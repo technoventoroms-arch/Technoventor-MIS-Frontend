@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+﻿import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -37,7 +37,7 @@ import {
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
-import { endpoints, type Entity } from "@mono/api_client";
+import { apiClient, endpoints, type Entity } from "@mono/api_client";
 
 import { useAuth } from "./auth";
 import { usePagedResource } from "./api-hooks";
@@ -116,18 +116,18 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.24),transparent_30%)]" />
         <div className="relative">
           <div className="mb-16 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-blue-100">
-            Premium laboratory operations platform
+            Technoventor MIS
           </div>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
             Run every lab, machine, inventory item, and project from one cockpit.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
-            Secure JWT access to a modern MIS experience built for makerspaces,
-            research labs, and enterprise operations teams.
+            Manage organisations, labs, machines, inventory, and projects in one
+            unified workspace for your teams.
           </p>
         </div>
         <div className="relative grid max-w-3xl grid-cols-3 gap-4">
-          {["Multi-tenant", "IoT ready", "Billing aware"].map((item) => (
+          {["Organisations", "Labs & machines", "Billing ready"].map((item) => (
             <div
               key={item}
               className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
@@ -150,7 +150,7 @@ export function LoginPage() {
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Sign in with your Django MIS account.
+            Sign in with your Technoventor MIS account.
           </p>
           <div className="mt-8 space-y-5">
             <div className="space-y-2">
@@ -195,15 +195,62 @@ export function MisShell() {
   const params = useParams();
   const orgId = params.orgId;
   const labId = params.labId;
+  const [orgLabel, setOrgLabel] = useState<string | null>(null);
+  const [labLabel, setLabLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!orgId) {
+      setOrgLabel(null);
+      return;
+    }
+    let cancelled = false;
+    setOrgLabel(null);
+    void apiClient
+      .get<Entity>(endpoints.organisations.detail(orgId), { orgId })
+      .then((org) => {
+        if (!cancelled) {
+          setOrgLabel(String(org.name ?? `Organisation ${orgId}`));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOrgLabel(`Organisation ${orgId}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  useEffect(() => {
+    if (!orgId || !labId) {
+      setLabLabel(null);
+      return;
+    }
+    let cancelled = false;
+    setLabLabel(null);
+    void apiClient
+      .get<Entity>(endpoints.labs.detail(orgId, labId), { orgId })
+      .then((lab) => {
+        if (!cancelled) {
+          setLabLabel(String(lab.name ?? `Lab ${labId}`));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLabLabel(`Lab ${labId}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, labId]);
+
   const navItems = useMemo(() => buildMisNav(orgId, labId), [labId, orgId]);
   const contexts = [
-    orgId ? { label: "Organisation", value: `Org #${orgId}` } : null,
-    labId ? { label: "Lab", value: `Lab #${labId}` } : null,
+    orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
+    labId ? { label: "Lab", value: labLabel ?? "Loading…" } : null,
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
     <PremiumShell
-      appName="Fab MIS"
+      appName="Technoventor MIS"
       appSubtitle="Laboratory operations"
       navItems={navItems}
       contexts={contexts}
@@ -220,19 +267,19 @@ export function OrganisationSwitcherPage() {
     {
       label: "Organisations",
       value: String(resource.rows.length),
-      helper: "Accessible tenants",
+      helper: "Your organisations",
       icon: <Building2 className="size-5" />,
     },
     {
-      label: "Session",
-      value: "JWT",
-      helper: "Backend compatible",
+      label: "Access",
+      value: "Secure",
+      helper: "Account protected",
       icon: <BadgeCheck className="size-5" />,
     },
     {
-      label: "API",
-      value: "/v1",
-      helper: "Django REST",
+      label: "Workspace",
+      value: "Active",
+      helper: "Live data sync",
       icon: <Gauge className="size-5" />,
     },
   ];
@@ -241,12 +288,12 @@ export function OrganisationSwitcherPage() {
     <PageFrame
       eyebrow="Workspace"
       title="Choose your organisation"
-      description="Start from the tenant that owns your labs, members, billing, and operating data."
+      description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
       metrics={metrics}
     >
       <PremiumDataTable
         title="Organisations"
-        description={resource.error?.message ?? "Tenant records from /api/v1/organisations/."}
+        description={resource.error?.message ?? "Your organisations and available workspaces."}
         columns={[
           ...baseColumns,
           {
@@ -296,7 +343,7 @@ export function OrgDashboardPage() {
     <PageFrame
       eyebrow="Organisation"
       title="Operational command center"
-      description="A premium overview of labs, teams, subscriptions, and high-priority work for this organisation."
+      description="Overview of labs, teams, subscriptions, and high-priority work for this organisation."
       metrics={[
         {
           label: "Labs",
@@ -333,7 +380,7 @@ export function LabsPage() {
     <DomainPage
       eyebrow="Facilities"
       title="Labs"
-      description="Manage physical laboratories, lab members, RFID cards, and lab IoT credentials."
+      description="Manage physical laboratories, lab members, access cards, and lab access settings."
       icon={<FlaskConical className="size-5" />}
       resource={resource}
       actionLabel="Create lab"
@@ -389,7 +436,7 @@ export function LabDashboardPage() {
     <PageFrame
       eyebrow="Lab"
       title="Lab operations cockpit"
-      description="Monitor machines, inventory, projects, attendance, and IoT readiness for this lab."
+      description="Monitor machines, inventory, projects, and attendance for this lab."
       metrics={[
         {
           label: "Machines",
@@ -448,7 +495,7 @@ export function MachinesPage() {
     <DomainPage
       eyebrow="Equipment"
       title="Machines"
-      description="Manage equipment status, reservations, logs, and ESP32/RFID API key readiness."
+      description="Manage equipment status, reservations, logs, and access setup."
       icon={<Wrench className="size-5" />}
       resource={resource}
       actionLabel="Register machine"
@@ -484,7 +531,7 @@ export function AttendancePage() {
     <DomainPage
       eyebrow="Access"
       title="Attendance"
-      description="Review RFID check-ins, approvals, attendance state, and user presence."
+      description="Review check-ins, approvals, attendance status, and who is present."
       icon={<CalendarCheck className="size-5" />}
       resource={resource}
       actionLabel="Export"
@@ -497,25 +544,25 @@ export function ApprovalsPage() {
     <PageFrame
       eyebrow="Governance"
       title="Approvals"
-      description="Centralize attendance, inventory, and operational approvals with clear audit context."
+      description="Review attendance, inventory orders, machine reservations, and join requests in one place."
       metrics={[
         {
           label: "Queues",
-          value: "2",
-          helper: "Attendance + inventory",
+          value: "4",
+          helper: "Join, attendance, inventory, machines",
           icon: <Activity className="size-5" />,
         },
         {
-          label: "Policy",
-          value: "RBAC",
-          helper: "Backend enforced",
+          label: "Access",
+          value: "Controlled",
+          helper: "Based on your role",
           icon: <Settings className="size-5" />,
         },
       ]}
     >
       <EmptyState
         title="Approval inbox ready"
-        description="Connect approval-specific backend filters to show pending attendance and inventory actions here."
+        description="Use this space to review pending attendance, inventory, and machine actions."
       />
     </PageFrame>
   );
@@ -526,11 +573,11 @@ export function CreatePlaceholderPage({ title }: { title: string }) {
     <PageFrame
       eyebrow="Create"
       title={title}
-      description="This premium form surface is ready for backend-aligned zod validation and submit actions."
+      description="Use this page to complete the create workflow for this module."
     >
       <EmptyState
-        title="Form workflow scaffolded"
-        description="Use the shared form system to add validated create/update flows without changing the page shell."
+        title="Form workflow available"
+        description="Create and update records here using the same workflow as the rest of the platform."
         icon={<PackagePlus className="size-7" />}
       />
     </PageFrame>
@@ -542,7 +589,7 @@ export function NotFoundPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
       <EmptyState
         title="Page not found"
-        description="The route you requested does not exist in the premium MIS experience."
+        description="The route you requested does not exist in Technoventor MIS."
       />
     </div>
   );
@@ -580,7 +627,7 @@ function DomainPage({
         {
           label: "Pagination",
           value: resource.next ? "More" : "Done",
-          helper: "API backed",
+          helper: "Live updates",
           icon: <Gauge className="size-5" />,
         },
       ]}
@@ -660,7 +707,9 @@ function ResourceTable({
       title={title}
       description={
         resource.error?.message ??
-        (resource.isLoading ? "Loading records from the MIS API..." : "Backend-compatible paginated list.")
+        (resource.isLoading
+          ? "Refreshing records..."
+          : `Live workspace list${resource.lastUpdatedAt ? ` • Updated ${formatRelativeTime(resource.lastUpdatedAt)}` : ""}.`)
       }
       columns={compact ? baseColumns.slice(0, 2) : baseColumns}
       rows={resource.rows}
@@ -671,9 +720,19 @@ function ResourceTable({
       onPrevious={resource.loadPrevious}
       actions={actions}
       emptyTitle={`No ${title.toLowerCase()} yet`}
-      emptyDescription="This surface is connected to the Django API and will populate as records are created."
+      emptyDescription="Records will appear here once data is added."
     />
   );
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (deltaSeconds < 5) return "just now";
+  if (deltaSeconds < 60) return `${deltaSeconds}s ago`;
+  const deltaMinutes = Math.floor(deltaSeconds / 60);
+  if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
+  const deltaHours = Math.floor(deltaMinutes / 60);
+  return `${deltaHours}h ago`;
 }
 
 function buildMisNav(orgId?: string, labId?: string): ShellNavItem[] {

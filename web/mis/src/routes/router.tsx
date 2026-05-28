@@ -21,7 +21,7 @@ function lazyElement<T extends Record<string, unknown>>(
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-      Loading premium workspace...
+      Loading workspace…
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   FlaskConical,
   Gauge,
   ListChecks,
+  Loader2,
   Plus,
   Radio,
   ScanBarcode,
@@ -29,7 +30,24 @@ import {
   type PremiumColumn,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@mono/shared_ui/components/ui/dialog";
+import { Label } from "@mono/shared_ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@mono/shared_ui/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mono/shared_ui/components/ui/tabs";
+import { Textarea } from "@mono/shared_ui/components/ui/textarea";
 import {
   apiClient,
   endpoints,
@@ -109,16 +127,16 @@ export function OrganisationSwitcherPage() {
     <PageFrame
       eyebrow="Workspace"
       title="My Organizations"
-      description="Start from the tenant that owns labs, members, billing, and operating data."
+      description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
       metrics={[
-        metric("Organisations", resource.rows.length, "Accessible tenants", <Building2 />),
-        metric("Session", "JWT", "Django compatible", <Gauge />),
-        metric("Operations", "Live", "No placeholder mode", <Activity />),
+        metric("Organisations", resource.rows.length, "Your organisations", <Building2 />),
+        metric("Access", "Secure", "Role-based access", <Gauge />),
+        metric("Operations", "Live", "Production workflow", <Activity />),
       ]}
     >
       <PremiumDataTable
         title="My Organizations"
-        description={resource.error?.message ?? "Tenant records from the live MIS API."}
+        description={resource.error?.message ?? "Your organisations and available workspaces."}
         columns={[
           nameColumn(),
           {
@@ -172,7 +190,7 @@ export function CreateOrganisationPage() {
     <PageFrame
       eyebrow="Create"
       title="Create New Organization"
-      description="Launch a tenant with admin ownership, billing readiness, and lab operations enabled."
+      description="Create a new organisation with you as the administrator. You can add labs and invite members next."
     >
       <PremiumSurface className="p-6">
         <ResourceForm
@@ -197,14 +215,14 @@ export function RequestLabPage() {
     <PageFrame
       eyebrow="Join Lab"
       title="Join Lab"
-      description="Premium redesign of the previous MIS request-lab flow."
+      description="Request access to labs and continue the onboarding workflow."
       metrics={[
         metric("Labs", availableLabs.rows.length, "Available to request", <DoorOpen />),
       ]}
     >
       <ResourceCrudTable
         title="Available Labs"
-        description={availableLabs.error?.message ?? "Discover active labs and submit the same join request as the previous MIS."}
+        description={availableLabs.error?.message ?? "Discover active labs and submit join requests."}
         resource={availableLabs}
         fields={[]}
         columns={[
@@ -248,7 +266,7 @@ export function OrgDashboardPage() {
     <PageFrame
       eyebrow="Organisation"
       title="Dashboard"
-      description="A premium overview of labs, teams, subscriptions, and high-priority work."
+      description="Overview of labs, teams, subscriptions, and high-priority work."
       metrics={[
         metric("Labs", labs.rows.length, "Facilities online", <FlaskConical />),
         metric("Members", members.rows.length, "Organisation users", <Users />),
@@ -277,7 +295,7 @@ export function LabsPage() {
     >
       <ResourceCrudTable
         title="Labs"
-        description="Organisation-scoped labs from Django REST."
+        description="Organisation-scoped labs with workspace access and controls."
         resource={resource}
         fields={labFields}
         orgId={orgId}
@@ -394,10 +412,10 @@ export function LabMembersPage() {
     <PageFrame
       eyebrow="Lab access"
       title="Users"
-      description="Assign organisation users to this lab, control roles, and issue RFID cards."
+      description="Assign organisation users to this lab, set roles, and manage access cards."
       metrics={[
         metric("Lab members", members.rows.length, "Active assignments", <Users />),
-        metric("RFID cards", rfids.rows.length, "Selected member", <Radio />),
+        metric("Access cards", rfids.rows.length, "Selected member", <Radio />),
       ]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -426,10 +444,10 @@ export function LabMembersPage() {
             roleColumn(),
             {
               key: "rfid",
-              header: "RFID",
+              header: "Access",
               render: (row) => (
                 <Button size="sm" variant="outline" onClick={() => setSelectedMember(row)}>
-                  Manage RFID
+                  Manage card
                 </Button>
               ),
             },
@@ -437,17 +455,17 @@ export function LabMembersPage() {
         />
         {selectedMember ? (
           <ResourceCrudTable
-            title="RFID cards"
+            title="Access cards"
             resource={rfids}
-            fields={[{ name: "rfid_uid", label: "RFID UID", required: true }]}
+            fields={[{ name: "rfid_uid", label: "Card UID", required: true }]}
             orgId={orgId}
             createPath={endpoints.labs.rfids(labId, selectedMember.id)}
             deletePath={(row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/`}
-            createLabel="Add RFID"
-            columns={[textColumn("rfid_uid", "RFID UID"), dateColumn()]}
+            createLabel="Add card"
+            columns={[textColumn("rfid_uid", "Card UID"), dateColumn()]}
           />
         ) : (
-          <EmptyState title="Select a lab member" description="Choose Manage RFID to issue or revoke cards." />
+          <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
         )}
       </div>
     </PageFrame>
@@ -548,7 +566,7 @@ export function LabDashboardPage() {
     <PageFrame
       eyebrow="Lab"
       title="Dashboard"
-      description="Monitor machines, inventory, projects, attendance, and IoT readiness for this lab."
+      description="Monitor machines, inventory, projects, and attendance for this lab."
       metrics={[
         metric("Machines", machines.rows.length, "Equipment records", <Wrench />),
         metric("Inventory", inventory.rows.length, "Stock records", <Boxes />),
@@ -730,7 +748,7 @@ export function MachinesPage() {
     <PageFrame
       eyebrow="Equipment"
       title="Machines"
-      description="Register machines, change states, inspect reservations, and prepare IoT operations."
+      description="Register machines, update status, review bookings, and manage day-to-day use."
       metrics={[metric("Machines", machines.rows.length, "Equipment records", <Wrench />)]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -824,7 +842,7 @@ export function MachinesPage() {
           onNext={logs.loadNext}
           onPrevious={logs.loadPrevious}
           emptyTitle="No machine logs"
-          emptyDescription="Status changes and RFID machine events will appear here."
+          emptyDescription="Status changes and machine activity will appear here."
         />
       ) : null}
     </PageFrame>
@@ -930,6 +948,9 @@ export function ProjectsPage() {
 
 export function AttendancePage() {
   const { orgId, labId } = useParams();
+  const [regularizeRow, setRegularizeRow] = useState<ApiRow | null>(null);
+  const [regularizeNotes, setRegularizeNotes] = useState("");
+  const [isSubmittingRegularize, setIsSubmittingRegularize] = useState(false);
   const attendance = usePagedResource<ApiRow>(
     labId ? `${endpoints.attendance.me}?lab_id=${labId}` : endpoints.attendance.me,
     orgId
@@ -940,7 +961,7 @@ export function AttendancePage() {
     <PageFrame
       eyebrow="Access"
       title="My Attendance"
-      description="Review your RFID check-ins and request attendance regularisation."
+      description="Review your attendance records and submit correction requests when needed."
       metrics={[metric("Attendance", attendance.rows.length, "Current records", <CalendarCheck />)]}
     >
       <ResourceCrudTable
@@ -958,13 +979,71 @@ export function AttendancePage() {
           {
             label: "Regularize",
             run: async (row) => {
-              const notes = window.prompt("Reason for regularization", String(row.notes ?? ""));
-              if (notes === null) return;
-              await apiClient.update(endpoints.attendance.meRecord(row.id), { notes }, { orgId });
+              setRegularizeRow(row);
+              setRegularizeNotes(String(row.notes ?? ""));
             },
           },
         ]}
       />
+      <Dialog
+        open={Boolean(regularizeRow)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRegularizeRow(null);
+            setRegularizeNotes("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request attendance regularization</DialogTitle>
+            <DialogDescription>
+              Provide a short reason so the approver can review and process your request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="regularize-notes">Reason</Label>
+            <Textarea
+              id="regularize-notes"
+              value={regularizeNotes}
+              onChange={(event) => setRegularizeNotes(event.target.value)}
+              placeholder="Explain the attendance correction needed"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRegularizeRow(null);
+                setRegularizeNotes("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!regularizeRow || isSubmittingRegularize}
+              onClick={async () => {
+                if (!regularizeRow) return;
+                setIsSubmittingRegularize(true);
+                try {
+                  await apiClient.update(
+                    endpoints.attendance.meRecord(regularizeRow.id),
+                    { notes: regularizeNotes },
+                    { orgId }
+                  );
+                  setRegularizeRow(null);
+                  setRegularizeNotes("");
+                  await attendance.reload();
+                } finally {
+                  setIsSubmittingRegularize(false);
+                }
+              }}
+            >
+              {isSubmittingRegularize ? "Submitting..." : "Submit request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageFrame>
   );
 }
@@ -1109,16 +1188,20 @@ export function ApprovalsPage() {
 
 export function CartPage() {
   const { orgId, labId } = useParams();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutProjectId, setCheckoutProjectId] = useState("");
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
   const cart = usePagedResource<ApiRow>(labId ? endpoints.inventory.cart(labId) : null, orgId);
+  const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
 
   return (
     <PageFrame
       eyebrow="Cart"
       title="Cart"
-      description="Premium redesign of the previous MIS cart page for collecting inventory before checkout."
+      description="Collect inventory items and submit checkout requests for project usage."
       metrics={[
         metric("Cart items", cart.rows.length, "Ready for checkout", <ShoppingCart />),
-        metric("Checkout", "Django", "Creates project inventory orders", <Boxes />),
+        metric("Checkout", "Ready", "Creates project inventory orders", <Boxes />),
       ]}
     >
       <ResourceCrudTable
@@ -1138,13 +1221,62 @@ export function CartPage() {
           {
             label: "Checkout",
             run: async () => {
-              const projectId = window.prompt("Enter project ID for this checkout");
-              if (!projectId) return;
-              await apiClient.create(endpoints.inventory.cartCheckout(String(labId)), { project_id: Number(projectId) }, { orgId });
+              setIsCheckoutOpen(true);
             },
           },
         ]}
       />
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Checkout cart</DialogTitle>
+            <DialogDescription>
+              Select the project that should receive these inventory items.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="checkout-project">Project</Label>
+            <Select value={checkoutProjectId} onValueChange={setCheckoutProjectId}>
+              <SelectTrigger id="checkout-project">
+                <SelectValue placeholder="Select a project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.rows.map((project) => (
+                  <SelectItem key={String(project.id)} value={String(project.id)}>
+                    {displayName(project)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!checkoutProjectId || isSubmittingCheckout}
+              onClick={async () => {
+                if (!checkoutProjectId || !labId) return;
+                setIsSubmittingCheckout(true);
+                try {
+                  await apiClient.create(
+                    endpoints.inventory.cartCheckout(String(labId)),
+                    { project_id: Number(checkoutProjectId) },
+                    { orgId }
+                  );
+                  setIsCheckoutOpen(false);
+                  setCheckoutProjectId("");
+                  await cart.reload();
+                } finally {
+                  setIsSubmittingCheckout(false);
+                }
+              }}
+            >
+              {isSubmittingCheckout ? "Checking out..." : "Confirm checkout"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageFrame>
   );
 }
@@ -1164,7 +1296,7 @@ export function MyOrdersPage() {
     <PageFrame
       eyebrow="Orders"
       title="My Orders"
-      description="Premium redesign of the previous MIS user-level order aggregation."
+      description="Track your inventory and machine-related orders in one place."
       metrics={[
         metric("Inventory orders", inventoryOrders.rows.length, "Across my projects", <FileText />),
         metric("Machine requests", machineRequests.rows.length, "Across my reservations", <Wrench />),
@@ -1223,7 +1355,7 @@ export function ScanMachinePage() {
   const visibleMachines = { ...machines, rows: machineRows };
 
   useEffect(() => {
-    const scannerId = "premium-machine-qr-reader";
+    const scannerId = "mis-machine-qr-reader";
     let isCancelled = false;
 
     import("html5-qrcode")
@@ -1239,7 +1371,7 @@ export function ScanMachinePage() {
               try {
                 const parsed = JSON.parse(decodedText) as { id?: unknown; machine_id?: unknown };
                 const machineId = parsed.id ?? parsed.machine_id;
-                if (!machineId) throw new Error("Machine QR must include id or machine_id.");
+                if (!machineId) throw new Error("This QR code does not contain valid machine information.");
                 setScannedMachineId(String(machineId));
               } catch {
                 setScannerError("Invalid machine QR code.");
@@ -1263,19 +1395,22 @@ export function ScanMachinePage() {
     <PageFrame
       eyebrow="Machine access"
       title="Scan Machine"
-      description="Premium redesign of the previous QR/RFID machine scan page."
+      description="Scan machine QR, validate reservations, and start or stop sessions."
       metrics={[
-        metric("Machines", machines.rows.length, "Browser scan targets", <ScanBarcode />),
-        metric("IoT endpoint", "Available", "RFID terminal flow still supported", <Radio />),
+        metric("Equipment", machines.rows.length, "In this lab", <ScanBarcode />),
+        metric("Scanning", "Camera", "Point at the machine QR code", <Radio />),
       ]}
     >
       <PremiumSurface className="mb-6 p-6">
         <SectionHeader
           eyebrow="Camera"
-          title={scannedMachineId ? `Scanned machine #${scannedMachineId}` : "Scan Machine QR"}
-          description={scannerError ?? "Scan the previous MIS machine QR code, then use the active reservation below."}
+          title={scannedMachineId ? `Machine ${scannedMachineId}` : "Scan machine QR code"}
+          description={
+            scannerError ??
+            "Allow camera access, scan the machine QR code, then start or complete your session from the list below."
+          }
         />
-        <div id="premium-machine-qr-reader" className="mt-4 overflow-hidden rounded-xl border" />
+        <div id="mis-machine-qr-reader" className="mt-4 overflow-hidden rounded-xl border" />
         {scannedMachineId ? (
           <Button className="mt-4" variant="outline" onClick={() => setScannedMachineId(null)}>
             Scan Again
@@ -1301,7 +1436,7 @@ export function ScanMachinePage() {
               const current = await apiClient.list<ApiRow>(endpoints.machines.currentReservation(String(labId), row.id), { orgId });
               const reservation = current.results[0];
               if (!reservation) {
-                throw new Error("No approved reservation is active for this machine right now.");
+                throw new Error("No approved booking is active for this machine right now.");
               }
               const nextStatus = row.status === "ACTIVE" ? "OFF" : "ACTIVE";
               await apiClient.create(endpoints.machines.reservationConsume(reservation.id), { status: nextStatus }, { orgId });
@@ -1324,7 +1459,7 @@ export function MachineSchedulePage() {
     <PageFrame
       eyebrow="Machine"
       title="Machine Schedule"
-      description="Premium redesign of the previous machine schedule page."
+      description="View reservations and operating schedule for this machine."
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
       <PremiumDataTable
@@ -1352,24 +1487,96 @@ export function MachineSchedulePage() {
 
 export function MachineDetailsPage() {
   const { orgId, labId, machineId } = useParams();
+  const [machine, setMachine] = useState<ApiRow | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orgId || !labId || !machineId) {
+      setMachine(null);
+      setLoadError(null);
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+    void apiClient
+      .get<ApiRow>(endpoints.machines.detail(labId, machineId), { orgId })
+      .then((data) => {
+        if (!cancelled) {
+          setMachine(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadError(normalizeApiError(error).message);
+          setMachine(null);
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, labId, machineId]);
+
+  if (!orgId || !labId || !machineId) return null;
+
+  const schedulePath = `/${orgId}/lab/${labId}/machine/${machineId}`;
+  const logsPath = `/${orgId}/lab/${labId}/machine/${machineId}/logs`;
 
   return (
     <PageFrame
       eyebrow="Machine"
-      title="Machine Details"
-      description="Premium redesign of the previous machine details page."
-      metrics={[metric("Machine", `#${machineId}`, "Detail route preserved", <Wrench />)]}
+      title="Machine details"
+      description="Specifications, identifiers, and quick links for this machine."
+      metrics={[
+        metric("Status", machine?.status ? String(machine.status) : "—", "Current state", <Wrench />),
+        metric("Model", machine?.model_number ? String(machine.model_number) : "—", "Manufacturer model", <Wrench />),
+      ]}
     >
-      <EmptyState
-        title="Machine details are available from the Machines page"
-        description="The premium Machines page includes edit, status, reservation, and log actions while preserving this previous MIS route."
-        icon={<Wrench className="size-7" />}
-        action={
-          <Button asChild>
-            <Link to={`/${orgId}/lab/${labId}/machine`}>Open Machines</Link>
-          </Button>
-        }
-      />
+      {isLoading ? (
+        <PremiumSurface className="flex items-center justify-center gap-3 p-12 text-sm text-slate-500 dark:text-slate-400">
+          <Loader2 className="size-5 animate-spin" />
+          Loading machine details…
+        </PremiumSurface>
+      ) : loadError ? (
+        <EmptyState
+          title="Could not load machine"
+          description={loadError}
+          icon={<Wrench className="size-7" />}
+          action={
+            <Button asChild>
+              <Link to={`/${orgId}/lab/${labId}/machine`}>Back to machines</Link>
+            </Button>
+          }
+        />
+      ) : machine ? (
+        <div className="space-y-6">
+          <PremiumSurface className="p-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {machineDetailField("Name", displayName(machine))}
+              {machineDetailField("Serial number", machine.serial_number)}
+              {machineDetailField("Purchased", machine.purchased_at)}
+              {machineDetailField("Description", machine.description)}
+            </div>
+          </PremiumSurface>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to={schedulePath}>Schedule & bookings</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to={logsPath}>Activity log</Link>
+            </Button>
+            <Button asChild>
+              <Link to={`/${orgId}/lab/${labId}/machine`}>All machines</Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <EmptyState title="Machine not found" description="This machine may have been removed or you may not have access." />
+      )}
     </PageFrame>
   );
 }
@@ -1385,12 +1592,12 @@ export function MachineLogsPage() {
     <PageFrame
       eyebrow="Machine"
       title="Machine Logs"
-      description="Premium redesign of the previous machine logs page."
+      description="Review machine usage logs and related events."
       metrics={[metric("Logs", logs.rows.length, "Status audit records", <Wrench />)]}
     >
       <PremiumDataTable
         title="Machine Logs"
-        description={logs.error?.message ?? "Status and RFID audit trail."}
+        description={logs.error?.message ?? "Status changes and usage events for this machine."}
         columns={[
           textColumn("previous_status", "Previous"),
           textColumn("new_status", "New"),
@@ -1426,7 +1633,7 @@ export function ProjectDetailsPage() {
     <PageFrame
       eyebrow="Project"
       title="Project Details"
-      description="Premium redesign of the previous project detail page with team and inventory order tabs."
+      description="Review project team details, timeline, and associated material requests."
       metrics={[
         metric("Team", members.rows.length, "Project members", <Users />),
         metric("Orders", orders.rows.length, "Inventory requests", <FileText />),
@@ -1469,6 +1676,18 @@ export function ProjectDetailsPage() {
         </TabsContent>
       </Tabs>
     </PageFrame>
+  );
+}
+
+function machineDetailField(label: string, value: unknown) {
+  const text = value === null || value === undefined || value === "" ? "—" : String(value);
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-slate-950 dark:text-white">{text}</p>
+    </div>
   );
 }
 
@@ -1519,7 +1738,7 @@ function CompactTable({
   return (
     <PremiumDataTable
       title={title}
-      description={resource.error?.message ?? "Live API-backed data."}
+      description={resource.error?.message ?? "Live workspace data."}
       columns={columns}
       rows={resource.rows}
       getRowKey={(row, index) => `${row.id}-${index}`}

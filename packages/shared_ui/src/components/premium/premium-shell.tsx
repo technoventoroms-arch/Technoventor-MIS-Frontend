@@ -241,7 +241,7 @@ export function PremiumShell({
           <DialogHeader>
             <DialogTitle>Search workspace</DialogTitle>
             <DialogDescription>
-              Jump to available premium sections in this workspace.
+              Jump to any section in this workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -263,7 +263,7 @@ export function PremiumShell({
                   >
                     <Icon className="size-4" />
                     <span>{item.label}</span>
-                    <span className="ml-auto truncate text-xs text-slate-400">{item.to}</span>
+                    <span className="ml-auto text-xs text-slate-400">Open</span>
                   </Link>
                 );
               })}
@@ -281,11 +281,11 @@ export function PremiumShell({
           <SheetHeader>
             <SheetTitle>Notifications</SheetTitle>
             <SheetDescription>
-              Live notifications will appear here when an active notification feed is configured.
+              Updates will appear here when your administrator enables notifications.
             </SheetDescription>
           </SheetHeader>
           <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
-            No unread notifications for this session.
+            You have no new notifications right now.
           </div>
         </SheetContent>
       </Sheet>

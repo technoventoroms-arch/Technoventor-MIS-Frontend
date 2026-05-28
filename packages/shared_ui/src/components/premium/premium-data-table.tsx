@@ -95,7 +95,7 @@ export function PremiumDataTable<T>({
       )}
       {(next || previous || onNext || onPrevious) && (
         <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-          <span>Paginated results</span>
+          <span>More records</span>
           <div className="flex gap-2">
             <Button
               variant="outline"

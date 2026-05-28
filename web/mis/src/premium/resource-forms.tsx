@@ -70,6 +70,7 @@ export function ResourceCrudTable<T extends Entity>({
     previous: string | null;
     error: ApiError | null;
     isLoading: boolean;
+    lastUpdatedAt?: number | null;
     reload: () => Promise<void>;
     loadNext: () => Promise<void>;
     loadPrevious: () => Promise<void>;
@@ -160,7 +161,9 @@ export function ResourceCrudTable<T extends Entity>({
           actionError ??
           resource.error?.message ??
           description ??
-          (resource.isLoading ? "Loading records..." : "Live records from the MIS API.")
+          (resource.isLoading
+            ? "Refreshing records..."
+            : `Live workspace records${resource.lastUpdatedAt ? ` • Updated ${formatRelativeTime(resource.lastUpdatedAt)}` : ""}.`)
         }
         columns={[...columns, actionColumn]}
         rows={resource.rows}
@@ -196,7 +199,7 @@ export function ResourceCrudTable<T extends Entity>({
       {editingRow && updatePath ? (
         <ResourceFormDialog
           title={`Edit ${title}`}
-          description="Update this record using backend-compatible fields."
+          description="Update this record and save your changes."
           fields={fields}
           initialValues={editingRow}
           open={Boolean(editingRow)}
@@ -212,6 +215,16 @@ export function ResourceCrudTable<T extends Entity>({
       ) : null}
     </>
   );
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (deltaSeconds < 5) return "just now";
+  if (deltaSeconds < 60) return `${deltaSeconds}s ago`;
+  const deltaMinutes = Math.floor(deltaSeconds / 60);
+  if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
+  const deltaHours = Math.floor(deltaMinutes / 60);
+  return `${deltaHours}h ago`;
 }
 
 export function ResourceFormDialog({

@@ -15,6 +15,7 @@ import {
   PremiumSurface,
   SectionHeader,
 } from "@mono/shared_ui/components/premium";
+import { Button } from "@mono/shared_ui/components/ui/button";
 
 import { useAuth } from "./auth";
 import { ResourceForm, type ResourceField } from "./resource-forms";
@@ -45,14 +46,38 @@ const labFields: ResourceField[] = [
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
+  const [invites, setInvites] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiClient
+      .get<{ error?: boolean; data?: any[] }>("users/me/invitations")
+      .then((res) => {
+        if (!res.error && Array.isArray(res.data)) {
+          setInvites(res.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAcceptInvite = async (inviteId: number, state: "ACCEPTED" | "REJECTED") => {
+    try {
+      const res = await apiClient.update<any>(`users/me/invitations/${inviteId}/`, {
+        status: state,
+      });
+      if (!res.error) {
+        setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+        await refreshUser();
+      }
+    } catch (err) {}
+  };
 
   return (
     <PageFrame
       eyebrow="Account"
       title="Profile"
-      description="Keep your MIS identity aligned with the Django user profile."
+      description="Manage your profile details used across Technoventor MIS."
       metrics={[
-        metric("Session", user?.email ?? "Signed in", "JWT profile", <UserCircle />),
+        metric("Account", user?.email ?? "Signed in", "Profile details", <UserCircle />),
       ]}
     >
       <PremiumSurface className="p-6">
@@ -66,6 +91,54 @@ export function ProfilePage() {
           }}
         />
       </PremiumSurface>
+
+      {invites.length > 0 && (
+        <PremiumSurface className="mt-6 p-6">
+          <SectionHeader
+            title="My Invitations"
+            description="Pending invitations to join organizations and laboratories."
+          />
+          <div className="mt-6 space-y-4">
+            {invites.map((invite) => (
+              <div
+                key={invite.id}
+                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+              >
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-100">
+                    {invite.organisation_name}
+                  </div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Lab: <span className="font-medium">{invite.lab_name}</span>
+                  </div>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center rounded-md bg-pink-50 px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-700/10 dark:bg-pink-400/10 dark:text-pink-400 dark:ring-pink-400/20">
+                      {invite.role_name}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-950/30"
+                    onClick={() => handleAcceptInvite(invite.id, "REJECTED")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+                    onClick={() => handleAcceptInvite(invite.id, "ACCEPTED")}
+                  >
+                    Accept
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </PremiumSurface>
+      )}
     </PageFrame>
   );
 }
@@ -85,9 +158,9 @@ export function OrganisationSettingsPage() {
     <PageFrame
       eyebrow="Settings"
       title="Organization"
-      description="Update tenant profile fields through the active organisation API."
+      description="Update organisation profile and operational details."
       metrics={[
-        metric("Organisation", organisation?.name ?? `#${orgId}`, "Editable tenant", <Building2 />),
+        metric("Organisation", organisation?.name ?? `#${orgId}`, "Profile", <Building2 />),
       ]}
     >
       <PremiumSurface className="p-6">
@@ -159,10 +232,10 @@ export function ReportsPage() {
     <PageFrame
       eyebrow="Insights"
       title="Reports"
-      description="Premium reporting surface for organisation and lab analytics."
+      description="Reports and analytics for organisation and lab activity."
       metrics={[
         metric("Scope", labId ? `Lab #${labId}` : `Org #${orgId}`, "Reporting context", <BarChart3 />),
-        metric("Provider", reportUrl ? "Metabase" : "Not configured", "VITE_PUBLIC_METABASE_ENDPOINT", <Settings />),
+        metric("Provider", reportUrl ? "Connected" : "Not configured", "Reporting service", <Settings />),
       ]}
     >
       {reportUrl ? (
@@ -177,7 +250,7 @@ export function ReportsPage() {
       ) : (
         <EmptyState
           title="Reporting endpoint not configured"
-          description="Set VITE_PUBLIC_METABASE_ENDPOINT to expose the premium reporting dashboard."
+          description="Reports dashboard is not configured yet. Contact your administrator to enable it."
           icon={<BarChart3 className="size-7" />}
         />
       )}
