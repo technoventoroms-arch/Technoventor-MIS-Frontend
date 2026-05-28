@@ -47,6 +47,9 @@ const labFields: ResourceField[] = [
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const [invites, setInvites] = useState<any[]>([]);
+  const [token, setToken] = useState("");
+  const [tokenFeedback, setTokenFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isTokenSubmitting, setIsTokenSubmitting] = useState(false);
 
   useEffect(() => {
     apiClient
@@ -71,6 +74,33 @@ export function ProfilePage() {
     } catch (err) {}
   };
 
+  const handleManualInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token.trim()) return;
+    setIsTokenSubmitting(true);
+    setTokenFeedback(null);
+    try {
+      const res = await apiClient.create<any>(`organisations/invites/${token.trim()}/accept/`, {});
+      if (!res.error) {
+        setTokenFeedback({ type: "success", message: "Successfully joined the organisation!" });
+        setToken("");
+        await refreshUser();
+        // Reload automatic invites
+        const invitesRes = await apiClient.get<{ error?: boolean; data?: any[] }>("users/me/invitations");
+        if (!invitesRes.error && Array.isArray(invitesRes.data)) {
+          setInvites(invitesRes.data);
+        }
+      } else {
+        setTokenFeedback({ type: "error", message: res.message || "Failed to accept invitation." });
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Failed to accept invitation. Make sure the token is valid.";
+      setTokenFeedback({ type: "error", message: msg });
+    } finally {
+      setIsTokenSubmitting(false);
+    }
+  };
+
   return (
     <PageFrame
       eyebrow="Account"
@@ -90,6 +120,47 @@ export function ProfilePage() {
             await refreshUser();
           }}
         />
+      </PremiumSurface>
+
+      <PremiumSurface className="mt-6 p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Accept Invite by Token
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Have a unique invitation token? Paste it below to join the organisation immediately.
+          </p>
+        </div>
+        <form onSubmit={handleManualInviteSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-2">
+            <label htmlFor="token" className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Invitation Token
+            </label>
+            <input
+              id="token"
+              type="text"
+              placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder-slate-400 focus:border-teal-500 focus:ring-teal-500 dark:border-white/10 dark:bg-white/[0.03]"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={isTokenSubmitting} className="h-10 shrink-0">
+            {isTokenSubmitting ? "Accepting..." : "Accept Invite"}
+          </Button>
+        </form>
+        {tokenFeedback && (
+          <div
+            className={`mt-4 rounded-md p-3 text-sm ${
+              tokenFeedback.type === "success"
+                ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
+                : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+            }`}
+          >
+            {tokenFeedback.message}
+          </div>
+        )}
       </PremiumSurface>
 
       {invites.length > 0 && (
