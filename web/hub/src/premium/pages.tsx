@@ -114,14 +114,14 @@ export function HubLoginPage() {
           onSubmit={handleSubmit}
           className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">
             Admin Hub
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight">
             Operator sign in
           </h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Access the platform control plane using Django JWT credentials.
+            Access the platform control plane with your Technoventor account.
           </p>
           <div className="mt-8 space-y-5">
             <div className="space-y-2">
@@ -158,9 +158,10 @@ export function HubLoginPage() {
         </form>
       </section>
       <section className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(99,102,241,0.35),transparent_32%),radial-gradient(circle_at_10%_90%,rgba(14,165,233,0.2),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_10%_90%,rgba(13,148,136,0.2),transparent_30%)]" />
         <div className="relative">
-          <div className="mb-16 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-indigo-100">
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-teal-100">
+            <img src="/technoventor-logo.svg" alt="Technoventor logo" className="h-8 w-auto rounded bg-white px-1 py-1" />
             Platform operations console
           </div>
           <h2 className="max-w-2xl text-6xl font-semibold tracking-tight">
@@ -177,7 +178,7 @@ export function HubLoginPage() {
               key={item}
               className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
             >
-              <ShieldCheck className="mb-4 size-6 text-indigo-200" />
+              <ShieldCheck className="mb-4 size-6 text-teal-200" />
               <p className="font-semibold">{item}</p>
             </div>
           ))}
@@ -200,8 +201,9 @@ export function HubShell() {
 
   return (
     <PremiumShell
-      appName="Fab Manage"
+      appName="Technoventor Hub"
       appSubtitle="Admin Hub"
+      logoSrc="/technoventor-logo.svg"
       navItems={navItems}
       contexts={contexts}
       userName={fullName(user)}
@@ -239,8 +241,8 @@ export function PlatformDashboardPage() {
         },
         {
           label: "Auth",
-          value: "JWT",
-          helper: "Django compatible",
+          value: "Secure",
+          helper: "Role-based sign-in",
           icon: <ShieldCheck className="size-5" />,
         },
       ]}

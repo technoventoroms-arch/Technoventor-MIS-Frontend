@@ -7,7 +7,6 @@ import {
   Menu,
   Moon,
   Search,
-  ShieldCheck,
   Sun,
 } from "lucide-react";
 
@@ -55,6 +54,7 @@ export type ShellNotification = {
 export function PremiumShell({
   appName,
   appSubtitle,
+  logoSrc,
   navItems,
   userName,
   userEmail,
@@ -65,6 +65,7 @@ export function PremiumShell({
 }: {
   appName: string;
   appSubtitle: string;
+  logoSrc?: string;
   navItems: ShellNavItem[];
   userName?: string;
   userEmail?: string;
@@ -139,7 +140,7 @@ export function PremiumShell({
             cn(
               "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition",
               isActive
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-600/20"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
             )
           }
@@ -151,13 +152,17 @@ export function PremiumShell({
     });
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] text-slate-950 dark:bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,#020617_0%,#0f172a_100%)] dark:text-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.14),transparent_34%),linear-gradient(180deg,#f8fafc_0%,#ecfeff_100%)] text-slate-950 dark:bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.18),transparent_34%),linear-gradient(180deg,#020617_0%,#0f172a_100%)] dark:text-white">
       <div className="flex min-h-screen">
         <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-slate-200/70 bg-white/80 px-4 py-5 backdrop-blur-xl lg:block dark:border-white/10 dark:bg-slate-950/70">
           <Link to="/" className="flex items-center gap-3 px-2">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25">
-              <ShieldCheck className="size-5" />
-            </div>
+            {logoSrc ? (
+              <img src={logoSrc} alt={`${appName} logo`} className="h-11 w-auto rounded-md bg-white px-1 py-1" />
+            ) : (
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-500 text-xs font-bold text-white shadow-lg shadow-teal-600/25">
+                MIS
+              </div>
+            )}
             <div>
               <p className="text-base font-semibold tracking-tight">{appName}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -189,7 +194,7 @@ export function PremiumShell({
                 <button
                   type="button"
                   onClick={() => setIsSearchOpen(true)}
-                  className="hidden min-w-80 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-500 shadow-sm transition hover:border-blue-200 hover:text-slate-700 md:flex dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-slate-200"
+                  className="hidden min-w-80 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-500 shadow-sm transition hover:border-teal-200 hover:text-slate-700 md:flex dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400 dark:hover:border-white/20 dark:hover:text-slate-200"
                 >
                   <Search className="size-4" />
                   <span>Search labs, machines, inventory, projects...</span>

@@ -143,9 +143,10 @@ export function LoginPage() {
   return (
     <div className="grid min-h-screen bg-slate-950 text-white lg:grid-cols-[1.15fr_0.85fr]">
       <section className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.24),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(13,148,136,0.24),transparent_30%)]" />
         <div className="relative">
-          <div className="mb-16 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-blue-100">
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-teal-100">
+            <img src="/technoventor-logo.svg" alt="Technoventor logo" className="h-8 w-auto rounded bg-white px-1 py-1" />
             Technoventor MIS
           </div>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
@@ -162,7 +163,7 @@ export function LoginPage() {
               key={item}
               className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
             >
-              <BadgeCheck className="mb-4 size-6 text-blue-200" />
+              <BadgeCheck className="mb-4 size-6 text-teal-200" />
               <p className="font-semibold">{item}</p>
             </div>
           ))}
@@ -173,7 +174,7 @@ export function LoginPage() {
           onSubmit={handleSubmit}
           className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">
             MIS Access
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">
@@ -283,6 +284,7 @@ export function MisShell() {
     <PremiumShell
       appName="Technoventor MIS"
       appSubtitle="Laboratory operations"
+      logoSrc="/technoventor-logo.svg"
       navItems={navItems}
       contexts={contexts}
       notifications={notifications.rows.slice(0, 20).map((row) => ({
