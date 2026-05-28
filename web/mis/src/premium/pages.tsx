@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -20,6 +20,7 @@ import {
   ScanBarcode,
   Settings,
   ShoppingCart,
+  Bell,
   UserCircle,
   Users,
   Wrench,
@@ -29,6 +30,7 @@ import {
   KpiCard,
   PremiumDataTable,
   PremiumShell,
+  PremiumSurface,
   SectionHeader,
   StatusBadge,
   type PremiumColumn,
@@ -48,6 +50,34 @@ type Metric = {
   helper: string;
   icon: ReactNode;
 };
+
+type VisualTile = {
+  title: string;
+  subtitle: string;
+  accent: string;
+  icon: ReactNode;
+};
+
+const ERP_LRP_VISUALS: VisualTile[] = [
+  {
+    title: "Organisation Control",
+    subtitle: "Users, billing, compliance",
+    accent: "from-indigo-600 to-blue-500",
+    icon: <Building2 className="size-5" />,
+  },
+  {
+    title: "Lab Operations",
+    subtitle: "Machines, scheduling, uptime",
+    accent: "from-cyan-600 to-teal-500",
+    icon: <Wrench className="size-5" />,
+  },
+  {
+    title: "Inventory & Projects",
+    subtitle: "Stock, orders, execution",
+    accent: "from-amber-600 to-orange-500",
+    icon: <Boxes className="size-5" />,
+  },
+];
 
 const baseColumns: PremiumColumn<Entity>[] = [
   {
@@ -113,9 +143,10 @@ export function LoginPage() {
   return (
     <div className="grid min-h-screen bg-slate-950 text-white lg:grid-cols-[1.15fr_0.85fr]">
       <section className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.24),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(13,148,136,0.24),transparent_30%)]" />
         <div className="relative">
-          <div className="mb-16 inline-flex rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-blue-100">
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-teal-100">
+            <img src="/technoventor-logo.svg" alt="Technoventor logo" className="h-8 w-auto rounded bg-white px-1 py-1" />
             Technoventor MIS
           </div>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
@@ -132,7 +163,7 @@ export function LoginPage() {
               key={item}
               className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
             >
-              <BadgeCheck className="mb-4 size-6 text-blue-200" />
+              <BadgeCheck className="mb-4 size-6 text-teal-200" />
               <p className="font-semibold">{item}</p>
             </div>
           ))}
@@ -143,7 +174,7 @@ export function LoginPage() {
           onSubmit={handleSubmit}
           className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-white/[0.03]"
         >
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">
             MIS Access
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">
@@ -197,6 +228,7 @@ export function MisShell() {
   const labId = params.labId;
   const [orgLabel, setOrgLabel] = useState<string | null>(null);
   const [labLabel, setLabLabel] = useState<string | null>(null);
+  const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
 
   useEffect(() => {
     if (!orgId) {
@@ -252,8 +284,17 @@ export function MisShell() {
     <PremiumShell
       appName="Technoventor MIS"
       appSubtitle="Laboratory operations"
+      logoSrc="/technoventor-logo.svg"
       navItems={navItems}
       contexts={contexts}
+      notifications={notifications.rows.slice(0, 20).map((row) => ({
+        id: row.id,
+        title: String(row.title ?? "Update"),
+        message: String(row.message ?? ""),
+        createdAt: typeof row.created_at === "string" ? row.created_at : undefined,
+        isRead: Boolean(row.is_read),
+        to: orgId && labId ? `/${orgId}/lab/${labId}/notifications` : undefined,
+      }))}
       userName={fullName(user)}
       userEmail={user?.email}
       onSignOut={logout}
@@ -291,6 +332,25 @@ export function OrganisationSwitcherPage() {
       description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
       metrics={metrics}
     >
+      <VisualShowcase
+        title="Technoventor ERP + LRP Experience"
+        description="A unified operating layer for business workflows and lab execution."
+        tiles={ERP_LRP_VISUALS}
+      />
+      <PriorityRail
+        items={[
+          {
+            title: "Pick your workspace",
+            detail: "Open the active organisation to continue operations.",
+            tone: "bg-blue-50 text-blue-700 dark:bg-blue-400/15 dark:text-blue-200",
+          },
+          {
+            title: "Action next",
+            detail: "Create organisation or join lab to onboard new teams quickly.",
+            tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
+          },
+        ]}
+      />
       <PremiumDataTable
         title="Organisations"
         description={resource.error?.message ?? "Your organisations and available workspaces."}
@@ -365,6 +425,19 @@ export function OrgDashboardPage() {
         },
       ]}
     >
+      <VisualShowcase
+        title="Executive Snapshot"
+        description="Track operations, teams, and commercial health in one view."
+        tiles={ERP_LRP_VISUALS}
+      />
+      <OpsPulsePanel
+        title="Organisation pulse"
+        lines={[
+          { label: "Operational capacity", value: scoreLabel(labs.rows.length + members.rows.length) },
+          { label: "People readiness", value: scoreLabel(members.rows.length) },
+          { label: "Commercial status", value: subscriptions.rows.length ? "Configured" : "Needs setup" },
+        ]}
+      />
       <div className="grid gap-6 xl:grid-cols-2">
         <ResourceTable title="Labs" resource={labs} />
         <ResourceTable title="Members" resource={members} />
@@ -458,6 +531,19 @@ export function LabDashboardPage() {
         },
       ]}
     >
+      <VisualShowcase
+        title="Production Floor View"
+        description="Live visibility for planning, execution, and approvals."
+        tiles={ERP_LRP_VISUALS.slice(1)}
+      />
+      <OpsPulsePanel
+        title="Lab pulse"
+        lines={[
+          { label: "Machine availability", value: scoreLabel(machines.rows.length) },
+          { label: "Inventory readiness", value: scoreLabel(inventory.rows.length) },
+          { label: "Project throughput", value: scoreLabel(projects.rows.length) },
+        ]}
+      />
       <div className="grid gap-6 xl:grid-cols-3">
         <ResourceTable title="Machines" resource={machines} compact />
         <ResourceTable title="Inventory" resource={inventory} compact />
@@ -691,6 +777,92 @@ function PageFrame({
   );
 }
 
+function VisualShowcase({
+  title,
+  description,
+  tiles,
+}: {
+  title: string;
+  description: string;
+  tiles: VisualTile[];
+}) {
+  return (
+    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/70">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold text-slate-950 dark:text-white">{title}</h3>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {tiles.map((tile) => (
+          <article
+            key={tile.title}
+            className={`relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br ${tile.accent} p-4 text-white`}
+          >
+            <div className="absolute -right-6 -top-8 size-24 rounded-full bg-white/15 blur-xl" />
+            <div className="absolute -bottom-10 left-10 size-24 rounded-full bg-white/10 blur-xl" />
+            <div className="relative">
+              <div className="mb-8 inline-flex rounded-xl bg-white/20 p-2">{tile.icon}</div>
+              <p className="text-sm font-semibold">{tile.title}</p>
+              <p className="text-xs text-white/85">{tile.subtitle}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OpsPulsePanel({
+  title,
+  lines,
+}: {
+  title: string;
+  lines: { label: string; value: string }[];
+}) {
+  return (
+    <PremiumSurface className="p-5">
+      <h3 className="text-base font-semibold text-slate-950 dark:text-white">{title}</h3>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {lines.map((line) => (
+          <div
+            key={line.label}
+            className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {line.label}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{line.value}</p>
+          </div>
+        ))}
+      </div>
+    </PremiumSurface>
+  );
+}
+
+function PriorityRail({
+  items,
+}: {
+  items: { title: string; detail: string; tone: string }[];
+}) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.title} className={`rounded-2xl border p-4 text-sm ${item.tone}`}>
+          <p className="font-semibold">{item.title}</p>
+          <p className="mt-1 opacity-90">{item.detail}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function scoreLabel(total: number): string {
+  if (total >= 8) return "High";
+  if (total >= 4) return "Good";
+  if (total >= 1) return "Growing";
+  return "Starting";
+}
+
 function ResourceTable({
   title,
   resource,
@@ -763,6 +935,7 @@ function buildMisNav(orgId?: string, labId?: string): ShellNavItem[] {
           { label: "Users", to: `${labBase}/users`, icon: Users },
           { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
           { label: "My Orders", to: `${labBase}/orders`, icon: FileText },
+          { label: "Notifications", to: `${labBase}/notifications`, icon: Bell },
           { label: "My Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
           { label: "Scan Machine", to: `${labBase}/scan-machine`, icon: ScanBarcode },
           { label: "Approvals", to: `${labBase}/approval`, icon: Activity },

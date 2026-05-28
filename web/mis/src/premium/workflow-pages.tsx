@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -39,6 +39,7 @@ import {
   DialogTitle,
 } from "@mono/shared_ui/components/ui/dialog";
 import { Label } from "@mono/shared_ui/components/ui/label";
+import { Input } from "@mono/shared_ui/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,7 @@ import {
 } from "@mono/api_client";
 
 import { usePagedResource } from "./api-hooks";
+import { useAuth } from "./auth";
 import {
   ResourceCrudTable,
   ResourceForm,
@@ -93,6 +95,20 @@ const labFields: ResourceField[] = [
   { name: "name", label: "Lab name", required: true },
   { name: "phone", label: "Phone" },
   { name: "image_url", label: "Image URL" },
+  {
+    name: "booking_enabled",
+    label: "Allow bookings",
+    type: "select",
+    options: [
+      { value: "true", label: "Enabled" },
+      { value: "false", label: "Disabled" },
+    ],
+    defaultValue: "true",
+  },
+  { name: "slot_duration_minutes", label: "Slot duration (minutes)", type: "number", defaultValue: "60" },
+  { name: "no_show_grace_minutes", label: "No-show grace (minutes)", type: "number", defaultValue: "30" },
+  { name: "booking_window_start", label: "Booking start (HH:MM)", placeholder: "09:00" },
+  { name: "booking_window_end", label: "Booking end (HH:MM)", placeholder: "18:00" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -283,6 +299,7 @@ export function OrgDashboardPage() {
 
 export function LabsPage() {
   const { orgId } = useParams();
+  const { isOrgAdmin } = useOrgRole(orgId);
   const resource = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
 
   if (!orgId) return null;
@@ -299,10 +316,16 @@ export function LabsPage() {
         resource={resource}
         fields={labFields}
         orgId={orgId}
-        createPath={endpoints.labs.list(orgId)}
-        updatePath={(row) => endpoints.labs.detail(orgId, row.id)}
-        deletePath={(row) => endpoints.labs.detail(orgId, row.id)}
+        createPath={isOrgAdmin ? endpoints.labs.list(orgId) : undefined}
+        updatePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
+        deletePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
         createLabel="Create lab"
+        transformPayload={(values) => ({
+          ...values,
+          booking_enabled: values.booking_enabled === "true",
+          slot_duration_minutes: values.slot_duration_minutes ? Number(values.slot_duration_minutes) : undefined,
+          no_show_grace_minutes: values.no_show_grace_minutes ? Number(values.no_show_grace_minutes) : undefined,
+        })}
         columns={[
           nameColumn(),
           textColumn("phone", "Phone"),
@@ -323,6 +346,8 @@ export function LabsPage() {
 
 export function OrgUsersPage() {
   const { orgId } = useParams();
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const { isOrgAdmin } = useOrgRole(orgId);
   const labs = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
   const roles = usePagedResource<ApiRow>(orgId ? endpoints.iam.roles(orgId) : null, orgId);
   const members = usePagedResource<ApiRow>(
@@ -353,6 +378,13 @@ export function OrgUsersPage() {
         </TabsList>
         <TabsContent value="members">
           <CompactTable title="Members" resource={members} columns={[memberColumn(), dateColumn()]} />
+          {isOrgAdmin ? (
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                Bulk import users
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
         <TabsContent value="invites">
           <ResourceCrudTable
@@ -364,7 +396,7 @@ export function OrgUsersPage() {
               { name: "role", label: "Role", type: "select", options: toOptions(roles.rows) },
             ]}
             orgId={orgId}
-            createPath={endpoints.organisations.invites(orgId)}
+            createPath={isOrgAdmin ? endpoints.organisations.invites(orgId) : undefined}
             createLabel="Invite member"
             columns={[textColumn("email", "Email"), textColumn("status", "Status"), dateColumn()]}
           />
@@ -378,20 +410,50 @@ export function OrgUsersPage() {
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={endpoints.iam.roles(orgId)}
-            updatePath={(row) => `${endpoints.iam.roles(orgId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.iam.roles(orgId)}${row.id}/`}
+            createPath={isOrgAdmin ? endpoints.iam.roles(orgId) : undefined}
+            updatePath={isOrgAdmin ? (row) => `${endpoints.iam.roles(orgId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin ? (row) => `${endpoints.iam.roles(orgId)}${row.id}/` : undefined}
             createLabel="Create role"
             columns={[nameColumn(), textColumn("description", "Description"), dateColumn()]}
           />
         </TabsContent>
       </Tabs>
+      {isOrgAdmin ? <ResourceFormDialog
+        title="Bulk import users"
+        description="Paste CSV rows: email,first_name,last_name,password,lab_id,role_id,card_uid"
+        fields={[{ name: "rows", label: "CSV rows", type: "textarea", required: true }]}
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onSubmit={async (values) => {
+          const users = String(values.rows)
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [email, first_name, last_name, password, lab_id, role_id, rfid_uid] = line
+                .split(",")
+                .map((part) => part.trim());
+              return {
+                email,
+                first_name,
+                last_name,
+                password,
+                lab_id: lab_id ? Number(lab_id) : undefined,
+                role_id: role_id ? Number(role_id) : undefined,
+                rfid_uid: rfid_uid || undefined,
+              };
+            });
+          await apiClient.create(endpoints.organisations.bulkUserImport(orgId), { users }, { orgId });
+          await members.reload();
+        }}
+      /> : null}
     </PageFrame>
   );
 }
 
 export function LabMembersPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedMember, setSelectedMember] = useState<ApiRow | null>(null);
   const orgMembers = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.members(orgId) : null,
@@ -436,8 +498,8 @@ export function LabMembersPage() {
             { name: "role_id", label: "Role", type: "select", required: true, options: toOptions(roles.rows) },
           ]}
           orgId={orgId}
-          createPath={`${endpoints.labs.members(orgId, labId)}add/`}
-          deletePath={(row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/`}
+          createPath={isOrgAdmin || isLabManager ? `${endpoints.labs.members(orgId, labId)}add/` : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/` : undefined}
           createLabel="Assign member"
           columns={[
             memberColumn(),
@@ -459,8 +521,8 @@ export function LabMembersPage() {
             resource={rfids}
             fields={[{ name: "rfid_uid", label: "Card UID", required: true }]}
             orgId={orgId}
-            createPath={endpoints.labs.rfids(labId, selectedMember.id)}
-            deletePath={(row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/`}
+            createPath={isOrgAdmin || isLabManager ? endpoints.labs.rfids(labId, selectedMember.id) : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/` : undefined}
             createLabel="Add card"
             columns={[textColumn("rfid_uid", "Card UID"), dateColumn()]}
           />
@@ -584,6 +646,7 @@ export function LabDashboardPage() {
 
 export function InventoryPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [adjusting, setAdjusting] = useState<ApiRow | null>(null);
   const [movementItem, setMovementItem] = useState<ApiRow | null>(null);
   const items = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -626,9 +689,9 @@ export function InventoryPage() {
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.items(labId)}
-            updatePath={(row) => endpoints.inventory.item(labId, row.id)}
-            deletePath={(row) => endpoints.inventory.item(labId, row.id)}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.items(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
             createLabel="Add item"
             columns={[
               nameColumn(),
@@ -640,9 +703,11 @@ export function InventoryPage() {
                 header: "Stock",
                 render: (row) => (
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setAdjusting(row)}>
-                      Adjust
-                    </Button>
+                    {isOrgAdmin || isLabManager ? (
+                      <Button size="sm" variant="outline" onClick={() => setAdjusting(row)}>
+                        Adjust
+                      </Button>
+                    ) : null}
                     <Button size="sm" variant="outline" onClick={() => setMovementItem(row)}>
                       Movements
                     </Button>
@@ -661,9 +726,9 @@ export function InventoryPage() {
               { name: "parent", label: "Parent category", type: "select", options: toOptions(categories.rows) },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.categories(labId)}
-            updatePath={(row) => `${endpoints.inventory.categories(labId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.inventory.categories(labId)}${row.id}/`}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.categories(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
             createLabel="Add category"
             columns={[nameColumn(), dateColumn()]}
           />
@@ -677,15 +742,15 @@ export function InventoryPage() {
               { name: "symbol", label: "Symbol", required: true },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.units(labId)}
-            updatePath={(row) => `${endpoints.inventory.units(labId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.inventory.units(labId)}${row.id}/`}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.units(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
             createLabel="Add unit"
             columns={[nameColumn(), textColumn("symbol", "Symbol"), dateColumn()]}
           />
         </TabsContent>
       </Tabs>
-      <ResourceFormDialog
+      {isOrgAdmin || isLabManager ? <ResourceFormDialog
         title="Adjust stock"
         description={adjusting ? `Update quantity for ${displayName(adjusting)}.` : undefined}
         open={Boolean(adjusting)}
@@ -701,7 +766,7 @@ export function InventoryPage() {
           await apiClient.create(endpoints.inventory.adjust(labId, adjusting.id), values, { orgId });
           await items.reload();
         }}
-      />
+      /> : null}
       {movementItem ? (
         <PremiumDataTable
           title="Stock movements"
@@ -729,19 +794,57 @@ export function InventoryPage() {
 
 export function MachinesPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [statusMachine, setStatusMachine] = useState<ApiRow | null>(null);
   const [reservationMachine, setReservationMachine] = useState<ApiRow | null>(null);
   const [logMachine, setLogMachine] = useState<ApiRow | null>(null);
+  const [bookingMachine, setBookingMachine] = useState<ApiRow | null>(null);
+  const [bookingMachineId, setBookingMachineId] = useState<string>("");
+  const [bookingDate, setBookingDate] = useState<string>("");
+  const [bookingSlotStart, setBookingSlotStart] = useState<string>("");
+  const [bookingSlotEnd, setBookingSlotEnd] = useState<string>("");
+  const [bookingStep, setBookingStep] = useState(1);
+  const [bookingProject, setBookingProject] = useState("");
+  const [bookingMaterialItem, setBookingMaterialItem] = useState("");
+  const [bookingMaterialQty, setBookingMaterialQty] = useState("");
+  const [bookingNotes, setBookingNotes] = useState("");
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
   const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
+  const inventoryItems = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const reservations = usePagedResource<ApiRow>(
     labId && reservationMachine ? endpoints.machines.reservations(labId, reservationMachine.id) : null,
+    orgId
+  );
+  const bookingReservations = usePagedResource<ApiRow>(
+    labId && bookingMachineId ? endpoints.machines.reservations(labId, bookingMachineId) : null,
     orgId
   );
   const logs = usePagedResource<ApiRow>(
     labId && logMachine ? endpoints.machines.logs(labId, logMachine.id) : null,
     orgId
   );
+  const bookingMachineData = machines.rows.find((row) => String(row.id) === bookingMachineId) ?? bookingMachine;
+  const existingReservations = bookingReservations.rows;
+  const slotCandidates = useMemo(() => {
+    if (!bookingDate) return [];
+    const slots: { from: string; till: string; blocked: boolean }[] = [];
+    for (let hour = 9; hour < 18; hour++) {
+      const from = `${bookingDate}T${String(hour).padStart(2, "0")}:00`;
+      const till = `${bookingDate}T${String(hour + 1).padStart(2, "0")}:00`;
+      const fromDate = new Date(from);
+      const tillDate = new Date(till);
+      const blocked = existingReservations.some((reservation) => {
+        if (!reservation.booked_from || !reservation.booked_till) return false;
+        const rFrom = new Date(String(reservation.booked_from));
+        const rTill = new Date(String(reservation.booked_till));
+        return rFrom < tillDate && rTill > fromDate && reservation.status !== "CANCELLED" && reservation.status !== "REJECTED";
+      });
+      slots.push({ from, till, blocked });
+    }
+    return slots;
+  }, [bookingDate, existingReservations]);
 
   if (!labId) return null;
   return (
@@ -757,9 +860,9 @@ export function MachinesPage() {
           resource={machines}
           fields={machineFields}
           orgId={orgId}
-          createPath={endpoints.machines.list(labId)}
-          updatePath={(row) => endpoints.machines.detail(labId, row.id)}
-          deletePath={(row) => endpoints.machines.detail(labId, row.id)}
+          createPath={isOrgAdmin || isLabManager ? endpoints.machines.list(labId) : undefined}
+          updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
           createLabel="Register machine"
           columns={[
             nameColumn(),
@@ -770,11 +873,24 @@ export function MachinesPage() {
               header: "Operations",
               render: (row) => (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
-                    Status
-                  </Button>
+                  {isLabManager || isOrgAdmin ? (
+                    <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
+                      Status
+                    </Button>
+                  ) : null}
                   <Button size="sm" variant="outline" onClick={() => setReservationMachine(row)}>
                     Reservations
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setBookingMachine(row);
+                    setBookingStep(1);
+                    setBookingMachineId(String(row.id));
+                    setBookingDate("");
+                    setBookingSlotStart("");
+                    setBookingSlotEnd("");
+                    setBookingError(null);
+                  }}>
+                    Book slot
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setLogMachine(row)}>
                     Logs
@@ -792,38 +908,233 @@ export function MachinesPage() {
               { name: "project", label: "Project", type: "select", required: true, options: toOptions(projects.rows) },
               { name: "booked_from", label: "Booked from", type: "datetime-local", required: true },
               { name: "booked_till", label: "Booked till", type: "datetime-local", required: true },
+              { name: "material_item_id", label: "Material item", type: "select", options: toOptions(inventoryItems.rows) },
+              { name: "material_quantity", label: "Material quantity", type: "number" },
               { name: "notes", label: "Notes", type: "textarea" },
             ]}
             orgId={orgId}
             createPath={endpoints.machines.reservations(labId, reservationMachine.id)}
             createLabel="Reserve machine"
+            transformPayload={(values) => {
+              const payload: Record<string, unknown> = {
+                project: Number(values.project),
+                booked_from: values.booked_from,
+                booked_till: values.booked_till,
+                notes: values.notes,
+              };
+              if (values.material_item_id && values.material_quantity) {
+                payload.materials = [
+                  {
+                    item_id: Number(values.material_item_id),
+                    quantity: Number(values.material_quantity),
+                  },
+                ];
+              }
+              return payload;
+            }}
             columns={[textColumn("project", "Project"), statusColumn(), textColumn("booked_from", "From"), textColumn("booked_till", "Till")]}
           />
         ) : (
           <EmptyState title="Select a machine" description="Open Reservations to view and create bookings." />
         )}
       </div>
-      <ResourceFormDialog
-        title="Update machine status"
-        open={Boolean(statusMachine)}
-        onOpenChange={(open) => !open && setStatusMachine(null)}
-        fields={[
-          {
-            name: "status",
-            label: "Status",
-            type: "select",
-            required: true,
-            options: ["ACTIVE", "OCCUPIED", "OFF", "UNDER_MAINTENANCE", "RETIRED", "FAULTY"].map(toOption),
-          },
-          { name: "reference", label: "Reference" },
-          { name: "notes", label: "Notes", type: "textarea" },
-        ]}
-        onSubmit={async (values) => {
-          if (!statusMachine) return;
-          await apiClient.update(endpoints.machines.status(labId, statusMachine.id), values, { orgId });
-          await machines.reload();
+      {isLabManager || isOrgAdmin ? (
+        <ResourceFormDialog
+          title="Update machine status"
+          open={Boolean(statusMachine)}
+          onOpenChange={(open) => !open && setStatusMachine(null)}
+          fields={[
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              required: true,
+              options: ["ACTIVE", "OCCUPIED", "OFF", "UNDER_MAINTENANCE", "RETIRED", "FAULTY"].map(toOption),
+            },
+            { name: "reference", label: "Reference" },
+            { name: "notes", label: "Notes", type: "textarea" },
+          ]}
+          onSubmit={async (values) => {
+            if (!statusMachine) return;
+            await apiClient.update(endpoints.machines.status(labId, statusMachine.id), values, { orgId });
+            await machines.reload();
+          }}
+        />
+      ) : null}
+      <Dialog
+        open={Boolean(bookingMachine)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBookingMachine(null);
+            setBookingStep(1);
+            setBookingError(null);
+          }
         }}
-      />
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book machine slot</DialogTitle>
+            <DialogDescription>
+              Calendar + open slots + machine matrix with material request.
+            </DialogDescription>
+          </DialogHeader>
+          {bookingMachine ? (
+            <div className="space-y-4">
+              <div className="text-xs text-slate-500">Step {bookingStep} of 4</div>
+              {bookingStep === 1 ? (
+                <div className="space-y-2">
+                  <Label>Choose project</Label>
+                  <Select value={bookingProject} onValueChange={setBookingProject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.rows.map((project) => (
+                        <SelectItem key={String(project.id)} value={String(project.id)}>
+                          {displayName(project)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {bookingStep === 2 ? (
+                <div className="space-y-2">
+                  <Label>Machine matrix</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                    {machines.rows.map((machine) => (
+                      <button
+                        key={String(machine.id)}
+                        type="button"
+                          className={`rounded-xl border p-3 text-left transition ${
+                            String(machine.id) === bookingMachineId
+                              ? "border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:text-teal-100"
+                              : "border-slate-200 hover:border-teal-300 dark:border-slate-700 dark:hover:border-teal-700"
+                          }`}
+                        onClick={() => setBookingMachineId(String(machine.id))}
+                      >
+                        <div className="font-medium">{displayName(machine)}</div>
+                        <div className="text-xs text-slate-500">Model: {formatValue(machine.model_number)}</div>
+                        <div className="text-xs text-slate-500">Photo: {machine.image_url ? "Available" : "Not set"}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {bookingStep === 3 ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Calendar date</Label>
+                    <Input type="date" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Open slots</Label>
+                    <div className="grid grid-cols-3 gap-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-3 dark:border-teal-800/60 dark:from-teal-950/30 dark:to-slate-950">
+                      {slotCandidates.map((slot) => (
+                        <Button
+                          key={slot.from}
+                          type="button"
+                          size="sm"
+                          className={
+                            bookingSlotStart === slot.from
+                              ? "bg-teal-600 text-white hover:bg-teal-700"
+                              : "border-teal-300 text-teal-700 hover:bg-teal-100 dark:border-teal-700 dark:text-teal-200 dark:hover:bg-teal-900/30"
+                          }
+                          variant="outline"
+                          disabled={slot.blocked}
+                          onClick={() => {
+                            setBookingSlotStart(slot.from);
+                            setBookingSlotEnd(slot.till);
+                          }}
+                        >
+                          {slot.from.slice(11, 16)}-{slot.till.slice(11, 16)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {bookingStep === 4 ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Material item (optional)</Label>
+                    <Select value={bookingMaterialItem} onValueChange={setBookingMaterialItem}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select material item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inventoryItems.rows.map((item) => (
+                          <SelectItem key={String(item.id)} value={String(item.id)}>
+                            {displayName(item)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Material quantity</Label>
+                    <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
+                  </div>
+                </div>
+              ) : null}
+              {bookingError ? <div className="text-sm text-rose-600">{bookingError}</div> : null}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBookingStep((current) => Math.max(1, current - 1))} disabled={bookingStep === 1}>
+                  Back
+                </Button>
+                {bookingStep < 4 ? (
+                  <Button
+                    onClick={() => {
+                      if (bookingStep === 1 && !bookingProject) return setBookingError("Select a project.");
+                      if (bookingStep === 2 && !bookingMachineId) return setBookingError("Select a machine.");
+                      if (bookingStep === 3 && (!bookingSlotStart || !bookingSlotEnd)) return setBookingError("Select an open slot.");
+                      setBookingError(null);
+                      setBookingStep((current) => current + 1);
+                    }}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={isBooking}
+                    onClick={async () => {
+                      if (!labId || !bookingMachineData) return;
+                      setIsBooking(true);
+                      setBookingError(null);
+                      try {
+                        const payload: Record<string, unknown> = {
+                          project: Number(bookingProject),
+                          machine: Number(bookingMachineId),
+                          booked_from: bookingSlotStart,
+                          booked_till: bookingSlotEnd,
+                          notes: bookingNotes,
+                        };
+                        if (bookingMaterialItem && bookingMaterialQty) {
+                          payload.materials = [{ item_id: Number(bookingMaterialItem), quantity: Number(bookingMaterialQty) }];
+                        }
+                        await apiClient.create(endpoints.machines.reservations(labId, bookingMachineData.id), payload, { orgId });
+                        setBookingMachine(null);
+                        await reservations.reload();
+                        await bookingReservations.reload();
+                      } catch (error) {
+                        setBookingError(normalizeApiError(error).message);
+                      } finally {
+                        setIsBooking(false);
+                      }
+                    }}
+                  >
+                    {isBooking ? "Submitting..." : "Submit booking request"}
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       {logMachine ? (
         <PremiumDataTable
           title="Machine status logs"
@@ -851,6 +1162,7 @@ export function MachinesPage() {
 
 export function ProjectsPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedProject, setSelectedProject] = useState<ApiRow | null>(null);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventory = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -877,9 +1189,9 @@ export function ProjectsPage() {
           resource={projects}
           fields={projectFields}
           orgId={orgId}
-          createPath={endpoints.projects.list(labId)}
-          updatePath={(row) => endpoints.projects.detail(labId, row.id)}
-          deletePath={(row) => endpoints.projects.detail(labId, row.id)}
+          createPath={isOrgAdmin || isLabManager ? endpoints.projects.list(labId) : undefined}
+          updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
           createLabel="New project"
           columns={[
             nameColumn(),
@@ -1050,6 +1362,7 @@ export function AttendancePage() {
 
 export function ApprovalsPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const attendance = usePagedResource<ApiRow>(labId ? endpoints.attendance.list(labId) : null, orgId);
   const joinRequests = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.joinRequests(orgId) : null,
@@ -1076,6 +1389,12 @@ export function ApprovalsPage() {
         metric("Machines", machineReservations.rows.length, "Pending reservations", <Wrench />),
       ]}
     >
+      {!isOrgAdmin && !isLabManager ? (
+        <EmptyState
+          title="Approval access required"
+          description="This page is available to organisation admins and lab managers."
+        />
+      ) : (
       <Tabs defaultValue="join" className="gap-6">
         <TabsList>
           <TabsTrigger value="join">Join requests</TabsTrigger>
@@ -1182,6 +1501,7 @@ export function ApprovalsPage() {
           />
         </TabsContent>
       </Tabs>
+      )}
     </PageFrame>
   );
 }
@@ -1336,6 +1656,85 @@ export function MyOrdersPage() {
               textColumn("booked_from", "From"),
               textColumn("booked_till", "Till"),
             ]}
+          />
+        </TabsContent>
+      </Tabs>
+    </PageFrame>
+  );
+}
+
+export function NotificationsPage() {
+  const { orgId } = useParams();
+  const [tab, setTab] = useState<"unread" | "all" | "grouped">("unread");
+  const notifications = usePagedResource<ApiRow>(endpoints.users.notifications, orgId);
+  const unreadRows = notifications.rows.filter((row) => !row.is_read);
+  const groupedRows = Object.entries(
+    notifications.rows.reduce<Record<string, number>>((accumulator, row) => {
+      const key = String(row.type ?? "GENERAL");
+      accumulator[key] = (accumulator[key] ?? 0) + 1;
+      return accumulator;
+    }, {})
+  ).map(([type, count], index) => ({ id: `${type}-${index}`, type, count }));
+  const activeRows = tab === "unread" ? unreadRows : tab === "all" ? notifications.rows : groupedRows;
+
+  return (
+    <PageFrame
+      eyebrow="Updates"
+      title="Notifications"
+      description="Review booking updates, approvals, and slot availability alerts."
+      metrics={[
+        metric("Total", notifications.rows.length, "Recent updates", <Activity />),
+        metric("Unread", unreadRows.length, "Needs attention", <Radio />),
+      ]}
+    >
+      <Tabs defaultValue="unread" className="gap-6" onValueChange={(value) => setTab(value as "unread" | "all" | "grouped")}>
+        <TabsList>
+          <TabsTrigger value="unread">Unread ({unreadRows.length})</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="grouped">Grouped</TabsTrigger>
+        </TabsList>
+        <TabsContent value="unread">
+          <PremiumDataTable
+            title="Notification inbox"
+            description="Unread updates requiring action."
+            rows={activeRows}
+            getRowKey={(row) => String(row.id)}
+            columns={[textColumn("title", "Title"), textColumn("message", "Message"), textColumn("type", "Type"), dateColumn()]}
+            next={notifications.next}
+            previous={notifications.previous}
+            onNext={notifications.loadNext}
+            onPrevious={notifications.loadPrevious}
+            emptyTitle="No unread notifications"
+            emptyDescription="You are all caught up."
+            actions={<Button variant="outline" onClick={() => void notifications.reload()}>Refresh</Button>}
+          />
+        </TabsContent>
+        <TabsContent value="all">
+          <ResourceCrudTable
+            title="All notifications"
+            resource={{ ...notifications, rows: activeRows as ApiRow[] }}
+            fields={[]}
+            orgId={orgId}
+            columns={[textColumn("title", "Title"), textColumn("message", "Message"), textColumn("type", "Type"), dateColumn()]}
+            rowActions={[
+              {
+                label: "Mark read",
+                run: async (row) => {
+                  await apiClient.update(endpoints.users.markNotificationRead(row.id), {}, { orgId });
+                },
+              },
+            ]}
+          />
+        </TabsContent>
+        <TabsContent value="grouped">
+          <PremiumDataTable
+            title="Grouped notifications"
+            description="Grouped by notification type."
+            rows={activeRows}
+            getRowKey={(row) => String(row.id)}
+            columns={[textColumn("type", "Type"), textColumn("count", "Count")]}
+            emptyTitle="No notifications"
+            emptyDescription="No grouped activity available."
           />
         </TabsContent>
       </Tabs>
@@ -1850,6 +2249,34 @@ function dateColumn<T extends ApiRow>(): PremiumColumn<T> {
     header: "Updated",
     render: (row) => <span className="text-slate-500">{formatDate(row.updated_at ?? row.created_at)}</span>,
   };
+}
+
+function useLabAccessRole(orgId?: string, labId?: string) {
+  const { user } = useAuth();
+  const orgMembers = usePagedResource<ApiRow>(orgId ? endpoints.organisations.members(orgId) : null, orgId);
+  const labMembers = usePagedResource<ApiRow>(
+    orgId && labId ? endpoints.labs.members(orgId, labId) : null,
+    orgId
+  );
+
+  return useMemo(() => {
+    const orgMember = orgMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    const labMember = labMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    const roleName = String(labMember?.role?.name ?? "").toLowerCase();
+    const isOrgAdmin = Boolean(orgMember?.is_admin);
+    const isLabManager = roleName.includes("manager") || roleName.includes("mentor");
+    return { isOrgAdmin, isLabManager };
+  }, [labMembers.rows, orgMembers.rows, user?.id]);
+}
+
+function useOrgRole(orgId?: string) {
+  const { user } = useAuth();
+  const orgMembers = usePagedResource<ApiRow>(orgId ? endpoints.organisations.members(orgId) : null, orgId);
+
+  return useMemo(() => {
+    const orgMember = orgMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    return { isOrgAdmin: Boolean(orgMember?.is_admin) };
+  }, [orgMembers.rows, user?.id]);
 }
 
 function toOptions(rows: ApiRow[]): FieldOption[] {
