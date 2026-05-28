@@ -50,9 +50,9 @@ export function ProfilePage() {
     <PageFrame
       eyebrow="Account"
       title="Profile"
-      description="Keep your MIS identity aligned with the Django user profile."
+      description="Manage your profile details used across Technoventor MIS."
       metrics={[
-        metric("Session", user?.email ?? "Signed in", "JWT profile", <UserCircle />),
+        metric("Account", user?.email ?? "Signed in", "Profile details", <UserCircle />),
       ]}
     >
       <PremiumSurface className="p-6">
@@ -85,9 +85,9 @@ export function OrganisationSettingsPage() {
     <PageFrame
       eyebrow="Settings"
       title="Organization"
-      description="Update tenant profile fields through the active organisation API."
+      description="Update organisation profile and operational details."
       metrics={[
-        metric("Organisation", organisation?.name ?? `#${orgId}`, "Editable tenant", <Building2 />),
+        metric("Organisation", organisation?.name ?? `#${orgId}`, "Profile", <Building2 />),
       ]}
     >
       <PremiumSurface className="p-6">
@@ -159,10 +159,10 @@ export function ReportsPage() {
     <PageFrame
       eyebrow="Insights"
       title="Reports"
-      description="Premium reporting surface for organisation and lab analytics."
+      description="Reports and analytics for organisation and lab activity."
       metrics={[
         metric("Scope", labId ? `Lab #${labId}` : `Org #${orgId}`, "Reporting context", <BarChart3 />),
-        metric("Provider", reportUrl ? "Metabase" : "Not configured", "VITE_PUBLIC_METABASE_ENDPOINT", <Settings />),
+        metric("Provider", reportUrl ? "Connected" : "Not configured", "Reporting service", <Settings />),
       ]}
     >
       {reportUrl ? (
@@ -177,7 +177,7 @@ export function ReportsPage() {
       ) : (
         <EmptyState
           title="Reporting endpoint not configured"
-          description="Set VITE_PUBLIC_METABASE_ENDPOINT to expose the premium reporting dashboard."
+          description="Reports dashboard is not configured yet. Contact your administrator to enable it."
           icon={<BarChart3 className="size-7" />}
         />
       )}

@@ -65,10 +65,7 @@ function getEnvBaseUrl(): string {
   const meta = import.meta as ImportMeta & {
     env?: Record<string, string | undefined>;
   };
-  return (
-    meta.env?.VITE_PUBLIC_API_ENDPOINT ??
-    "https://technoventor-mis-django-backend.onrender.com/api/v1/"
-  );
+  return meta.env?.VITE_PUBLIC_API_ENDPOINT ?? "/api/v1/";
 }
 
 function normalizeBaseUrl(value: string): string {
@@ -337,6 +334,14 @@ export const endpoints = {
     invites: (orgId: string | number) => `organisations/${orgId}/invites/`,
     joinRequests: (orgId: string | number) =>
       `organisations/${orgId}/join-requests/`,
+    bulkUserImport: (orgId: string | number) =>
+      `organisations/${orgId}/bulk-users/import/`,
+  },
+  users: {
+    notifications: "users/notifications/",
+    markNotificationRead: (notificationId: string | number) =>
+      `users/notifications/${notificationId}/read/`,
+    notificationStream: "users/notifications/stream/",
   },
   iam: {
     permissions: "iam/permissions/",

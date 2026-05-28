@@ -5,11 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pnpm --filter mis dev --host",
-    "build": "pnpm --filter mis build",
     "mis_dev": "pnpm --filter mis dev --host",
     "mis_build": "pnpm --filter mis build",
-    "premium_build": "pnpm --filter mis build"
+    "hub_dev": "pnpm --filter hub dev --host",
+    "hub_build": "pnpm --filter hub build",
+    "premium_build": "pnpm --filter mis build && pnpm --filter hub build"
   },
   "keywords": [],
   "author": "",

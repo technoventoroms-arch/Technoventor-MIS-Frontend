@@ -21,7 +21,7 @@ function lazyElement<T extends Record<string, unknown>>(
 function RouteFallback() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-slate-400">
-      Loading premium workspace...
+      Loading workspace…
     </div>
   );
 }
@@ -49,7 +49,7 @@ const routes: RouteObject[] = [
         path: "",
         element: page("MisShell"),
         children: [
-          { index: true, element: workflowPage("OrganisationSwitcherPage") },
+          { index: true, element: page("OrganisationSwitcherPage") },
           { path: "profile", element: accountPage("ProfilePage") },
           { path: "request_lab", element: workflowPage("RequestLabPage") },
           {
@@ -61,7 +61,7 @@ const routes: RouteObject[] = [
             element: workflowPage("CreateOrganisationPage"),
           },
           { path: ":orgId", element: page("RedirectToOrgDashboard") },
-          { path: ":orgId/dashboard", element: workflowPage("OrgDashboardPage") },
+          { path: ":orgId/dashboard", element: page("OrgDashboardPage") },
           { path: ":orgId/settings", element: accountPage("OrganisationSettingsPage") },
           { path: ":orgId/organization", element: accountPage("OrganisationSettingsPage") },
           { path: ":orgId/organization/transactions", element: workflowPage("BillingPage") },
@@ -78,9 +78,9 @@ const routes: RouteObject[] = [
           { path: ":orgId/transactions", element: workflowPage("BillingPage") },
           {
             path: ":orgId/lab/:labId",
-            element: workflowPage("LabDashboardPage"),
+            element: page("LabDashboardPage"),
           },
-          { path: ":orgId/lab/:labId/dashboard", element: workflowPage("LabDashboardPage") },
+          { path: ":orgId/lab/:labId/dashboard", element: page("LabDashboardPage") },
           { path: ":orgId/lab/:labId/users", element: workflowPage("LabMembersPage") },
           { path: ":orgId/lab/:labId/users/:userId/attendance", element: workflowPage("AttendancePage") },
           { path: ":orgId/lab/:labId/inventory", element: workflowPage("InventoryPage") },
@@ -97,6 +97,7 @@ const routes: RouteObject[] = [
           { path: ":orgId/lab/:labId/approval", element: workflowPage("ApprovalsPage") },
           { path: ":orgId/lab/:labId/cart", element: workflowPage("CartPage") },
           { path: ":orgId/lab/:labId/orders", element: workflowPage("MyOrdersPage") },
+          { path: ":orgId/lab/:labId/notifications", element: workflowPage("NotificationsPage") },
           { path: ":orgId/lab/:labId/scan-machine", element: workflowPage("ScanMachinePage") },
           { path: ":orgId/lab/:labId/settings", element: accountPage("LabSettingsPage") },
           { path: ":orgId/lab/:labId/edit-lab", element: accountPage("LabSettingsPage") },

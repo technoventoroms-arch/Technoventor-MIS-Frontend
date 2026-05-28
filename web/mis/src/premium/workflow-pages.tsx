@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ReactNode } from "react";
+﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -11,6 +11,7 @@ import {
   FlaskConical,
   Gauge,
   ListChecks,
+  Loader2,
   Plus,
   Radio,
   ScanBarcode,
@@ -29,7 +30,25 @@ import {
   type PremiumColumn,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@mono/shared_ui/components/ui/dialog";
+import { Label } from "@mono/shared_ui/components/ui/label";
+import { Input } from "@mono/shared_ui/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@mono/shared_ui/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mono/shared_ui/components/ui/tabs";
+import { Textarea } from "@mono/shared_ui/components/ui/textarea";
 import {
   apiClient,
   endpoints,
@@ -38,6 +57,7 @@ import {
 } from "@mono/api_client";
 
 import { usePagedResource } from "./api-hooks";
+import { useAuth } from "./auth";
 import {
   ResourceCrudTable,
   ResourceForm,
@@ -75,6 +95,20 @@ const labFields: ResourceField[] = [
   { name: "name", label: "Lab name", required: true },
   { name: "phone", label: "Phone" },
   { name: "image_url", label: "Image URL" },
+  {
+    name: "booking_enabled",
+    label: "Allow bookings",
+    type: "select",
+    options: [
+      { value: "true", label: "Enabled" },
+      { value: "false", label: "Disabled" },
+    ],
+    defaultValue: "true",
+  },
+  { name: "slot_duration_minutes", label: "Slot duration (minutes)", type: "number", defaultValue: "60" },
+  { name: "no_show_grace_minutes", label: "No-show grace (minutes)", type: "number", defaultValue: "30" },
+  { name: "booking_window_start", label: "Booking start (HH:MM)", placeholder: "09:00" },
+  { name: "booking_window_end", label: "Booking end (HH:MM)", placeholder: "18:00" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -109,16 +143,16 @@ export function OrganisationSwitcherPage() {
     <PageFrame
       eyebrow="Workspace"
       title="My Organizations"
-      description="Start from the tenant that owns labs, members, billing, and operating data."
+      description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
       metrics={[
-        metric("Organisations", resource.rows.length, "Accessible tenants", <Building2 />),
-        metric("Session", "JWT", "Django compatible", <Gauge />),
-        metric("Operations", "Live", "No placeholder mode", <Activity />),
+        metric("Organisations", resource.rows.length, "Your organisations", <Building2 />),
+        metric("Access", "Secure", "Role-based access", <Gauge />),
+        metric("Operations", "Live", "Production workflow", <Activity />),
       ]}
     >
       <PremiumDataTable
         title="My Organizations"
-        description={resource.error?.message ?? "Tenant records from the live MIS API."}
+        description={resource.error?.message ?? "Your organisations and available workspaces."}
         columns={[
           nameColumn(),
           {
@@ -172,7 +206,7 @@ export function CreateOrganisationPage() {
     <PageFrame
       eyebrow="Create"
       title="Create New Organization"
-      description="Launch a tenant with admin ownership, billing readiness, and lab operations enabled."
+      description="Create a new organisation with you as the administrator. You can add labs and invite members next."
     >
       <PremiumSurface className="p-6">
         <ResourceForm
@@ -197,14 +231,14 @@ export function RequestLabPage() {
     <PageFrame
       eyebrow="Join Lab"
       title="Join Lab"
-      description="Premium redesign of the previous MIS request-lab flow."
+      description="Request access to labs and continue the onboarding workflow."
       metrics={[
         metric("Labs", availableLabs.rows.length, "Available to request", <DoorOpen />),
       ]}
     >
       <ResourceCrudTable
         title="Available Labs"
-        description={availableLabs.error?.message ?? "Discover active labs and submit the same join request as the previous MIS."}
+        description={availableLabs.error?.message ?? "Discover active labs and submit join requests."}
         resource={availableLabs}
         fields={[]}
         columns={[
@@ -248,7 +282,7 @@ export function OrgDashboardPage() {
     <PageFrame
       eyebrow="Organisation"
       title="Dashboard"
-      description="A premium overview of labs, teams, subscriptions, and high-priority work."
+      description="Overview of labs, teams, subscriptions, and high-priority work."
       metrics={[
         metric("Labs", labs.rows.length, "Facilities online", <FlaskConical />),
         metric("Members", members.rows.length, "Organisation users", <Users />),
@@ -265,6 +299,7 @@ export function OrgDashboardPage() {
 
 export function LabsPage() {
   const { orgId } = useParams();
+  const { isOrgAdmin } = useOrgRole(orgId);
   const resource = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
 
   if (!orgId) return null;
@@ -277,14 +312,20 @@ export function LabsPage() {
     >
       <ResourceCrudTable
         title="Labs"
-        description="Organisation-scoped labs from Django REST."
+        description="Organisation-scoped labs with workspace access and controls."
         resource={resource}
         fields={labFields}
         orgId={orgId}
-        createPath={endpoints.labs.list(orgId)}
-        updatePath={(row) => endpoints.labs.detail(orgId, row.id)}
-        deletePath={(row) => endpoints.labs.detail(orgId, row.id)}
+        createPath={isOrgAdmin ? endpoints.labs.list(orgId) : undefined}
+        updatePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
+        deletePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
         createLabel="Create lab"
+        transformPayload={(values) => ({
+          ...values,
+          booking_enabled: values.booking_enabled === "true",
+          slot_duration_minutes: values.slot_duration_minutes ? Number(values.slot_duration_minutes) : undefined,
+          no_show_grace_minutes: values.no_show_grace_minutes ? Number(values.no_show_grace_minutes) : undefined,
+        })}
         columns={[
           nameColumn(),
           textColumn("phone", "Phone"),
@@ -305,6 +346,8 @@ export function LabsPage() {
 
 export function OrgUsersPage() {
   const { orgId } = useParams();
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const { isOrgAdmin } = useOrgRole(orgId);
   const labs = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
   const roles = usePagedResource<ApiRow>(orgId ? endpoints.iam.roles(orgId) : null, orgId);
   const members = usePagedResource<ApiRow>(
@@ -335,6 +378,13 @@ export function OrgUsersPage() {
         </TabsList>
         <TabsContent value="members">
           <CompactTable title="Members" resource={members} columns={[memberColumn(), dateColumn()]} />
+          {isOrgAdmin ? (
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                Bulk import users
+              </Button>
+            </div>
+          ) : null}
         </TabsContent>
         <TabsContent value="invites">
           <ResourceCrudTable
@@ -346,7 +396,7 @@ export function OrgUsersPage() {
               { name: "role", label: "Role", type: "select", options: toOptions(roles.rows) },
             ]}
             orgId={orgId}
-            createPath={endpoints.organisations.invites(orgId)}
+            createPath={isOrgAdmin ? endpoints.organisations.invites(orgId) : undefined}
             createLabel="Invite member"
             columns={[textColumn("email", "Email"), textColumn("status", "Status"), dateColumn()]}
           />
@@ -360,20 +410,50 @@ export function OrgUsersPage() {
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={endpoints.iam.roles(orgId)}
-            updatePath={(row) => `${endpoints.iam.roles(orgId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.iam.roles(orgId)}${row.id}/`}
+            createPath={isOrgAdmin ? endpoints.iam.roles(orgId) : undefined}
+            updatePath={isOrgAdmin ? (row) => `${endpoints.iam.roles(orgId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin ? (row) => `${endpoints.iam.roles(orgId)}${row.id}/` : undefined}
             createLabel="Create role"
             columns={[nameColumn(), textColumn("description", "Description"), dateColumn()]}
           />
         </TabsContent>
       </Tabs>
+      {isOrgAdmin ? <ResourceFormDialog
+        title="Bulk import users"
+        description="Paste CSV rows: email,first_name,last_name,password,lab_id,role_id,card_uid"
+        fields={[{ name: "rows", label: "CSV rows", type: "textarea", required: true }]}
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onSubmit={async (values) => {
+          const users = String(values.rows)
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [email, first_name, last_name, password, lab_id, role_id, rfid_uid] = line
+                .split(",")
+                .map((part) => part.trim());
+              return {
+                email,
+                first_name,
+                last_name,
+                password,
+                lab_id: lab_id ? Number(lab_id) : undefined,
+                role_id: role_id ? Number(role_id) : undefined,
+                rfid_uid: rfid_uid || undefined,
+              };
+            });
+          await apiClient.create(endpoints.organisations.bulkUserImport(orgId), { users }, { orgId });
+          await members.reload();
+        }}
+      /> : null}
     </PageFrame>
   );
 }
 
 export function LabMembersPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedMember, setSelectedMember] = useState<ApiRow | null>(null);
   const orgMembers = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.members(orgId) : null,
@@ -394,10 +474,10 @@ export function LabMembersPage() {
     <PageFrame
       eyebrow="Lab access"
       title="Users"
-      description="Assign organisation users to this lab, control roles, and issue RFID cards."
+      description="Assign organisation users to this lab, set roles, and manage access cards."
       metrics={[
         metric("Lab members", members.rows.length, "Active assignments", <Users />),
-        metric("RFID cards", rfids.rows.length, "Selected member", <Radio />),
+        metric("Access cards", rfids.rows.length, "Selected member", <Radio />),
       ]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -418,18 +498,18 @@ export function LabMembersPage() {
             { name: "role_id", label: "Role", type: "select", required: true, options: toOptions(roles.rows) },
           ]}
           orgId={orgId}
-          createPath={`${endpoints.labs.members(orgId, labId)}add/`}
-          deletePath={(row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/`}
+          createPath={isOrgAdmin || isLabManager ? `${endpoints.labs.members(orgId, labId)}add/` : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/` : undefined}
           createLabel="Assign member"
           columns={[
             memberColumn(),
             roleColumn(),
             {
               key: "rfid",
-              header: "RFID",
+              header: "Access",
               render: (row) => (
                 <Button size="sm" variant="outline" onClick={() => setSelectedMember(row)}>
-                  Manage RFID
+                  Manage card
                 </Button>
               ),
             },
@@ -437,17 +517,17 @@ export function LabMembersPage() {
         />
         {selectedMember ? (
           <ResourceCrudTable
-            title="RFID cards"
+            title="Access cards"
             resource={rfids}
-            fields={[{ name: "rfid_uid", label: "RFID UID", required: true }]}
+            fields={[{ name: "rfid_uid", label: "Card UID", required: true }]}
             orgId={orgId}
-            createPath={endpoints.labs.rfids(labId, selectedMember.id)}
-            deletePath={(row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/`}
-            createLabel="Add RFID"
-            columns={[textColumn("rfid_uid", "RFID UID"), dateColumn()]}
+            createPath={isOrgAdmin || isLabManager ? endpoints.labs.rfids(labId, selectedMember.id) : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/` : undefined}
+            createLabel="Add card"
+            columns={[textColumn("rfid_uid", "Card UID"), dateColumn()]}
           />
         ) : (
-          <EmptyState title="Select a lab member" description="Choose Manage RFID to issue or revoke cards." />
+          <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
         )}
       </div>
     </PageFrame>
@@ -548,7 +628,7 @@ export function LabDashboardPage() {
     <PageFrame
       eyebrow="Lab"
       title="Dashboard"
-      description="Monitor machines, inventory, projects, attendance, and IoT readiness for this lab."
+      description="Monitor machines, inventory, projects, and attendance for this lab."
       metrics={[
         metric("Machines", machines.rows.length, "Equipment records", <Wrench />),
         metric("Inventory", inventory.rows.length, "Stock records", <Boxes />),
@@ -566,6 +646,7 @@ export function LabDashboardPage() {
 
 export function InventoryPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [adjusting, setAdjusting] = useState<ApiRow | null>(null);
   const [movementItem, setMovementItem] = useState<ApiRow | null>(null);
   const items = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -608,9 +689,9 @@ export function InventoryPage() {
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.items(labId)}
-            updatePath={(row) => endpoints.inventory.item(labId, row.id)}
-            deletePath={(row) => endpoints.inventory.item(labId, row.id)}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.items(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
             createLabel="Add item"
             columns={[
               nameColumn(),
@@ -622,9 +703,11 @@ export function InventoryPage() {
                 header: "Stock",
                 render: (row) => (
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setAdjusting(row)}>
-                      Adjust
-                    </Button>
+                    {isOrgAdmin || isLabManager ? (
+                      <Button size="sm" variant="outline" onClick={() => setAdjusting(row)}>
+                        Adjust
+                      </Button>
+                    ) : null}
                     <Button size="sm" variant="outline" onClick={() => setMovementItem(row)}>
                       Movements
                     </Button>
@@ -643,9 +726,9 @@ export function InventoryPage() {
               { name: "parent", label: "Parent category", type: "select", options: toOptions(categories.rows) },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.categories(labId)}
-            updatePath={(row) => `${endpoints.inventory.categories(labId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.inventory.categories(labId)}${row.id}/`}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.categories(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
             createLabel="Add category"
             columns={[nameColumn(), dateColumn()]}
           />
@@ -659,15 +742,15 @@ export function InventoryPage() {
               { name: "symbol", label: "Symbol", required: true },
             ]}
             orgId={orgId}
-            createPath={endpoints.inventory.units(labId)}
-            updatePath={(row) => `${endpoints.inventory.units(labId)}${row.id}/`}
-            deletePath={(row) => `${endpoints.inventory.units(labId)}${row.id}/`}
+            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.units(labId) : undefined}
+            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
+            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
             createLabel="Add unit"
             columns={[nameColumn(), textColumn("symbol", "Symbol"), dateColumn()]}
           />
         </TabsContent>
       </Tabs>
-      <ResourceFormDialog
+      {isOrgAdmin || isLabManager ? <ResourceFormDialog
         title="Adjust stock"
         description={adjusting ? `Update quantity for ${displayName(adjusting)}.` : undefined}
         open={Boolean(adjusting)}
@@ -683,7 +766,7 @@ export function InventoryPage() {
           await apiClient.create(endpoints.inventory.adjust(labId, adjusting.id), values, { orgId });
           await items.reload();
         }}
-      />
+      /> : null}
       {movementItem ? (
         <PremiumDataTable
           title="Stock movements"
@@ -711,26 +794,64 @@ export function InventoryPage() {
 
 export function MachinesPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [statusMachine, setStatusMachine] = useState<ApiRow | null>(null);
   const [reservationMachine, setReservationMachine] = useState<ApiRow | null>(null);
   const [logMachine, setLogMachine] = useState<ApiRow | null>(null);
+  const [bookingMachine, setBookingMachine] = useState<ApiRow | null>(null);
+  const [bookingMachineId, setBookingMachineId] = useState<string>("");
+  const [bookingDate, setBookingDate] = useState<string>("");
+  const [bookingSlotStart, setBookingSlotStart] = useState<string>("");
+  const [bookingSlotEnd, setBookingSlotEnd] = useState<string>("");
+  const [bookingStep, setBookingStep] = useState(1);
+  const [bookingProject, setBookingProject] = useState("");
+  const [bookingMaterialItem, setBookingMaterialItem] = useState("");
+  const [bookingMaterialQty, setBookingMaterialQty] = useState("");
+  const [bookingNotes, setBookingNotes] = useState("");
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
   const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
+  const inventoryItems = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const reservations = usePagedResource<ApiRow>(
     labId && reservationMachine ? endpoints.machines.reservations(labId, reservationMachine.id) : null,
+    orgId
+  );
+  const bookingReservations = usePagedResource<ApiRow>(
+    labId && bookingMachineId ? endpoints.machines.reservations(labId, bookingMachineId) : null,
     orgId
   );
   const logs = usePagedResource<ApiRow>(
     labId && logMachine ? endpoints.machines.logs(labId, logMachine.id) : null,
     orgId
   );
+  const bookingMachineData = machines.rows.find((row) => String(row.id) === bookingMachineId) ?? bookingMachine;
+  const existingReservations = bookingReservations.rows;
+  const slotCandidates = useMemo(() => {
+    if (!bookingDate) return [];
+    const slots: { from: string; till: string; blocked: boolean }[] = [];
+    for (let hour = 9; hour < 18; hour++) {
+      const from = `${bookingDate}T${String(hour).padStart(2, "0")}:00`;
+      const till = `${bookingDate}T${String(hour + 1).padStart(2, "0")}:00`;
+      const fromDate = new Date(from);
+      const tillDate = new Date(till);
+      const blocked = existingReservations.some((reservation) => {
+        if (!reservation.booked_from || !reservation.booked_till) return false;
+        const rFrom = new Date(String(reservation.booked_from));
+        const rTill = new Date(String(reservation.booked_till));
+        return rFrom < tillDate && rTill > fromDate && reservation.status !== "CANCELLED" && reservation.status !== "REJECTED";
+      });
+      slots.push({ from, till, blocked });
+    }
+    return slots;
+  }, [bookingDate, existingReservations]);
 
   if (!labId) return null;
   return (
     <PageFrame
       eyebrow="Equipment"
       title="Machines"
-      description="Register machines, change states, inspect reservations, and prepare IoT operations."
+      description="Register machines, update status, review bookings, and manage day-to-day use."
       metrics={[metric("Machines", machines.rows.length, "Equipment records", <Wrench />)]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -739,9 +860,9 @@ export function MachinesPage() {
           resource={machines}
           fields={machineFields}
           orgId={orgId}
-          createPath={endpoints.machines.list(labId)}
-          updatePath={(row) => endpoints.machines.detail(labId, row.id)}
-          deletePath={(row) => endpoints.machines.detail(labId, row.id)}
+          createPath={isOrgAdmin || isLabManager ? endpoints.machines.list(labId) : undefined}
+          updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
           createLabel="Register machine"
           columns={[
             nameColumn(),
@@ -752,11 +873,24 @@ export function MachinesPage() {
               header: "Operations",
               render: (row) => (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
-                    Status
-                  </Button>
+                  {isLabManager || isOrgAdmin ? (
+                    <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
+                      Status
+                    </Button>
+                  ) : null}
                   <Button size="sm" variant="outline" onClick={() => setReservationMachine(row)}>
                     Reservations
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setBookingMachine(row);
+                    setBookingStep(1);
+                    setBookingMachineId(String(row.id));
+                    setBookingDate("");
+                    setBookingSlotStart("");
+                    setBookingSlotEnd("");
+                    setBookingError(null);
+                  }}>
+                    Book slot
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setLogMachine(row)}>
                     Logs
@@ -774,38 +908,233 @@ export function MachinesPage() {
               { name: "project", label: "Project", type: "select", required: true, options: toOptions(projects.rows) },
               { name: "booked_from", label: "Booked from", type: "datetime-local", required: true },
               { name: "booked_till", label: "Booked till", type: "datetime-local", required: true },
+              { name: "material_item_id", label: "Material item", type: "select", options: toOptions(inventoryItems.rows) },
+              { name: "material_quantity", label: "Material quantity", type: "number" },
               { name: "notes", label: "Notes", type: "textarea" },
             ]}
             orgId={orgId}
             createPath={endpoints.machines.reservations(labId, reservationMachine.id)}
             createLabel="Reserve machine"
+            transformPayload={(values) => {
+              const payload: Record<string, unknown> = {
+                project: Number(values.project),
+                booked_from: values.booked_from,
+                booked_till: values.booked_till,
+                notes: values.notes,
+              };
+              if (values.material_item_id && values.material_quantity) {
+                payload.materials = [
+                  {
+                    item_id: Number(values.material_item_id),
+                    quantity: Number(values.material_quantity),
+                  },
+                ];
+              }
+              return payload;
+            }}
             columns={[textColumn("project", "Project"), statusColumn(), textColumn("booked_from", "From"), textColumn("booked_till", "Till")]}
           />
         ) : (
           <EmptyState title="Select a machine" description="Open Reservations to view and create bookings." />
         )}
       </div>
-      <ResourceFormDialog
-        title="Update machine status"
-        open={Boolean(statusMachine)}
-        onOpenChange={(open) => !open && setStatusMachine(null)}
-        fields={[
-          {
-            name: "status",
-            label: "Status",
-            type: "select",
-            required: true,
-            options: ["ACTIVE", "OCCUPIED", "OFF", "UNDER_MAINTENANCE", "RETIRED", "FAULTY"].map(toOption),
-          },
-          { name: "reference", label: "Reference" },
-          { name: "notes", label: "Notes", type: "textarea" },
-        ]}
-        onSubmit={async (values) => {
-          if (!statusMachine) return;
-          await apiClient.update(endpoints.machines.status(labId, statusMachine.id), values, { orgId });
-          await machines.reload();
+      {isLabManager || isOrgAdmin ? (
+        <ResourceFormDialog
+          title="Update machine status"
+          open={Boolean(statusMachine)}
+          onOpenChange={(open) => !open && setStatusMachine(null)}
+          fields={[
+            {
+              name: "status",
+              label: "Status",
+              type: "select",
+              required: true,
+              options: ["ACTIVE", "OCCUPIED", "OFF", "UNDER_MAINTENANCE", "RETIRED", "FAULTY"].map(toOption),
+            },
+            { name: "reference", label: "Reference" },
+            { name: "notes", label: "Notes", type: "textarea" },
+          ]}
+          onSubmit={async (values) => {
+            if (!statusMachine) return;
+            await apiClient.update(endpoints.machines.status(labId, statusMachine.id), values, { orgId });
+            await machines.reload();
+          }}
+        />
+      ) : null}
+      <Dialog
+        open={Boolean(bookingMachine)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBookingMachine(null);
+            setBookingStep(1);
+            setBookingError(null);
+          }
         }}
-      />
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Book machine slot</DialogTitle>
+            <DialogDescription>
+              Calendar + open slots + machine matrix with material request.
+            </DialogDescription>
+          </DialogHeader>
+          {bookingMachine ? (
+            <div className="space-y-4">
+              <div className="text-xs text-slate-500">Step {bookingStep} of 4</div>
+              {bookingStep === 1 ? (
+                <div className="space-y-2">
+                  <Label>Choose project</Label>
+                  <Select value={bookingProject} onValueChange={setBookingProject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.rows.map((project) => (
+                        <SelectItem key={String(project.id)} value={String(project.id)}>
+                          {displayName(project)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              {bookingStep === 2 ? (
+                <div className="space-y-2">
+                  <Label>Machine matrix</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                    {machines.rows.map((machine) => (
+                      <button
+                        key={String(machine.id)}
+                        type="button"
+                          className={`rounded-xl border p-3 text-left transition ${
+                            String(machine.id) === bookingMachineId
+                              ? "border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:text-teal-100"
+                              : "border-slate-200 hover:border-teal-300 dark:border-slate-700 dark:hover:border-teal-700"
+                          }`}
+                        onClick={() => setBookingMachineId(String(machine.id))}
+                      >
+                        <div className="font-medium">{displayName(machine)}</div>
+                        <div className="text-xs text-slate-500">Model: {formatValue(machine.model_number)}</div>
+                        <div className="text-xs text-slate-500">Photo: {machine.image_url ? "Available" : "Not set"}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {bookingStep === 3 ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Calendar date</Label>
+                    <Input type="date" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Open slots</Label>
+                    <div className="grid grid-cols-3 gap-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-3 dark:border-teal-800/60 dark:from-teal-950/30 dark:to-slate-950">
+                      {slotCandidates.map((slot) => (
+                        <Button
+                          key={slot.from}
+                          type="button"
+                          size="sm"
+                          className={
+                            bookingSlotStart === slot.from
+                              ? "bg-teal-600 text-white hover:bg-teal-700"
+                              : "border-teal-300 text-teal-700 hover:bg-teal-100 dark:border-teal-700 dark:text-teal-200 dark:hover:bg-teal-900/30"
+                          }
+                          variant="outline"
+                          disabled={slot.blocked}
+                          onClick={() => {
+                            setBookingSlotStart(slot.from);
+                            setBookingSlotEnd(slot.till);
+                          }}
+                        >
+                          {slot.from.slice(11, 16)}-{slot.till.slice(11, 16)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              {bookingStep === 4 ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Material item (optional)</Label>
+                    <Select value={bookingMaterialItem} onValueChange={setBookingMaterialItem}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select material item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inventoryItems.rows.map((item) => (
+                          <SelectItem key={String(item.id)} value={String(item.id)}>
+                            {displayName(item)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Material quantity</Label>
+                    <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
+                  </div>
+                </div>
+              ) : null}
+              {bookingError ? <div className="text-sm text-rose-600">{bookingError}</div> : null}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBookingStep((current) => Math.max(1, current - 1))} disabled={bookingStep === 1}>
+                  Back
+                </Button>
+                {bookingStep < 4 ? (
+                  <Button
+                    onClick={() => {
+                      if (bookingStep === 1 && !bookingProject) return setBookingError("Select a project.");
+                      if (bookingStep === 2 && !bookingMachineId) return setBookingError("Select a machine.");
+                      if (bookingStep === 3 && (!bookingSlotStart || !bookingSlotEnd)) return setBookingError("Select an open slot.");
+                      setBookingError(null);
+                      setBookingStep((current) => current + 1);
+                    }}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={isBooking}
+                    onClick={async () => {
+                      if (!labId || !bookingMachineData) return;
+                      setIsBooking(true);
+                      setBookingError(null);
+                      try {
+                        const payload: Record<string, unknown> = {
+                          project: Number(bookingProject),
+                          machine: Number(bookingMachineId),
+                          booked_from: bookingSlotStart,
+                          booked_till: bookingSlotEnd,
+                          notes: bookingNotes,
+                        };
+                        if (bookingMaterialItem && bookingMaterialQty) {
+                          payload.materials = [{ item_id: Number(bookingMaterialItem), quantity: Number(bookingMaterialQty) }];
+                        }
+                        await apiClient.create(endpoints.machines.reservations(labId, bookingMachineData.id), payload, { orgId });
+                        setBookingMachine(null);
+                        await reservations.reload();
+                        await bookingReservations.reload();
+                      } catch (error) {
+                        setBookingError(normalizeApiError(error).message);
+                      } finally {
+                        setIsBooking(false);
+                      }
+                    }}
+                  >
+                    {isBooking ? "Submitting..." : "Submit booking request"}
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       {logMachine ? (
         <PremiumDataTable
           title="Machine status logs"
@@ -824,7 +1153,7 @@ export function MachinesPage() {
           onNext={logs.loadNext}
           onPrevious={logs.loadPrevious}
           emptyTitle="No machine logs"
-          emptyDescription="Status changes and RFID machine events will appear here."
+          emptyDescription="Status changes and machine activity will appear here."
         />
       ) : null}
     </PageFrame>
@@ -833,6 +1162,7 @@ export function MachinesPage() {
 
 export function ProjectsPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedProject, setSelectedProject] = useState<ApiRow | null>(null);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventory = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -859,9 +1189,9 @@ export function ProjectsPage() {
           resource={projects}
           fields={projectFields}
           orgId={orgId}
-          createPath={endpoints.projects.list(labId)}
-          updatePath={(row) => endpoints.projects.detail(labId, row.id)}
-          deletePath={(row) => endpoints.projects.detail(labId, row.id)}
+          createPath={isOrgAdmin || isLabManager ? endpoints.projects.list(labId) : undefined}
+          updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
+          deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
           createLabel="New project"
           columns={[
             nameColumn(),
@@ -930,6 +1260,9 @@ export function ProjectsPage() {
 
 export function AttendancePage() {
   const { orgId, labId } = useParams();
+  const [regularizeRow, setRegularizeRow] = useState<ApiRow | null>(null);
+  const [regularizeNotes, setRegularizeNotes] = useState("");
+  const [isSubmittingRegularize, setIsSubmittingRegularize] = useState(false);
   const attendance = usePagedResource<ApiRow>(
     labId ? `${endpoints.attendance.me}?lab_id=${labId}` : endpoints.attendance.me,
     orgId
@@ -940,7 +1273,7 @@ export function AttendancePage() {
     <PageFrame
       eyebrow="Access"
       title="My Attendance"
-      description="Review your RFID check-ins and request attendance regularisation."
+      description="Review your attendance records and submit correction requests when needed."
       metrics={[metric("Attendance", attendance.rows.length, "Current records", <CalendarCheck />)]}
     >
       <ResourceCrudTable
@@ -958,19 +1291,78 @@ export function AttendancePage() {
           {
             label: "Regularize",
             run: async (row) => {
-              const notes = window.prompt("Reason for regularization", String(row.notes ?? ""));
-              if (notes === null) return;
-              await apiClient.update(endpoints.attendance.meRecord(row.id), { notes }, { orgId });
+              setRegularizeRow(row);
+              setRegularizeNotes(String(row.notes ?? ""));
             },
           },
         ]}
       />
+      <Dialog
+        open={Boolean(regularizeRow)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRegularizeRow(null);
+            setRegularizeNotes("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request attendance regularization</DialogTitle>
+            <DialogDescription>
+              Provide a short reason so the approver can review and process your request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="regularize-notes">Reason</Label>
+            <Textarea
+              id="regularize-notes"
+              value={regularizeNotes}
+              onChange={(event) => setRegularizeNotes(event.target.value)}
+              placeholder="Explain the attendance correction needed"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRegularizeRow(null);
+                setRegularizeNotes("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!regularizeRow || isSubmittingRegularize}
+              onClick={async () => {
+                if (!regularizeRow) return;
+                setIsSubmittingRegularize(true);
+                try {
+                  await apiClient.update(
+                    endpoints.attendance.meRecord(regularizeRow.id),
+                    { notes: regularizeNotes },
+                    { orgId }
+                  );
+                  setRegularizeRow(null);
+                  setRegularizeNotes("");
+                  await attendance.reload();
+                } finally {
+                  setIsSubmittingRegularize(false);
+                }
+              }}
+            >
+              {isSubmittingRegularize ? "Submitting..." : "Submit request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageFrame>
   );
 }
 
 export function ApprovalsPage() {
   const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const attendance = usePagedResource<ApiRow>(labId ? endpoints.attendance.list(labId) : null, orgId);
   const joinRequests = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.joinRequests(orgId) : null,
@@ -997,6 +1389,12 @@ export function ApprovalsPage() {
         metric("Machines", machineReservations.rows.length, "Pending reservations", <Wrench />),
       ]}
     >
+      {!isOrgAdmin && !isLabManager ? (
+        <EmptyState
+          title="Approval access required"
+          description="This page is available to organisation admins and lab managers."
+        />
+      ) : (
       <Tabs defaultValue="join" className="gap-6">
         <TabsList>
           <TabsTrigger value="join">Join requests</TabsTrigger>
@@ -1103,22 +1501,27 @@ export function ApprovalsPage() {
           />
         </TabsContent>
       </Tabs>
+      )}
     </PageFrame>
   );
 }
 
 export function CartPage() {
   const { orgId, labId } = useParams();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutProjectId, setCheckoutProjectId] = useState("");
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
   const cart = usePagedResource<ApiRow>(labId ? endpoints.inventory.cart(labId) : null, orgId);
+  const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
 
   return (
     <PageFrame
       eyebrow="Cart"
       title="Cart"
-      description="Premium redesign of the previous MIS cart page for collecting inventory before checkout."
+      description="Collect inventory items and submit checkout requests for project usage."
       metrics={[
         metric("Cart items", cart.rows.length, "Ready for checkout", <ShoppingCart />),
-        metric("Checkout", "Django", "Creates project inventory orders", <Boxes />),
+        metric("Checkout", "Ready", "Creates project inventory orders", <Boxes />),
       ]}
     >
       <ResourceCrudTable
@@ -1138,13 +1541,62 @@ export function CartPage() {
           {
             label: "Checkout",
             run: async () => {
-              const projectId = window.prompt("Enter project ID for this checkout");
-              if (!projectId) return;
-              await apiClient.create(endpoints.inventory.cartCheckout(String(labId)), { project_id: Number(projectId) }, { orgId });
+              setIsCheckoutOpen(true);
             },
           },
         ]}
       />
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Checkout cart</DialogTitle>
+            <DialogDescription>
+              Select the project that should receive these inventory items.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="checkout-project">Project</Label>
+            <Select value={checkoutProjectId} onValueChange={setCheckoutProjectId}>
+              <SelectTrigger id="checkout-project">
+                <SelectValue placeholder="Select a project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.rows.map((project) => (
+                  <SelectItem key={String(project.id)} value={String(project.id)}>
+                    {displayName(project)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!checkoutProjectId || isSubmittingCheckout}
+              onClick={async () => {
+                if (!checkoutProjectId || !labId) return;
+                setIsSubmittingCheckout(true);
+                try {
+                  await apiClient.create(
+                    endpoints.inventory.cartCheckout(String(labId)),
+                    { project_id: Number(checkoutProjectId) },
+                    { orgId }
+                  );
+                  setIsCheckoutOpen(false);
+                  setCheckoutProjectId("");
+                  await cart.reload();
+                } finally {
+                  setIsSubmittingCheckout(false);
+                }
+              }}
+            >
+              {isSubmittingCheckout ? "Checking out..." : "Confirm checkout"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageFrame>
   );
 }
@@ -1164,7 +1616,7 @@ export function MyOrdersPage() {
     <PageFrame
       eyebrow="Orders"
       title="My Orders"
-      description="Premium redesign of the previous MIS user-level order aggregation."
+      description="Track your inventory and machine-related orders in one place."
       metrics={[
         metric("Inventory orders", inventoryOrders.rows.length, "Across my projects", <FileText />),
         metric("Machine requests", machineRequests.rows.length, "Across my reservations", <Wrench />),
@@ -1211,6 +1663,85 @@ export function MyOrdersPage() {
   );
 }
 
+export function NotificationsPage() {
+  const { orgId } = useParams();
+  const [tab, setTab] = useState<"unread" | "all" | "grouped">("unread");
+  const notifications = usePagedResource<ApiRow>(endpoints.users.notifications, orgId);
+  const unreadRows = notifications.rows.filter((row) => !row.is_read);
+  const groupedRows = Object.entries(
+    notifications.rows.reduce<Record<string, number>>((accumulator, row) => {
+      const key = String(row.type ?? "GENERAL");
+      accumulator[key] = (accumulator[key] ?? 0) + 1;
+      return accumulator;
+    }, {})
+  ).map(([type, count], index) => ({ id: `${type}-${index}`, type, count }));
+  const activeRows = tab === "unread" ? unreadRows : tab === "all" ? notifications.rows : groupedRows;
+
+  return (
+    <PageFrame
+      eyebrow="Updates"
+      title="Notifications"
+      description="Review booking updates, approvals, and slot availability alerts."
+      metrics={[
+        metric("Total", notifications.rows.length, "Recent updates", <Activity />),
+        metric("Unread", unreadRows.length, "Needs attention", <Radio />),
+      ]}
+    >
+      <Tabs defaultValue="unread" className="gap-6" onValueChange={(value) => setTab(value as "unread" | "all" | "grouped")}>
+        <TabsList>
+          <TabsTrigger value="unread">Unread ({unreadRows.length})</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="grouped">Grouped</TabsTrigger>
+        </TabsList>
+        <TabsContent value="unread">
+          <PremiumDataTable
+            title="Notification inbox"
+            description="Unread updates requiring action."
+            rows={activeRows}
+            getRowKey={(row) => String(row.id)}
+            columns={[textColumn("title", "Title"), textColumn("message", "Message"), textColumn("type", "Type"), dateColumn()]}
+            next={notifications.next}
+            previous={notifications.previous}
+            onNext={notifications.loadNext}
+            onPrevious={notifications.loadPrevious}
+            emptyTitle="No unread notifications"
+            emptyDescription="You are all caught up."
+            actions={<Button variant="outline" onClick={() => void notifications.reload()}>Refresh</Button>}
+          />
+        </TabsContent>
+        <TabsContent value="all">
+          <ResourceCrudTable
+            title="All notifications"
+            resource={{ ...notifications, rows: activeRows as ApiRow[] }}
+            fields={[]}
+            orgId={orgId}
+            columns={[textColumn("title", "Title"), textColumn("message", "Message"), textColumn("type", "Type"), dateColumn()]}
+            rowActions={[
+              {
+                label: "Mark read",
+                run: async (row) => {
+                  await apiClient.update(endpoints.users.markNotificationRead(row.id), {}, { orgId });
+                },
+              },
+            ]}
+          />
+        </TabsContent>
+        <TabsContent value="grouped">
+          <PremiumDataTable
+            title="Grouped notifications"
+            description="Grouped by notification type."
+            rows={activeRows}
+            getRowKey={(row) => String(row.id)}
+            columns={[textColumn("type", "Type"), textColumn("count", "Count")]}
+            emptyTitle="No notifications"
+            emptyDescription="No grouped activity available."
+          />
+        </TabsContent>
+      </Tabs>
+    </PageFrame>
+  );
+}
+
 export function ScanMachinePage() {
   const { orgId, labId } = useParams();
   const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
@@ -1223,7 +1754,7 @@ export function ScanMachinePage() {
   const visibleMachines = { ...machines, rows: machineRows };
 
   useEffect(() => {
-    const scannerId = "premium-machine-qr-reader";
+    const scannerId = "mis-machine-qr-reader";
     let isCancelled = false;
 
     import("html5-qrcode")
@@ -1239,7 +1770,7 @@ export function ScanMachinePage() {
               try {
                 const parsed = JSON.parse(decodedText) as { id?: unknown; machine_id?: unknown };
                 const machineId = parsed.id ?? parsed.machine_id;
-                if (!machineId) throw new Error("Machine QR must include id or machine_id.");
+                if (!machineId) throw new Error("This QR code does not contain valid machine information.");
                 setScannedMachineId(String(machineId));
               } catch {
                 setScannerError("Invalid machine QR code.");
@@ -1263,19 +1794,22 @@ export function ScanMachinePage() {
     <PageFrame
       eyebrow="Machine access"
       title="Scan Machine"
-      description="Premium redesign of the previous QR/RFID machine scan page."
+      description="Scan machine QR, validate reservations, and start or stop sessions."
       metrics={[
-        metric("Machines", machines.rows.length, "Browser scan targets", <ScanBarcode />),
-        metric("IoT endpoint", "Available", "RFID terminal flow still supported", <Radio />),
+        metric("Equipment", machines.rows.length, "In this lab", <ScanBarcode />),
+        metric("Scanning", "Camera", "Point at the machine QR code", <Radio />),
       ]}
     >
       <PremiumSurface className="mb-6 p-6">
         <SectionHeader
           eyebrow="Camera"
-          title={scannedMachineId ? `Scanned machine #${scannedMachineId}` : "Scan Machine QR"}
-          description={scannerError ?? "Scan the previous MIS machine QR code, then use the active reservation below."}
+          title={scannedMachineId ? `Machine ${scannedMachineId}` : "Scan machine QR code"}
+          description={
+            scannerError ??
+            "Allow camera access, scan the machine QR code, then start or complete your session from the list below."
+          }
         />
-        <div id="premium-machine-qr-reader" className="mt-4 overflow-hidden rounded-xl border" />
+        <div id="mis-machine-qr-reader" className="mt-4 overflow-hidden rounded-xl border" />
         {scannedMachineId ? (
           <Button className="mt-4" variant="outline" onClick={() => setScannedMachineId(null)}>
             Scan Again
@@ -1301,7 +1835,7 @@ export function ScanMachinePage() {
               const current = await apiClient.list<ApiRow>(endpoints.machines.currentReservation(String(labId), row.id), { orgId });
               const reservation = current.results[0];
               if (!reservation) {
-                throw new Error("No approved reservation is active for this machine right now.");
+                throw new Error("No approved booking is active for this machine right now.");
               }
               const nextStatus = row.status === "ACTIVE" ? "OFF" : "ACTIVE";
               await apiClient.create(endpoints.machines.reservationConsume(reservation.id), { status: nextStatus }, { orgId });
@@ -1324,7 +1858,7 @@ export function MachineSchedulePage() {
     <PageFrame
       eyebrow="Machine"
       title="Machine Schedule"
-      description="Premium redesign of the previous machine schedule page."
+      description="View reservations and operating schedule for this machine."
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
       <PremiumDataTable
@@ -1352,24 +1886,96 @@ export function MachineSchedulePage() {
 
 export function MachineDetailsPage() {
   const { orgId, labId, machineId } = useParams();
+  const [machine, setMachine] = useState<ApiRow | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orgId || !labId || !machineId) {
+      setMachine(null);
+      setLoadError(null);
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+    void apiClient
+      .get<ApiRow>(endpoints.machines.detail(labId, machineId), { orgId })
+      .then((data) => {
+        if (!cancelled) {
+          setMachine(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadError(normalizeApiError(error).message);
+          setMachine(null);
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, labId, machineId]);
+
+  if (!orgId || !labId || !machineId) return null;
+
+  const schedulePath = `/${orgId}/lab/${labId}/machine/${machineId}`;
+  const logsPath = `/${orgId}/lab/${labId}/machine/${machineId}/logs`;
 
   return (
     <PageFrame
       eyebrow="Machine"
-      title="Machine Details"
-      description="Premium redesign of the previous machine details page."
-      metrics={[metric("Machine", `#${machineId}`, "Detail route preserved", <Wrench />)]}
+      title="Machine details"
+      description="Specifications, identifiers, and quick links for this machine."
+      metrics={[
+        metric("Status", machine?.status ? String(machine.status) : "—", "Current state", <Wrench />),
+        metric("Model", machine?.model_number ? String(machine.model_number) : "—", "Manufacturer model", <Wrench />),
+      ]}
     >
-      <EmptyState
-        title="Machine details are available from the Machines page"
-        description="The premium Machines page includes edit, status, reservation, and log actions while preserving this previous MIS route."
-        icon={<Wrench className="size-7" />}
-        action={
-          <Button asChild>
-            <Link to={`/${orgId}/lab/${labId}/machine`}>Open Machines</Link>
-          </Button>
-        }
-      />
+      {isLoading ? (
+        <PremiumSurface className="flex items-center justify-center gap-3 p-12 text-sm text-slate-500 dark:text-slate-400">
+          <Loader2 className="size-5 animate-spin" />
+          Loading machine details…
+        </PremiumSurface>
+      ) : loadError ? (
+        <EmptyState
+          title="Could not load machine"
+          description={loadError}
+          icon={<Wrench className="size-7" />}
+          action={
+            <Button asChild>
+              <Link to={`/${orgId}/lab/${labId}/machine`}>Back to machines</Link>
+            </Button>
+          }
+        />
+      ) : machine ? (
+        <div className="space-y-6">
+          <PremiumSurface className="p-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {machineDetailField("Name", displayName(machine))}
+              {machineDetailField("Serial number", machine.serial_number)}
+              {machineDetailField("Purchased", machine.purchased_at)}
+              {machineDetailField("Description", machine.description)}
+            </div>
+          </PremiumSurface>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to={schedulePath}>Schedule & bookings</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to={logsPath}>Activity log</Link>
+            </Button>
+            <Button asChild>
+              <Link to={`/${orgId}/lab/${labId}/machine`}>All machines</Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <EmptyState title="Machine not found" description="This machine may have been removed or you may not have access." />
+      )}
     </PageFrame>
   );
 }
@@ -1385,12 +1991,12 @@ export function MachineLogsPage() {
     <PageFrame
       eyebrow="Machine"
       title="Machine Logs"
-      description="Premium redesign of the previous machine logs page."
+      description="Review machine usage logs and related events."
       metrics={[metric("Logs", logs.rows.length, "Status audit records", <Wrench />)]}
     >
       <PremiumDataTable
         title="Machine Logs"
-        description={logs.error?.message ?? "Status and RFID audit trail."}
+        description={logs.error?.message ?? "Status changes and usage events for this machine."}
         columns={[
           textColumn("previous_status", "Previous"),
           textColumn("new_status", "New"),
@@ -1426,7 +2032,7 @@ export function ProjectDetailsPage() {
     <PageFrame
       eyebrow="Project"
       title="Project Details"
-      description="Premium redesign of the previous project detail page with team and inventory order tabs."
+      description="Review project team details, timeline, and associated material requests."
       metrics={[
         metric("Team", members.rows.length, "Project members", <Users />),
         metric("Orders", orders.rows.length, "Inventory requests", <FileText />),
@@ -1469,6 +2075,18 @@ export function ProjectDetailsPage() {
         </TabsContent>
       </Tabs>
     </PageFrame>
+  );
+}
+
+function machineDetailField(label: string, value: unknown) {
+  const text = value === null || value === undefined || value === "" ? "—" : String(value);
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-slate-950 dark:text-white">{text}</p>
+    </div>
   );
 }
 
@@ -1519,7 +2137,7 @@ function CompactTable({
   return (
     <PremiumDataTable
       title={title}
-      description={resource.error?.message ?? "Live API-backed data."}
+      description={resource.error?.message ?? "Live workspace data."}
       columns={columns}
       rows={resource.rows}
       getRowKey={(row, index) => `${row.id}-${index}`}
@@ -1631,6 +2249,34 @@ function dateColumn<T extends ApiRow>(): PremiumColumn<T> {
     header: "Updated",
     render: (row) => <span className="text-slate-500">{formatDate(row.updated_at ?? row.created_at)}</span>,
   };
+}
+
+function useLabAccessRole(orgId?: string, labId?: string) {
+  const { user } = useAuth();
+  const orgMembers = usePagedResource<ApiRow>(orgId ? endpoints.organisations.members(orgId) : null, orgId);
+  const labMembers = usePagedResource<ApiRow>(
+    orgId && labId ? endpoints.labs.members(orgId, labId) : null,
+    orgId
+  );
+
+  return useMemo(() => {
+    const orgMember = orgMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    const labMember = labMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    const roleName = String(labMember?.role?.name ?? "").toLowerCase();
+    const isOrgAdmin = Boolean(orgMember?.is_admin);
+    const isLabManager = roleName.includes("manager") || roleName.includes("mentor");
+    return { isOrgAdmin, isLabManager };
+  }, [labMembers.rows, orgMembers.rows, user?.id]);
+}
+
+function useOrgRole(orgId?: string) {
+  const { user } = useAuth();
+  const orgMembers = usePagedResource<ApiRow>(orgId ? endpoints.organisations.members(orgId) : null, orgId);
+
+  return useMemo(() => {
+    const orgMember = orgMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    return { isOrgAdmin: Boolean(orgMember?.is_admin) };
+  }, [orgMembers.rows, user?.id]);
 }
 
 function toOptions(rows: ApiRow[]): FieldOption[] {

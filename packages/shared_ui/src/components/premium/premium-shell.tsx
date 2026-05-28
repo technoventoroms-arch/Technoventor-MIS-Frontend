@@ -43,6 +43,15 @@ export type ShellContext = {
   value: string;
 };
 
+export type ShellNotification = {
+  id: string | number;
+  title: string;
+  message: string;
+  createdAt?: string;
+  isRead?: boolean;
+  to?: string;
+};
+
 export function PremiumShell({
   appName,
   appSubtitle,
@@ -50,6 +59,7 @@ export function PremiumShell({
   userName,
   userEmail,
   contexts = [],
+  notifications = [],
   onSignOut,
   children,
 }: {
@@ -59,6 +69,7 @@ export function PremiumShell({
   userName?: string;
   userEmail?: string;
   contexts?: ShellContext[];
+  notifications?: ShellNotification[];
   onSignOut?: () => void;
   children?: ReactNode;
 }) {
@@ -76,6 +87,7 @@ export function PremiumShell({
         item.to.toLowerCase().includes(normalizedQuery)
     );
   }, [navItems, searchQuery]);
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
   useEffect(() => {
     function handleKeyboardShortcut(event: KeyboardEvent) {
@@ -199,10 +211,14 @@ export function PremiumShell({
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="relative"
                   aria-label="Notifications"
                   onClick={() => setIsNotificationsOpen(true)}
                 >
                   <Bell className="size-4" />
+                  {unreadCount ? (
+                    <span className="absolute right-1 top-1 inline-flex size-2 rounded-full bg-rose-500" />
+                  ) : null}
                 </Button>
                 <div className="hidden border-l border-slate-200 pl-3 md:block dark:border-white/10">
                   <p className="text-sm font-semibold">{userName ?? "MIS User"}</p>
@@ -241,7 +257,7 @@ export function PremiumShell({
           <DialogHeader>
             <DialogTitle>Search workspace</DialogTitle>
             <DialogDescription>
-              Jump to available premium sections in this workspace.
+              Jump to any section in this workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -263,7 +279,7 @@ export function PremiumShell({
                   >
                     <Icon className="size-4" />
                     <span>{item.label}</span>
-                    <span className="ml-auto truncate text-xs text-slate-400">{item.to}</span>
+                    <span className="ml-auto text-xs text-slate-400">Open</span>
                   </Link>
                 );
               })}
@@ -281,11 +297,32 @@ export function PremiumShell({
           <SheetHeader>
             <SheetTitle>Notifications</SheetTitle>
             <SheetDescription>
-              Live notifications will appear here when an active notification feed is configured.
+              Updates will appear here when your administrator enables notifications.
             </SheetDescription>
           </SheetHeader>
-          <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
-            No unread notifications for this session.
+          <div className="space-y-2 p-4">
+            {notifications.length ? notifications.slice(0, 12).map((notification) => (
+              notification.to ? (
+                <Link
+                  key={String(notification.id)}
+                  to={notification.to}
+                  onClick={() => setIsNotificationsOpen(false)}
+                  className="block rounded-xl border p-3 text-sm"
+                >
+                  <p className="font-semibold">{notification.title}</p>
+                  <p className="text-slate-500 dark:text-slate-400">{notification.message}</p>
+                </Link>
+              ) : (
+                <div key={String(notification.id)} className="rounded-xl border p-3 text-sm">
+                  <p className="font-semibold">{notification.title}</p>
+                  <p className="text-slate-500 dark:text-slate-400">{notification.message}</p>
+                </div>
+              )
+            )) : (
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                You have no new notifications right now.
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>

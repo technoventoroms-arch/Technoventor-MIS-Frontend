@@ -245,6 +245,15 @@ importers:
         specifier: ^1.3.7
         version: 1.3.7
 
+  web/hub:
+    dependencies:
+      '@mono/api_client':
+        specifier: workspace:*
+        version: link:../../packages/api_client
+      '@mono/shared_ui':
+        specifier: workspace:*
+        version: link:../../packages/shared_ui
+
   web/mis:
     dependencies:
       '@mono/api_client':

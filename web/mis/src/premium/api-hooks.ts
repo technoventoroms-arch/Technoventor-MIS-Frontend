@@ -13,6 +13,7 @@ export type ResourceState<T> = {
   previous: string | null;
   isLoading: boolean;
   error: ApiError | null;
+  lastUpdatedAt: number | null;
   reload: () => Promise<void>;
   loadNext: () => Promise<void>;
   loadPrevious: () => Promise<void>;
@@ -30,6 +31,7 @@ export function usePagedResource<T extends Entity>(
   const [pageUrl, setPageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(path));
   const [error, setError] = useState<ApiError | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   const load = useCallback(
     async (targetUrl: string | null) => {
@@ -47,6 +49,7 @@ export function usePagedResource<T extends Entity>(
         });
         setPage(nextPage);
         setPageUrl(targetUrl);
+        setLastUpdatedAt(Date.now());
       } catch (loadError) {
         setError(normalizeApiError(loadError));
       } finally {
@@ -60,6 +63,14 @@ export function usePagedResource<T extends Entity>(
     void load(null);
   }, [load]);
 
+  useEffect(() => {
+    if (!path) return;
+    const intervalId = window.setInterval(() => {
+      void load(pageUrl);
+    }, 30000);
+    return () => window.clearInterval(intervalId);
+  }, [load, pageUrl, path]);
+
   return useMemo(
     () => ({
       rows: page.results,
@@ -67,10 +78,11 @@ export function usePagedResource<T extends Entity>(
       previous: page.previous,
       isLoading,
       error,
+      lastUpdatedAt,
       reload: () => load(pageUrl),
       loadNext: () => load(page.next),
       loadPrevious: () => load(page.previous),
     }),
-    [pageUrl, error, isLoading, load, page.next, page.previous, page.results]
+    [pageUrl, error, isLoading, lastUpdatedAt, load, page.next, page.previous, page.results]
   );
 }
