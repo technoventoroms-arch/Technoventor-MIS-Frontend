@@ -282,7 +282,11 @@ export function MisShell() {
     };
   }, [orgId, labId]);
 
-  const navItems = useMemo(() => buildMisNav(orgId, labId), [labId, orgId]);
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const navItems = useMemo(
+    () => buildMisNav(orgId, labId, isOrgAdmin),
+    [isOrgAdmin, labId, orgId]
+  );
   const contexts = [
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
     labId ? { label: "Lab", value: labLabel ?? "Loading…" } : null,
@@ -369,7 +373,7 @@ export function OrganisationSwitcherPage() {
             header: "Open",
             render: (row) => (
               <Button asChild size="sm">
-                <Link to={`/${row.id}/dashboard`}>Open workspace</Link>
+                <Link to={`/${row.id}/labs`}>Open workspace</Link>
               </Button>
             ),
           },
@@ -915,43 +919,71 @@ function formatRelativeTime(timestamp: number): string {
   return `${deltaHours}h ago`;
 }
 
-function buildMisNav(orgId?: string, labId?: string): ShellNavItem[] {
+function useIsOrgAdmin(orgId?: string): boolean {
+  const { user } = useAuth();
+  const members = usePagedResource<Entity>(
+    orgId ? endpoints.organisations.members(orgId) : null,
+    orgId
+  );
+
+  return useMemo(() => {
+    const member = members.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
+    return Boolean(member?.is_admin);
+  }, [members.rows, user?.id]);
+}
+
+function buildMisNav(orgId?: string, labId?: string, isOrgAdmin = false): ShellNavItem[] {
+  const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
+
   if (!orgId) {
     return [
       { label: "My Organization", to: "/", icon: Building2, end: true },
-      { label: "Create New Organization", to: "/create-organizations", icon: Plus },
-      { label: "Profile", to: "/profile", icon: UserCircle },
+      { label: "Create New Organization", to: "/create-organization", icon: Plus },
+      profileItem,
     ];
   }
 
   const orgBase = `/${orgId}`;
-  const labBase = labId ? `/${orgId}/lab/${labId}` : null;
+
+  if (labId) {
+    const labBase = `${orgBase}/lab/${labId}`;
+    return [
+      { label: "Back to Labs", to: `${orgBase}/labs`, icon: ArrowLeft },
+      { label: "Dashboard", to: labBase, icon: Gauge, end: true },
+      { label: "Projects", to: `${labBase}/projects`, icon: ListChecks },
+      { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
+      { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
+      { label: "Lab Members", to: `${labBase}/users`, icon: Users },
+      { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
+      { label: "My Orders", to: `${labBase}/orders`, icon: FileText },
+      { label: "Notifications", to: `${labBase}/notifications`, icon: Bell },
+      { label: "My Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
+      { label: "Scan Machine", to: `${labBase}/scan-machine`, icon: ScanBarcode },
+      { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
+      { label: "Lab Settings", to: `${labBase}/edit-lab`, icon: QrCode },
+      { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
+      profileItem,
+    ];
+  }
 
   return [
-    { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
-    { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical },
-    { label: "Users", to: `${orgBase}/users`, icon: Users },
-    { label: "Organization", to: `${orgBase}/organization`, icon: Settings },
-    { label: "Subscriptions", to: `${orgBase}/organization/transactions`, icon: CreditCard },
-    ...(labBase
+    ...(isOrgAdmin
+      ? [{ label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard }]
+      : []),
+    { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
+    ...(isOrgAdmin
       ? [
-          { label: "Back to Labs", to: `${orgBase}/labs`, icon: ArrowLeft },
-          { label: "Dashboard", to: `${labBase}`, icon: Gauge },
-          { label: "Projects", to: `${labBase}/projects`, icon: ListChecks },
-          { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
-          { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
-          { label: "Users", to: `${labBase}/users`, icon: Users },
-          { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
-          { label: "My Orders", to: `${labBase}/orders`, icon: FileText },
-          { label: "Notifications", to: `${labBase}/notifications`, icon: Bell },
-          { label: "My Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
-          { label: "Scan Machine", to: `${labBase}/scan-machine`, icon: ScanBarcode },
-          { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
-          { label: "Lab", to: `${labBase}/edit-lab`, icon: QrCode },
+          { label: "Users", to: `${orgBase}/users`, icon: Users },
+          { label: "Organization", to: `${orgBase}/organization`, icon: Settings },
+          {
+            label: "Subscriptions",
+            to: `${orgBase}/organization/transactions`,
+            icon: CreditCard,
+          },
         ]
       : []),
     { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
-    { label: "Profile", to: "/profile", icon: UserCircle },
+    profileItem,
   ];
 }
 
@@ -977,7 +1009,9 @@ function fullName(user: { first_name?: string; last_name?: string; email?: strin
 
 export function RedirectToOrgDashboard() {
   const { orgId } = useParams();
-  return <Navigate to={orgId ? `/${orgId}/dashboard` : "/"} replace />;
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  if (!orgId) return <Navigate to="/" replace />;
+  return <Navigate to={isOrgAdmin ? `/${orgId}/dashboard` : `/${orgId}/labs`} replace />;
 }
 
 export function RegisterPage() {

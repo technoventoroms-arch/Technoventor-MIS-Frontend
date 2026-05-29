@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
   BarChart3,
   Building2,
@@ -16,6 +17,8 @@ import {
   SectionHeader,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
+
+import { UserInvitation } from "@mono/shared_ui/interfaces/user";
 
 import { useAuth } from "./auth";
 import { ResourceForm, type ResourceField } from "./resource-forms";
@@ -44,9 +47,18 @@ const labFields: ResourceField[] = [
   { name: "description", label: "Description", type: "textarea" },
 ];
 
+function workspacePathFromInvite(invite: UserInvitation): string {
+  const orgId = invite.organisation_id;
+  const labId = invite.lab_id;
+  if (orgId && labId) return `/${orgId}/lab/${labId}`;
+  if (orgId) return `/${orgId}/labs`;
+  return "/";
+}
+
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const [invites, setInvites] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [invites, setInvites] = useState<UserInvitation[]>([]);
   const [token, setToken] = useState("");
   const [tokenFeedback, setTokenFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isTokenSubmitting, setIsTokenSubmitting] = useState(false);
@@ -62,14 +74,23 @@ export function ProfilePage() {
       .catch(() => {});
   }, []);
 
-  const handleAcceptInvite = async (inviteId: number, state: "ACCEPTED" | "REJECTED") => {
+  const handleAcceptInvite = async (
+    invite: UserInvitation,
+    state: "ACCEPTED" | "REJECTED"
+  ) => {
     try {
-      const res = await apiClient.update<any>(`users/me/invitations/${inviteId}/`, {
+      const res = await apiClient.update<any>(`users/me/invitations/${invite.id}/`, {
         status: state,
       });
       if (!res.error) {
-        setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+        setInvites((prev) => prev.filter((i) => i.id !== invite.id));
         await refreshUser();
+        if (state === "ACCEPTED") {
+          toast.success("Invitation accepted. Opening your workspace.");
+          navigate(workspacePathFromInvite(invite));
+        } else {
+          toast.success("Invitation rejected.");
+        }
       }
     } catch (err) {}
   };
@@ -85,10 +106,21 @@ export function ProfilePage() {
         setTokenFeedback({ type: "success", message: "Successfully joined the organisation!" });
         setToken("");
         await refreshUser();
-        // Reload automatic invites
-        const invitesRes = await apiClient.get<{ error?: boolean; data?: any[] }>("users/me/invitations");
+        const invitesRes = await apiClient.get<{ error?: boolean; data?: UserInvitation[] }>(
+          "users/me/invitations"
+        );
         if (!invitesRes.error && Array.isArray(invitesRes.data)) {
           setInvites(invitesRes.data);
+        }
+        const orgId = res.data?.organisation_id ?? res.organisation_id;
+        const labId = res.data?.lab_id ?? res.lab_id;
+        toast.success("Successfully joined the organisation!");
+        if (orgId && labId) {
+          navigate(`/${orgId}/lab/${labId}`);
+        } else if (orgId) {
+          navigate(`/${orgId}/labs`);
+        } else {
+          navigate("/");
         }
       } else {
         setTokenFeedback({ type: "error", message: res.message || "Failed to accept invitation." });
@@ -193,14 +225,14 @@ export function ProfilePage() {
                     variant="outline"
                     size="sm"
                     className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/30 dark:text-red-400 dark:hover:bg-red-950/30"
-                    onClick={() => handleAcceptInvite(invite.id, "REJECTED")}
+                    onClick={() => handleAcceptInvite(invite, "REJECTED")}
                   >
                     Reject
                   </Button>
                   <Button
                     size="sm"
                     className="bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
-                    onClick={() => handleAcceptInvite(invite.id, "ACCEPTED")}
+                    onClick={() => handleAcceptInvite(invite, "ACCEPTED")}
                   >
                     Accept
                   </Button>

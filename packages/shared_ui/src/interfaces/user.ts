@@ -31,4 +31,6 @@ export interface UserInvitation {
   status: "PENDING" | "APPROVED" | "REJECTED"; // can be stricter or just string
   lab_name: string;
   organisation_name: string;
+  organisation_id?: number;
+  lab_id?: number;
 }
