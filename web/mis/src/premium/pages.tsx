@@ -39,7 +39,7 @@ import {
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
-import { apiClient, endpoints, type Entity } from "@mono/api_client";
+import { apiClient, endpoints, normalizeApiError, type Entity } from "@mono/api_client";
 
 import { useAuth } from "./auth";
 import { usePagedResource } from "./api-hooks";
@@ -215,6 +215,14 @@ export function LoginPage() {
           <Button className="mt-7 w-full" size="lg" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
+          <div className="text-center mt-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Don't have an account?{" "}
+              <Link to="/register" className="font-semibold text-teal-600 hover:text-teal-500">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </form>
       </section>
     </div>
@@ -970,6 +978,162 @@ function fullName(user: { first_name?: string; last_name?: string; email?: strin
 export function RedirectToOrgDashboard() {
   const { orgId } = useParams();
   return <Navigate to={orgId ? `/${orgId}/dashboard` : "/"} replace />;
+}
+
+export function RegisterPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await apiClient.create("users/register/", {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber,
+        password,
+      });
+
+      await login(email, password);
+      navigate("/create-organization", { replace: true });
+    } catch (regError) {
+      setError(
+        regError instanceof Error
+          ? regError.message
+          : normalizeApiError(regError).message || "Unable to register account"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="grid min-h-screen bg-slate-950 text-white lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(13,148,136,0.24),transparent_30%)]" />
+        <div className="relative">
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm text-teal-100">
+            <img src="/technoventor-logo.svg" alt="Technoventor logo" className="h-8 w-auto rounded bg-white px-1 py-1" />
+            Technoventor MIS
+          </div>
+          <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
+            Create your multi-tenant laboratory workspace today.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
+            Get started in seconds. Register an account, create your organization, and invite your team.
+          </p>
+        </div>
+        <div className="relative grid max-w-3xl grid-cols-3 gap-4">
+          {["Full Self-Service", "SaaS Enabled", "Unlimited Labs"].map((item) => (
+            <div
+              key={item}
+              className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
+            >
+              <BadgeCheck className="mb-4 size-6 text-teal-200" />
+              <p className="font-semibold">{item}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="flex items-center justify-center bg-white px-6 py-12 text-slate-950 dark:bg-slate-950 dark:text-white">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-white/[0.03]"
+        >
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">
+            SaaS Registration
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+            Create your account
+          </h2>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Enter your details to register as a new organization administrator.
+          </p>
+          <div className="mt-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email address</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                value={phoneNumber}
+                onChange={(event) => setPhoneNumber(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </div>
+          </div>
+          {error ? (
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          ) : null}
+          <Button className="mt-7 w-full" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? "Creating account..." : "Register & Continue"}
+          </Button>
+          <div className="text-center mt-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Already have an account?{" "}
+              <Link to="/login" className="font-semibold text-teal-600 hover:text-teal-500">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
 }
 
 export { Outlet };

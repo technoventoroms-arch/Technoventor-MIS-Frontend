@@ -42,6 +42,11 @@ const routes: RouteObject[] = [
     children: [{ index: true, element: page("LoginPage") }],
   },
   {
+    path: "register",
+    element: <PublicOnlyRoute />,
+    children: [{ index: true, element: page("RegisterPage") }],
+  },
+  {
     path: "",
     element: <AuthenticatedRoute />,
     children: [
