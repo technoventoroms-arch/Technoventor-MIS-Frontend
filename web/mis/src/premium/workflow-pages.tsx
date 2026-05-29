@@ -1057,7 +1057,7 @@ export function MachinesPage() {
                 </div>
               ) : null}
               {bookingStep === 4 ? (() => {
-                const defaultMaterialsAttr = bookingMachineData?.attributes?.find(
+                const defaultMaterialsAttr = (bookingMachineData as any)?.attributes?.find(
                   (attr: any) => attr.key === "default_materials"
                 );
                 const defaultMaterialIds: number[] = defaultMaterialsAttr
@@ -1945,8 +1945,8 @@ export function MachineDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (machine?.attributes) {
-      const defaultMaterialsAttr = machine.attributes.find(
+    if ((machine as any)?.attributes) {
+      const defaultMaterialsAttr = (machine as any).attributes.find(
         (attr: any) => attr.key === "default_materials"
       );
       if (defaultMaterialsAttr) {
@@ -1983,7 +1983,7 @@ export function MachineDetailsPage() {
       toast.success("Default materials updated successfully.");
       setMachine((current) => {
         if (!current) return null;
-        const attrList = [...(current.attributes || [])];
+        const attrList = [...((current as any).attributes || [])];
         const idx = attrList.findIndex((a) => a.key === "default_materials");
         const newAttr = { key: "default_materials", value: JSON.stringify(selectedMaterials) };
         if (idx !== -1) {
