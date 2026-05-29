@@ -1162,7 +1162,6 @@ export function MachinesPage() {
 
 export function ProjectsPage() {
   const { orgId, labId } = useParams();
-  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedProject, setSelectedProject] = useState<ApiRow | null>(null);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventory = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
