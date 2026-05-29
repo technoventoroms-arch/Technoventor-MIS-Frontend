@@ -1189,9 +1189,9 @@ export function ProjectsPage() {
           resource={projects}
           fields={projectFields}
           orgId={orgId}
-          createPath={isOrgAdmin || isLabManager ? endpoints.projects.list(labId) : undefined}
-          updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
-          deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.projects.detail(labId, row.id) : undefined}
+          createPath={endpoints.projects.list(labId)}
+          updatePath={(row) => endpoints.projects.detail(labId, row.id)}
+          deletePath={(row) => endpoints.projects.detail(labId, row.id)}
           createLabel="New project"
           columns={[
             nameColumn(),
