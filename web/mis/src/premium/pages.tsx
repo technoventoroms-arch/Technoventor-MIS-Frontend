@@ -919,9 +919,14 @@ function formatRelativeTime(timestamp: number): string {
   return `${deltaHours}h ago`;
 }
 
+type OrgMember = Entity & {
+  user?: { id?: number | string };
+  is_admin?: boolean;
+};
+
 function useIsOrgAdmin(orgId?: string): boolean {
   const { user } = useAuth();
-  const members = usePagedResource<Entity>(
+  const members = usePagedResource<OrgMember>(
     orgId ? endpoints.organisations.members(orgId) : null,
     orgId
   );
