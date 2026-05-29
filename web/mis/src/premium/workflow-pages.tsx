@@ -58,6 +58,7 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useAuth } from "./auth";
+import { toast } from "sonner";
 import {
   ResourceCrudTable,
   ResourceForm,
@@ -806,6 +807,7 @@ export function MachinesPage() {
   const [bookingStep, setBookingStep] = useState(1);
   const [bookingProject, setBookingProject] = useState("");
   const [bookingMaterialItem, setBookingMaterialItem] = useState("");
+  const [bookingCustomMaterialItem, setBookingCustomMaterialItem] = useState("");
   const [bookingMaterialQty, setBookingMaterialQty] = useState("");
   const [bookingNotes, setBookingNotes] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -1054,33 +1056,81 @@ export function MachinesPage() {
                   </div>
                 </div>
               ) : null}
-              {bookingStep === 4 ? (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Material item (optional)</Label>
-                    <Select value={bookingMaterialItem} onValueChange={setBookingMaterialItem}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select material item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inventoryItems.rows.map((item) => (
-                          <SelectItem key={String(item.id)} value={String(item.id)}>
-                            {displayName(item)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {bookingStep === 4 ? (() => {
+                const defaultMaterialsAttr = bookingMachineData?.attributes?.find(
+                  (attr: any) => attr.key === "default_materials"
+                );
+                const defaultMaterialIds: number[] = defaultMaterialsAttr
+                  ? JSON.parse(defaultMaterialsAttr.value)
+                  : [];
+
+                const prefilledItems = inventoryItems.rows.filter(item => defaultMaterialIds.includes(Number(item.id)));
+
+                return (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Material item (optional)</Label>
+                      <Select value={bookingMaterialItem} onValueChange={(val) => {
+                        setBookingMaterialItem(val);
+                        if (val !== "custom") {
+                          setBookingCustomMaterialItem("");
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select material item" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {prefilledItems.length > 0 ? (
+                            <>
+                              {prefilledItems.map((item) => (
+                                <SelectItem key={String(item.id)} value={String(item.id)}>
+                                  {displayName(item)} (Prefilled)
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="custom" className="font-semibold text-teal-600 dark:text-teal-400">
+                                ➕ Custom request...
+                              </SelectItem>
+                            </>
+                          ) : (
+                            inventoryItems.rows.map((item) => (
+                              <SelectItem key={String(item.id)} value={String(item.id)}>
+                                {displayName(item)}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {bookingMaterialItem === "custom" ? (
+                      <div className="space-y-2 border-l-2 border-teal-500 pl-3">
+                        <Label>Select custom material item</Label>
+                        <Select value={bookingCustomMaterialItem} onValueChange={setBookingCustomMaterialItem}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select custom material item" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventoryItems.rows.map((item) => (
+                              <SelectItem key={String(item.id)} value={String(item.id)}>
+                                {displayName(item)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-2">
+                      <Label>Material quantity</Label>
+                      <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notes</Label>
+                      <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Material quantity</Label>
-                    <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
-                  </div>
-                </div>
-              ) : null}
+                );
+              })() : null}
               {bookingError ? <div className="text-sm text-rose-600">{bookingError}</div> : null}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setBookingStep((current) => Math.max(1, current - 1))} disabled={bookingStep === 1}>
@@ -1113,8 +1163,9 @@ export function MachinesPage() {
                           booked_till: bookingSlotEnd,
                           notes: bookingNotes,
                         };
-                        if (bookingMaterialItem && bookingMaterialQty) {
-                          payload.materials = [{ item_id: Number(bookingMaterialItem), quantity: Number(bookingMaterialQty) }];
+                        const finalItemId = bookingMaterialItem === "custom" ? bookingCustomMaterialItem : bookingMaterialItem;
+                        if (finalItemId && bookingMaterialQty) {
+                          payload.materials = [{ item_id: Number(finalItemId), quantity: Number(bookingMaterialQty) }];
                         }
                         await apiClient.create(endpoints.machines.reservations(labId, bookingMachineData.id), payload, { orgId });
                         setBookingMachine(null);
@@ -1885,9 +1936,69 @@ export function MachineSchedulePage() {
 
 export function MachineDetailsPage() {
   const { orgId, labId, machineId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
+  const inventory = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
+  const [selectedMaterials, setSelectedMaterials] = useState<number[]>([]);
+  const [isSavingMaterials, setIsSavingMaterials] = useState(false);
   const [machine, setMachine] = useState<ApiRow | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (machine?.attributes) {
+      const defaultMaterialsAttr = machine.attributes.find(
+        (attr: any) => attr.key === "default_materials"
+      );
+      if (defaultMaterialsAttr) {
+        try {
+          setSelectedMaterials(JSON.parse(defaultMaterialsAttr.value));
+        } catch (e) {
+          setSelectedMaterials([]);
+        }
+      } else {
+        setSelectedMaterials([]);
+      }
+    }
+  }, [machine]);
+
+  const toggleMaterial = (id: number) => {
+    setSelectedMaterials((current) =>
+      current.includes(id)
+        ? current.filter((x) => x !== id)
+        : [...current, id]
+    );
+  };
+
+  const handleSaveMaterials = async () => {
+    setIsSavingMaterials(true);
+    try {
+      await apiClient.create(
+        `machines/labs/${labId}/${machineId}/attributes/`,
+        {
+          key: "default_materials",
+          value: JSON.stringify(selectedMaterials),
+        },
+        { orgId }
+      );
+      toast.success("Default materials updated successfully.");
+      setMachine((current) => {
+        if (!current) return null;
+        const attrList = [...(current.attributes || [])];
+        const idx = attrList.findIndex((a) => a.key === "default_materials");
+        const newAttr = { key: "default_materials", value: JSON.stringify(selectedMaterials) };
+        if (idx !== -1) {
+          attrList[idx] = { ...attrList[idx], ...newAttr };
+        } else {
+          attrList.push({ id: Date.now(), ...newAttr });
+        }
+        return { ...current, attributes: attrList };
+      });
+    } catch (error) {
+      toast.error(normalizeApiError(error).message);
+    } finally {
+      setIsSavingMaterials(false);
+    }
+  };
 
   useEffect(() => {
     if (!orgId || !labId || !machineId) {
@@ -1960,6 +2071,59 @@ export function MachineDetailsPage() {
               {machineDetailField("Description", machine.description)}
             </div>
           </PremiumSurface>
+
+          {isOrgAdmin || isLabManager ? (
+            <PremiumSurface className="p-6 space-y-4">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Boxes className="size-5 text-teal-600 dark:text-teal-400" />
+                Prefilled Default Materials (Managers Only)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Check the inventory items that should show up by default when users book this machine.
+              </p>
+              {inventory.rows.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 max-h-60 overflow-y-auto border border-slate-100 dark:border-slate-800 rounded-xl p-3">
+                  {inventory.rows.map((item) => {
+                    const isChecked = selectedMaterials.includes(Number(item.id));
+                    return (
+                      <label
+                        key={String(item.id)}
+                        className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition select-none ${
+                          isChecked
+                            ? "border-teal-500 bg-teal-50/50 text-teal-900 dark:bg-teal-950/20 dark:text-teal-100"
+                            : "border-slate-100 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-850"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 dark:border-slate-700"
+                          checked={isChecked}
+                          onChange={() => toggleMaterial(Number(item.id))}
+                        />
+                        <div className="text-sm font-medium leading-none">
+                          {displayName(item)}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200 dark:border-amber-900/30">
+                  No inventory items available in this lab yet. Add items in the Inventory section first.
+                </p>
+              )}
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={handleSaveMaterials}
+                  disabled={isSavingMaterials || inventory.rows.length === 0}
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-sm transition"
+                >
+                  {isSavingMaterials ? "Saving..." : "Save Default Materials"}
+                </Button>
+              </div>
+            </PremiumSurface>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
               <Link to={schedulePath}>Schedule & bookings</Link>
