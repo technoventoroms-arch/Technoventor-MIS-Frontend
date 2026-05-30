@@ -876,6 +876,9 @@ export function MachinesPage() {
               header: "Operations",
               render: (row) => (
                 <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
+                  </Button>
                   {isLabManager || isOrgAdmin ? (
                     <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
                       Status
@@ -1905,6 +1908,11 @@ export function MachineSchedulePage() {
     orgId
   );
 
+  if (!orgId || !labId || !machineId) return null;
+
+  const detailsPath = `/${orgId}/lab/${labId}/machine/${machineId}/details`;
+  const logsPath = `/${orgId}/lab/${labId}/machine/${machineId}/logs`;
+
   return (
     <PageFrame
       eyebrow="Machine"
@@ -1912,6 +1920,17 @@ export function MachineSchedulePage() {
       description="View reservations and operating schedule for this machine."
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link to={detailsPath}>Machine details</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to={logsPath}>Activity log</Link>
+        </Button>
+        <Button asChild>
+          <Link to={`/${orgId}/lab/${labId}/machine`}>All machines</Link>
+        </Button>
+      </div>
       <PremiumDataTable
         title="Reservations"
         description={reservations.error?.message ?? "Machine booking schedule."}
@@ -2153,6 +2172,11 @@ export function MachineLogsPage() {
     orgId
   );
 
+  if (!orgId || !labId || !machineId) return null;
+
+  const detailsPath = `/${orgId}/lab/${labId}/machine/${machineId}/details`;
+  const schedulePath = `/${orgId}/lab/${labId}/machine/${machineId}`;
+
   return (
     <PageFrame
       eyebrow="Machine"
@@ -2160,6 +2184,17 @@ export function MachineLogsPage() {
       description="Review machine usage logs and related events."
       metrics={[metric("Logs", logs.rows.length, "Status audit records", <Wrench />)]}
     >
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link to={detailsPath}>Machine details</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to={schedulePath}>Schedule & bookings</Link>
+        </Button>
+        <Button asChild>
+          <Link to={`/${orgId}/lab/${labId}/machine`}>All machines</Link>
+        </Button>
+      </div>
       <PremiumDataTable
         title="Machine Logs"
         description={logs.error?.message ?? "Status changes and usage events for this machine."}
