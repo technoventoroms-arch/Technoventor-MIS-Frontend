@@ -118,7 +118,6 @@ const labFields: ResourceField[] = [
 const machineFields: ResourceField[] = [
   { name: "name", label: "Machine name", required: true },
   { name: "model_number", label: "Model number" },
-  { name: "serial_number", label: "Serial number" },
   { name: "purchased_at", label: "Purchased at", type: "date" },
   { name: "image_url", label: "Image URL" },
   { name: "description", label: "Description", type: "textarea" },
