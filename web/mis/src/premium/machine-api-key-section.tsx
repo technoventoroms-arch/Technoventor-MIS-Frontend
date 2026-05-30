@@ -15,18 +15,27 @@ type MachineApiKeySectionProps = {
   orgId: string;
   labId: string;
   machineId: string;
+  enabled?: boolean;
 };
 
 export function MachineApiKeySection({
   orgId,
   labId,
   machineId,
+  enabled = true,
 }: MachineApiKeySectionProps) {
   const [apiKeyData, setApiKeyData] = useState<MachineApiKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setApiKeyData(null);
+      setLoadError(null);
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
@@ -50,7 +59,9 @@ export function MachineApiKeySection({
     return () => {
       cancelled = true;
     };
-  }, [orgId, labId, machineId]);
+  }, [orgId, labId, machineId, enabled]);
+
+  if (!enabled) return null;
 
   const handleCopy = async () => {
     const key = apiKeyData?.api_key;
@@ -73,7 +84,8 @@ export function MachineApiKeySection({
             IoT API Key
           </h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            UUID credential used by this machine to authenticate with lab IoT services.
+            UUID credential used by this machine to authenticate with lab IoT services. Visible to lab
+            managers and organisation admins only.
           </p>
         </div>
         {apiKeyData?.api_key ? (

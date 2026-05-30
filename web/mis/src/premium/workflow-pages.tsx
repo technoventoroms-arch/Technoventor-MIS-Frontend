@@ -876,9 +876,11 @@ export function MachinesPage() {
               header: "Operations",
               render: (row) => (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
-                  </Button>
+                  {isLabManager || isOrgAdmin ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
+                    </Button>
+                  ) : null}
                   {isLabManager || isOrgAdmin ? (
                     <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
                       Status
@@ -1903,6 +1905,7 @@ export function ScanMachinePage() {
 
 export function MachineSchedulePage() {
   const { orgId, labId, machineId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const reservations = usePagedResource<ApiRow>(
     labId && machineId ? endpoints.machines.reservations(labId, machineId) : null,
     orgId
@@ -1921,9 +1924,11 @@ export function MachineSchedulePage() {
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link to={detailsPath}>Machine details</Link>
-        </Button>
+        {isOrgAdmin || isLabManager ? (
+          <Button asChild variant="outline">
+            <Link to={detailsPath}>Machine details</Link>
+          </Button>
+        ) : null}
         <Button asChild variant="outline">
           <Link to={logsPath}>Activity log</Link>
         </Button>
@@ -2092,7 +2097,9 @@ export function MachineDetailsPage() {
             </div>
           </PremiumSurface>
 
-          <MachineApiKeySection orgId={orgId} labId={labId} machineId={machineId} />
+          {isOrgAdmin || isLabManager ? (
+            <MachineApiKeySection orgId={orgId} labId={labId} machineId={machineId} />
+          ) : null}
 
           {isOrgAdmin || isLabManager ? (
             <PremiumSurface className="p-6 space-y-4">
@@ -2167,6 +2174,7 @@ export function MachineDetailsPage() {
 
 export function MachineLogsPage() {
   const { orgId, labId, machineId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const logs = usePagedResource<ApiRow>(
     labId && machineId ? endpoints.machines.logs(labId, machineId) : null,
     orgId
@@ -2185,9 +2193,11 @@ export function MachineLogsPage() {
       metrics={[metric("Logs", logs.rows.length, "Status audit records", <Wrench />)]}
     >
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link to={detailsPath}>Machine details</Link>
-        </Button>
+        {isOrgAdmin || isLabManager ? (
+          <Button asChild variant="outline">
+            <Link to={detailsPath}>Machine details</Link>
+          </Button>
+        ) : null}
         <Button asChild variant="outline">
           <Link to={schedulePath}>Schedule & bookings</Link>
         </Button>
