@@ -49,6 +49,12 @@ export type Entity = {
   [key: string]: unknown;
 };
 
+export type MachineApiKey = {
+  id: number;
+  name: string;
+  api_key: string;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -376,6 +382,8 @@ export const endpoints = {
     list: (labId: string | number) => `machines/labs/${labId}/`,
     detail: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/`,
+    apiKey: (labId: string | number, machineId: string | number) =>
+      `machines/labs/${labId}/${machineId}/api-key/`,
     status: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/status/`,
     logs: (labId: string | number, machineId: string | number) =>

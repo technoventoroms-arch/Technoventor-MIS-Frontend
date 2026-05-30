@@ -58,6 +58,7 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useAuth } from "./auth";
+import { MachineApiKeySection } from "./machine-api-key-section";
 import { toast } from "sonner";
 import {
   ResourceCrudTable,
@@ -2071,6 +2072,8 @@ export function MachineDetailsPage() {
               {machineDetailField("Description", machine.description)}
             </div>
           </PremiumSurface>
+
+          <MachineApiKeySection orgId={orgId} labId={labId} machineId={machineId} />
 
           {isOrgAdmin || isLabManager ? (
             <PremiumSurface className="p-6 space-y-4">
