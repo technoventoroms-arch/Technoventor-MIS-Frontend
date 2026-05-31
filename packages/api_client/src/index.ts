@@ -55,6 +55,19 @@ export type MachineApiKey = {
   api_key: string;
 };
 
+/** ESP32 NVS values — machine API key only (no lab key). */
+export type MachineFirmwareConfig = {
+  apiUrl: string;
+  consumeMachine: string;
+  machineStatus: string;
+  machineApiKey: string;
+};
+
+export type MachineIoTConfigResponse = {
+  error: boolean;
+  data: MachineFirmwareConfig;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -384,6 +397,8 @@ export const endpoints = {
       `machines/labs/${labId}/${machineId}/`,
     apiKey: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/api-key/`,
+    iotConfig: (labId: string | number, machineId: string | number) =>
+      `machines/labs/${labId}/${machineId}/iot-config/`,
     status: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/status/`,
     logs: (labId: string | number, machineId: string | number) =>

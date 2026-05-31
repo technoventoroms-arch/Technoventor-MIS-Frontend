@@ -876,9 +876,16 @@ export function MachinesPage() {
               render: (row) => (
                 <div className="flex flex-wrap gap-2">
                   {isLabManager || isOrgAdmin ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
+                      </Button>
+                      <Button size="sm" variant="secondary" asChild>
+                        <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>
+                          IoT key
+                        </Link>
+                      </Button>
+                    </>
                   ) : null}
                   {isLabManager || isOrgAdmin ? (
                     <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
@@ -1924,8 +1931,8 @@ export function MachineSchedulePage() {
     >
       <div className="mb-4 flex flex-wrap gap-2">
         {isOrgAdmin || isLabManager ? (
-          <Button asChild variant="outline">
-            <Link to={detailsPath}>Machine details</Link>
+          <Button asChild variant="secondary">
+            <Link to={detailsPath}>Machine details &amp; IoT key</Link>
           </Button>
         ) : null}
         <Button asChild variant="outline">
@@ -2098,7 +2105,19 @@ export function MachineDetailsPage() {
 
           {isOrgAdmin || isLabManager ? (
             <MachineApiKeySection orgId={orgId} labId={labId} machineId={machineId} />
-          ) : null}
+          ) : (
+            <PremiumSurface className="p-6 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Machine IoT credential</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                The machine API key for ESP32 / Wokwi is only visible to{" "}
+                <strong>lab managers</strong> and <strong>organisation admins</strong>. Log in as{" "}
+                <code className="text-teal-700 dark:text-teal-300">lab.manager@technoventor.com</code>{" "}
+                (demo) and open this same page via{" "}
+                <strong>Machines → IoT key</strong> or{" "}
+                <strong>Machine details &amp; IoT key</strong>.
+              </p>
+            </PremiumSurface>
+          )}
 
           {isOrgAdmin || isLabManager ? (
             <PremiumSurface className="p-6 space-y-4">
@@ -2193,8 +2212,8 @@ export function MachineLogsPage() {
     >
       <div className="mb-4 flex flex-wrap gap-2">
         {isOrgAdmin || isLabManager ? (
-          <Button asChild variant="outline">
-            <Link to={detailsPath}>Machine details</Link>
+          <Button asChild variant="secondary">
+            <Link to={detailsPath}>Machine details &amp; IoT key</Link>
           </Button>
         ) : null}
         <Button asChild variant="outline">
