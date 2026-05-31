@@ -38,11 +38,6 @@ import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
 import { useOrganisationAccess } from "./use-organisation-access";
-import {
-  WorkspaceHomeHero,
-  WorkspaceHomeMetrics,
-  WorkspaceQuickActions,
-} from "./workspace-home";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
 import { resolveLabNavPersona } from "./lab-role";
 
@@ -312,26 +307,46 @@ export function MisShell() {
 
 export function OrganisationSwitcherPage() {
   const { user } = useAuth();
-  const { resource, organisationCount, canCreateOrganisation, isLoading } =
-    useOrganisationAccess(true);
+  const { resource, organisationCount, canCreateOrganisation } = useOrganisationAccess(true);
+  const displayName = fullName(user);
+  const firstName = displayName.split(" ")[0] || "there";
+
+  const pageDescription =
+    resource.error?.message ??
+    (organisationCount > 0
+      ? "Open an organisation to reach your labs. Tools in the sidebar depend on your role in each lab."
+      : canCreateOrganisation
+        ? "Create your organisation, or join a lab if you were invited to an existing team."
+        : "Request access to a lab or accept an invite from your administrator.");
 
   return (
     <div className="space-y-8">
-      <WorkspaceHomeHero
-        userName={fullName(user)}
-        organisationCount={organisationCount}
-        canCreateOrganisation={canCreateOrganisation}
-        isLoading={isLoading}
+      <SectionHeader
+        eyebrow="Workspace"
+        title={organisationCount > 0 ? `Welcome back, ${firstName}` : "Your organisations"}
+        description={pageDescription}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/request_lab">Join a lab</Link>
+            </Button>
+            {canCreateOrganisation ? (
+              <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                <Link to="/create-organization">
+                  <Plus className="size-4" />
+                  Create organisation
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+        }
       />
-      <WorkspaceHomeMetrics organisationCount={organisationCount} isLoading={isLoading} />
-      <WorkspaceQuickActions canCreateOrganisation={canCreateOrganisation} />
       <PremiumDataTable
-        title="Your organisations"
+        title="Organisations"
         description={
-          resource.error?.message ??
-          (organisationCount > 0
-            ? "Select an organisation to open labs and tools for your role."
-            : "You are not linked to an organisation yet — join a lab or accept an invite.")
+          organisationCount > 0
+            ? `${organisationCount} workspace${organisationCount === 1 ? "" : "s"} available to you.`
+            : "No organisations linked to this account yet."
         }
         columns={[
           ...baseColumns,
@@ -359,21 +374,6 @@ export function OrganisationSwitcherPage() {
           canCreateOrganisation
             ? "Create your first organisation, or join a lab if you were invited to an existing team."
             : "Ask your administrator for an invite, or browse labs to request membership."
-        }
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/request_lab">Join a lab</Link>
-            </Button>
-            {canCreateOrganisation ? (
-              <Button asChild className="bg-teal-600 hover:bg-teal-700">
-                <Link to="/create-organization">
-                  <Plus className="size-4" />
-                  Create organisation
-                </Link>
-              </Button>
-            ) : null}
-          </div>
         }
       />
     </div>
