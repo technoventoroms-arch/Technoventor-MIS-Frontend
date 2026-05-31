@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
@@ -14,7 +14,6 @@ import {
   Loader2,
   Plus,
   Radio,
-  ScanBarcode,
   ShoppingCart,
   Users,
   Wrench,

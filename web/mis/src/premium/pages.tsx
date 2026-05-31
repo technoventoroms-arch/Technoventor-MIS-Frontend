@@ -588,7 +588,6 @@ function MemberLabDashboard({ labName }: { labName?: string }) {
 
 function AdminLabDashboard({ labName }: { labName?: string }) {
   const { orgId, labId } = useParams();
-  const isOrgAdmin = useIsOrgAdmin(orgId);
   const { can, canAny } = useLabPermissions();
   const machines = usePagedResource<Entity>(labId ? endpoints.machines.list(labId) : null, orgId);
   const inventory = usePagedResource<Entity>(labId ? endpoints.inventory.items(labId) : null, orgId);
