@@ -378,6 +378,8 @@ export const endpoints = {
     list: (orgId: string | number) => `labs/organisations/${orgId}/labs/`,
     detail: (orgId: string | number, labId: string | number) =>
       `labs/organisations/${orgId}/labs/${labId}/`,
+    bookingPolicy: (orgId: string | number, labId: string | number) =>
+      `labs/organisations/${orgId}/labs/${labId}/booking-policy/`,
     joinRequest: (labId: string | number) => `labs/${labId}/join-request/`,
     members: (orgId: string | number, labId: string | number) =>
       `labs/organisations/${orgId}/labs/${labId}/members/`,

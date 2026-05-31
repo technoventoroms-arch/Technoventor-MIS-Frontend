@@ -58,6 +58,14 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useAuth } from "./auth";
+import {
+  buildSlotCandidates,
+  defaultBookingPolicy,
+  formatMinutesAsTime,
+  parseTimeToMinutes,
+  validateCustomReservation,
+  type LabBookingPolicy,
+} from "./booking-utils";
 import { MachineApiKeySection } from "./machine-api-key-section";
 import { toast } from "sonner";
 import {
@@ -97,20 +105,6 @@ const labFields: ResourceField[] = [
   { name: "name", label: "Lab name", required: true },
   { name: "phone", label: "Phone" },
   { name: "image_url", label: "Image URL" },
-  {
-    name: "booking_enabled",
-    label: "Allow bookings",
-    type: "select",
-    options: [
-      { value: "true", label: "Enabled" },
-      { value: "false", label: "Disabled" },
-    ],
-    defaultValue: "true",
-  },
-  { name: "slot_duration_minutes", label: "Slot duration (minutes)", type: "number", defaultValue: "60" },
-  { name: "no_show_grace_minutes", label: "No-show grace (minutes)", type: "number", defaultValue: "30" },
-  { name: "booking_window_start", label: "Booking start (HH:MM)", placeholder: "09:00" },
-  { name: "booking_window_end", label: "Booking end (HH:MM)", placeholder: "18:00" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -321,12 +315,6 @@ export function LabsPage() {
         updatePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
         deletePath={isOrgAdmin ? (row) => endpoints.labs.detail(orgId, row.id) : undefined}
         createLabel="Create lab"
-        transformPayload={(values) => ({
-          ...values,
-          booking_enabled: values.booking_enabled === "true",
-          slot_duration_minutes: values.slot_duration_minutes ? Number(values.slot_duration_minutes) : undefined,
-          no_show_grace_minutes: values.no_show_grace_minutes ? Number(values.no_show_grace_minutes) : undefined,
-        })}
         columns={[
           nameColumn(),
           textColumn("phone", "Phone"),
@@ -812,6 +800,8 @@ export function MachinesPage() {
   const [bookingNotes, setBookingNotes] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [bookingTimeMode, setBookingTimeMode] = useState<"slots" | "custom">("slots");
+  const [labBookingPolicy, setLabBookingPolicy] = useState<LabBookingPolicy>(defaultBookingPolicy);
   const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventoryItems = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -829,24 +819,19 @@ export function MachinesPage() {
   );
   const bookingMachineData = machines.rows.find((row) => String(row.id) === bookingMachineId) ?? bookingMachine;
   const existingReservations = bookingReservations.rows;
-  const slotCandidates = useMemo(() => {
-    if (!bookingDate) return [];
-    const slots: { from: string; till: string; blocked: boolean }[] = [];
-    for (let hour = 9; hour < 18; hour++) {
-      const from = `${bookingDate}T${String(hour).padStart(2, "0")}:00`;
-      const till = `${bookingDate}T${String(hour + 1).padStart(2, "0")}:00`;
-      const fromDate = new Date(from);
-      const tillDate = new Date(till);
-      const blocked = existingReservations.some((reservation) => {
-        if (!reservation.booked_from || !reservation.booked_till) return false;
-        const rFrom = new Date(String(reservation.booked_from));
-        const rTill = new Date(String(reservation.booked_till));
-        return rFrom < tillDate && rTill > fromDate && reservation.status !== "CANCELLED" && reservation.status !== "REJECTED";
-      });
-      slots.push({ from, till, blocked });
-    }
-    return slots;
-  }, [bookingDate, existingReservations]);
+  const slotCandidates = useMemo(
+    () => buildSlotCandidates(bookingDate, labBookingPolicy, existingReservations),
+    [bookingDate, existingReservations, labBookingPolicy]
+  );
+  const bookingHoursLabel = `${formatMinutesAsTime(parseTimeToMinutes(labBookingPolicy.booking_window_start))}–${formatMinutesAsTime(parseTimeToMinutes(labBookingPolicy.booking_window_end))}`;
+
+  useEffect(() => {
+    if (!orgId || !labId) return;
+    apiClient
+      .get<LabBookingPolicy>(endpoints.labs.bookingPolicy(orgId, labId), { orgId })
+      .then((policy) => setLabBookingPolicy({ ...defaultBookingPolicy, ...policy }))
+      .catch(() => {});
+  }, [orgId, labId]);
 
   if (!labId) return null;
   return (
@@ -856,6 +841,16 @@ export function MachinesPage() {
       description="Register machines, update status, review bookings, and manage day-to-day use."
       metrics={[metric("Machines", machines.rows.length, "Equipment records", <Wrench />)]}
     >
+      {!labBookingPolicy.booking_enabled ? (
+        <PremiumSurface className="border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          Machine bookings are <strong>turned off</strong> for this lab. Lab managers can re-enable them under{" "}
+          <strong>Lab Settings</strong>.
+        </PremiumSurface>
+      ) : (
+        <PremiumSurface className="p-4 text-sm text-slate-600 dark:text-slate-300">
+          Booking hours: <strong>{bookingHoursLabel}</strong> (custom times must fall within this window and not overlap).
+        </PremiumSurface>
+      )}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <ResourceCrudTable
           title="Machines"
@@ -902,8 +897,11 @@ export function MachinesPage() {
                     setBookingDate("");
                     setBookingSlotStart("");
                     setBookingSlotEnd("");
+                    setBookingTimeMode("slots");
                     setBookingError(null);
-                  }}>
+                  }}
+                  disabled={!labBookingPolicy.booking_enabled}
+                  >
                     Book slot
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setLogMachine(row)}>
@@ -917,6 +915,7 @@ export function MachinesPage() {
         {reservationMachine ? (
           <ResourceCrudTable
             title="Reservations"
+            description={`Custom start/end allowed between ${bookingHoursLabel}. The API rejects overlaps and times outside lab hours.`}
             resource={reservations}
             fields={[
               { name: "project", label: "Project", type: "select", required: true, options: toOptions(projects.rows) },
@@ -927,9 +926,21 @@ export function MachinesPage() {
               { name: "notes", label: "Notes", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={endpoints.machines.reservations(labId, reservationMachine.id)}
+            createPath={
+              labBookingPolicy.booking_enabled
+                ? endpoints.machines.reservations(labId, reservationMachine.id)
+                : undefined
+            }
             createLabel="Reserve machine"
             transformPayload={(values) => {
+              const validationError = validateCustomReservation(
+                labBookingPolicy,
+                String(values.booked_from ?? ""),
+                String(values.booked_till ?? "")
+              );
+              if (validationError) {
+                throw new Error(validationError);
+              }
               const payload: Record<string, unknown> = {
                 project: Number(values.project),
                 booked_from: values.booked_from,
@@ -1037,35 +1048,89 @@ export function MachinesPage() {
               ) : null}
               {bookingStep === 3 ? (
                 <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Calendar date</Label>
-                    <Input type="date" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />
+                  <p className="text-xs text-slate-500">
+                    Lab hours: {bookingHoursLabel}. Choose a preset slot or enter a custom range (same day).
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={bookingTimeMode === "slots" ? "default" : "outline"}
+                      onClick={() => setBookingTimeMode("slots")}
+                    >
+                      Preset slots
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={bookingTimeMode === "custom" ? "default" : "outline"}
+                      onClick={() => setBookingTimeMode("custom")}
+                    >
+                      Custom time
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Open slots</Label>
-                    <div className="grid grid-cols-3 gap-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-3 dark:border-teal-800/60 dark:from-teal-950/30 dark:to-slate-950">
-                      {slotCandidates.map((slot) => (
-                        <Button
-                          key={slot.from}
-                          type="button"
-                          size="sm"
-                          className={
-                            bookingSlotStart === slot.from
-                              ? "bg-teal-600 text-white hover:bg-teal-700"
-                              : "border-teal-300 text-teal-700 hover:bg-teal-100 dark:border-teal-700 dark:text-teal-200 dark:hover:bg-teal-900/30"
-                          }
-                          variant="outline"
-                          disabled={slot.blocked}
-                          onClick={() => {
-                            setBookingSlotStart(slot.from);
-                            setBookingSlotEnd(slot.till);
-                          }}
-                        >
-                          {slot.from.slice(11, 16)}-{slot.till.slice(11, 16)}
-                        </Button>
-                      ))}
+                  {bookingTimeMode === "slots" ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Calendar date</Label>
+                        <Input
+                          type="date"
+                          value={bookingDate}
+                          onChange={(event) => setBookingDate(event.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Open slots</Label>
+                        <div className="grid grid-cols-3 gap-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-3 dark:border-teal-800/60 dark:from-teal-950/30 dark:to-slate-950">
+                          {slotCandidates.length === 0 ? (
+                            <p className="col-span-3 text-xs text-slate-500">
+                              Pick a date to see available slots.
+                            </p>
+                          ) : (
+                            slotCandidates.map((slot) => (
+                              <Button
+                                key={slot.from}
+                                type="button"
+                                size="sm"
+                                className={
+                                  bookingSlotStart === slot.from
+                                    ? "bg-teal-600 text-white hover:bg-teal-700"
+                                    : "border-teal-300 text-teal-700 hover:bg-teal-100 dark:border-teal-700 dark:text-teal-200 dark:hover:bg-teal-900/30"
+                                }
+                                variant="outline"
+                                disabled={slot.blocked}
+                                onClick={() => {
+                                  setBookingSlotStart(slot.from);
+                                  setBookingSlotEnd(slot.till);
+                                }}
+                              >
+                                {slot.from.slice(11, 16)}-{slot.till.slice(11, 16)}
+                              </Button>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Start</Label>
+                        <Input
+                          type="datetime-local"
+                          value={bookingSlotStart}
+                          onChange={(event) => setBookingSlotStart(event.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>End</Label>
+                        <Input
+                          type="datetime-local"
+                          value={bookingSlotEnd}
+                          onChange={(event) => setBookingSlotEnd(event.target.value)}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : null}
               {bookingStep === 4 ? (() => {
@@ -1153,7 +1218,14 @@ export function MachinesPage() {
                     onClick={() => {
                       if (bookingStep === 1 && !bookingProject) return setBookingError("Select a project.");
                       if (bookingStep === 2 && !bookingMachineId) return setBookingError("Select a machine.");
-                      if (bookingStep === 3 && (!bookingSlotStart || !bookingSlotEnd)) return setBookingError("Select an open slot.");
+                      if (bookingStep === 3) {
+                        const validationError = validateCustomReservation(
+                          labBookingPolicy,
+                          bookingSlotStart,
+                          bookingSlotEnd
+                        );
+                        if (validationError) return setBookingError(validationError);
+                      }
                       setBookingError(null);
                       setBookingStep((current) => current + 1);
                     }}
@@ -1165,14 +1237,23 @@ export function MachinesPage() {
                     disabled={isBooking}
                     onClick={async () => {
                       if (!labId || !bookingMachineData) return;
+                      const validationError = validateCustomReservation(
+                        labBookingPolicy,
+                        bookingSlotStart,
+                        bookingSlotEnd
+                      );
+                      if (validationError) {
+                        setBookingError(validationError);
+                        return;
+                      }
                       setIsBooking(true);
                       setBookingError(null);
                       try {
                         const payload: Record<string, unknown> = {
                           project: Number(bookingProject),
                           machine: Number(bookingMachineId),
-                          booked_from: bookingSlotStart,
-                          booked_till: bookingSlotEnd,
+                          booked_from: new Date(bookingSlotStart).toISOString(),
+                          booked_till: new Date(bookingSlotEnd).toISOString(),
                           notes: bookingNotes,
                         };
                         const finalItemId = bookingMaterialItem === "custom" ? bookingCustomMaterialItem : bookingMaterialItem;

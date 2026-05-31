@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   BarChart3,
   Building2,
+  CalendarClock,
   FlaskConical,
   Settings,
   UserCircle,
@@ -17,10 +18,19 @@ import {
   SectionHeader,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
+import { Input } from "@mono/shared_ui/components/ui/input";
+import { Label } from "@mono/shared_ui/components/ui/label";
+import { Switch } from "@mono/shared_ui/components/ui/switch";
 
 import { UserInvitation } from "@mono/shared_ui/interfaces/user";
 
 import { useAuth } from "./auth";
+import {
+  defaultBookingPolicy,
+  formatMinutesAsTime,
+  parseTimeToMinutes,
+  type LabBookingPolicy,
+} from "./booking-utils";
 import { ResourceForm, type ResourceField } from "./resource-forms";
 
 const profileFields: ResourceField[] = [
@@ -287,39 +297,208 @@ export function OrganisationSettingsPage() {
 
 export function LabSettingsPage() {
   const { orgId, labId } = useParams();
+  const { user } = useAuth();
   const [lab, setLab] = useState<Entity | null>(null);
+  const [booking, setBooking] = useState<LabBookingPolicy>(defaultBookingPolicy);
+  const [canManageBooking, setCanManageBooking] = useState(false);
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
+  const [isSavingBooking, setIsSavingBooking] = useState(false);
 
   useEffect(() => {
     if (!orgId || !labId) return;
     apiClient.get<Entity>(endpoints.labs.detail(orgId, labId), { orgId }).then(setLab);
-  }, [labId, orgId]);
+    apiClient
+      .get<LabBookingPolicy>(endpoints.labs.bookingPolicy(orgId, labId), { orgId })
+      .then((policy) => setBooking({ ...defaultBookingPolicy, ...policy }))
+      .catch(() => {});
+    apiClient
+      .get<{ results?: Array<{ user?: { id?: number }; role?: { name?: string } }> }>(
+        endpoints.labs.members(orgId, labId),
+        { orgId }
+      )
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : res.results ?? [];
+        const mine = rows.find((row) => Number(row.user?.id) === user?.id);
+        const roleName = String(mine?.role?.name ?? "").toLowerCase();
+        setCanManageBooking(roleName.includes("manager") || roleName.includes("mentor"));
+      })
+      .catch(() => {});
+    apiClient
+      .get<{ results?: Array<{ user?: { id?: number }; is_admin?: boolean }> }>(
+        endpoints.organisations.members(orgId),
+        { orgId }
+      )
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : res.results ?? [];
+        const mine = rows.find((row) => Number(row.user?.id) === user?.id);
+        if (mine?.is_admin) {
+          setIsOrgAdmin(true);
+          setCanManageBooking(true);
+        }
+      })
+      .catch(() => {});
+  }, [labId, orgId, user?.id]);
 
   if (!orgId || !labId) return null;
+
+  const windowStart = formatMinutesAsTime(parseTimeToMinutes(booking.booking_window_start));
+  const windowEnd = formatMinutesAsTime(parseTimeToMinutes(booking.booking_window_end));
 
   return (
     <PageFrame
       eyebrow="Settings"
       title="Lab"
-      description="Update lab profile fields, location, and operating details."
+      description="Update lab profile and control machine booking hours for members."
       metrics={[
         metric("Lab", lab?.name ?? `#${labId}`, "Editable facility", <FlaskConical />),
+        metric(
+          "Bookings",
+          booking.booking_enabled ? "On" : "Off",
+          `${windowStart}–${windowEnd}`,
+          <CalendarClock />
+        ),
       ]}
     >
-      <PremiumSurface className="p-6">
-        <ResourceForm
-          fields={labFields}
-          initialValues={lab}
-          submitLabel="Save lab"
-          onSubmit={async (values) => {
-            const updated = await apiClient.update<Entity>(
-              endpoints.labs.detail(orgId, labId),
-              values,
-              { orgId }
-            );
-            setLab(updated);
-          }}
-        />
-      </PremiumSurface>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <PremiumSurface className="p-6">
+          <SectionHeader title="Lab profile" description="Name, contact, and location." />
+          {isOrgAdmin ? (
+            <ResourceForm
+              fields={labFields}
+              initialValues={lab}
+              submitLabel="Save lab"
+              onSubmit={async (values) => {
+                const updated = await apiClient.update<Entity>(
+                  endpoints.labs.detail(orgId, labId),
+                  values,
+                  { orgId }
+                );
+                setLab(updated);
+                toast.success("Lab profile saved.");
+              }}
+            />
+          ) : (
+            <EmptyState
+              title="Organisation admin only"
+              description="Lab profile changes are managed at organisation level. You can still control booking policy on the right."
+            />
+          )}
+        </PremiumSurface>
+
+        <PremiumSurface className="p-6">
+          <SectionHeader
+            title="Machine booking policy"
+            description="Turn bookings on or off anytime and set allowed hours for student reservations."
+          />
+          {!canManageBooking ? (
+            <EmptyState
+              title="Manager access required"
+              description="Only lab managers and organisation admins can change booking policy."
+            />
+          ) : (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <div>
+                  <Label htmlFor="booking-enabled">Allow machine bookings</Label>
+                  <p className="text-xs text-slate-500">
+                    When off, members cannot create reservations and IoT unlock requires no booking.
+                  </p>
+                </div>
+                <Switch
+                  id="booking-enabled"
+                  checked={booking.booking_enabled}
+                  onCheckedChange={(checked) =>
+                    setBooking((current) => ({ ...current, booking_enabled: checked }))
+                  }
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="window-start">Booking opens at</Label>
+                  <Input
+                    id="window-start"
+                    type="time"
+                    value={windowStart}
+                    onChange={(event) =>
+                      setBooking((current) => ({
+                        ...current,
+                        booking_window_start: `${event.target.value}:00`,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="window-end">Booking closes at</Label>
+                  <Input
+                    id="window-end"
+                    type="time"
+                    value={windowEnd}
+                    onChange={(event) =>
+                      setBooking((current) => ({
+                        ...current,
+                        booking_window_end: `${event.target.value}:00`,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="slot-duration">Suggested slot length (minutes)</Label>
+                  <Input
+                    id="slot-duration"
+                    type="number"
+                    min={1}
+                    value={booking.slot_duration_minutes}
+                    onChange={(event) =>
+                      setBooking((current) => ({
+                        ...current,
+                        slot_duration_minutes: Number(event.target.value) || 60,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="grace">No-show grace (minutes)</Label>
+                  <Input
+                    id="grace"
+                    type="number"
+                    min={0}
+                    value={booking.no_show_grace_minutes ?? 30}
+                    onChange={(event) =>
+                      setBooking((current) => ({
+                        ...current,
+                        no_show_grace_minutes: Number(event.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <Button
+                disabled={isSavingBooking}
+                onClick={async () => {
+                  setIsSavingBooking(true);
+                  try {
+                    const updated = await apiClient.update<LabBookingPolicy>(
+                      endpoints.labs.bookingPolicy(orgId, labId),
+                      booking,
+                      { orgId }
+                    );
+                    setBooking({ ...defaultBookingPolicy, ...updated });
+                    toast.success("Booking policy saved.");
+                  } catch (error: unknown) {
+                    const message =
+                      error instanceof Error ? error.message : "Could not save booking policy.";
+                    toast.error(message);
+                  } finally {
+                    setIsSavingBooking(false);
+                  }
+                }}
+              >
+                {isSavingBooking ? "Saving…" : "Save booking policy"}
+              </Button>
+            </div>
+          )}
+        </PremiumSurface>
+      </div>
     </PageFrame>
   );
 }
