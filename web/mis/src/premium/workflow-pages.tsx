@@ -57,6 +57,7 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useOrganisationAccess } from "./use-organisation-access";
+import { entityNameCell, entityTitle } from "./entity-display";
 import { RequireLabFeature } from "./lab-feature-guard";
 import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
@@ -2428,12 +2429,7 @@ function nameColumn<T extends ApiRow>(): PremiumColumn<T> {
   return {
     key: "name",
     header: "Name",
-    render: (row) => (
-      <div>
-        <p className="font-semibold text-slate-950 dark:text-white">{displayName(row)}</p>
-        <p className="text-xs text-slate-500">ID {String(row.id)}</p>
-      </div>
-    ),
+    render: (row) => entityNameCell(row as Entity),
   };
 }
 
@@ -2528,7 +2524,7 @@ function toOption(value: string): FieldOption {
 
 function displayName(row: Partial<ApiRow> | undefined): string {
   if (!row) return "Unknown";
-  return String(row.full_name ?? row.name ?? row.title ?? row.email ?? row.number ?? `Record ${row.id}`);
+  return entityTitle(row as Entity);
 }
 
 function formatValue(value: unknown): string {

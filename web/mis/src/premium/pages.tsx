@@ -38,6 +38,7 @@ import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
 import { useOrganisationAccess } from "./use-organisation-access";
+import { entityNameCell } from "./entity-display";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
 import { resolveLabNavPersona } from "./lab-role";
 
@@ -52,16 +53,7 @@ const baseColumns: PremiumColumn<Entity>[] = [
   {
     key: "name",
     header: "Name",
-    render: (row) => (
-      <div>
-        <p className="font-semibold text-slate-950 dark:text-white">
-          {displayName(row)}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          ID {String(row.id)}
-        </p>
-      </div>
-    ),
+    render: (row) => entityNameCell(row),
   },
   {
     key: "status",
@@ -208,7 +200,7 @@ function MisShellInner() {
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
-  const { canCreateOrganisation } = useOrganisationAccess(!orgId);
+  const { canCreateOrganisation, isOrgAdminSomewhere } = useOrganisationAccess(!orgId);
 
   useEffect(() => {
     if (!orgId) {
@@ -262,10 +254,11 @@ function MisShellInner() {
         isOrgAdmin,
         roleName,
         canCreateOrganisation,
+        showJoinLab: !isOrgAdminSomewhere,
         can,
         canAny,
       }),
-    [can, canAny, canCreateOrganisation, isOrgAdmin, labId, orgId, roleName]
+    [can, canAny, canCreateOrganisation, isOrgAdmin, isOrgAdminSomewhere, labId, orgId, roleName]
   );
   const contexts = [
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
@@ -307,7 +300,9 @@ export function MisShell() {
 
 export function OrganisationSwitcherPage() {
   const { user } = useAuth();
-  const { resource, organisationCount, canCreateOrganisation } = useOrganisationAccess(true);
+  const { resource, organisationCount, canCreateOrganisation, isOrgAdminSomewhere } =
+    useOrganisationAccess(true);
+  const showJoinLab = !isOrgAdminSomewhere;
   const displayName = fullName(user);
   const firstName = displayName.split(" ")[0] || "there";
 
@@ -420,7 +415,7 @@ export function OrgDashboardPage() {
     >
       <div className="grid gap-6 xl:grid-cols-2">
         <ResourceTable title="Labs" resource={labs} />
-        <ResourceTable title="Members" resource={members} />
+        <ResourceTable title="Members" resource={members} columns={orgMemberColumns} />
       </div>
     </PageFrame>
   );
@@ -940,17 +935,47 @@ function scoreLabel(total: number): string {
   return "Starting";
 }
 
+const orgMemberColumns: PremiumColumn<Entity>[] = [
+  {
+    key: "member",
+    header: "Member",
+    render: (row) => entityNameCell(row),
+  },
+  {
+    key: "access",
+    header: "Access",
+    render: (row) => (
+      <StatusBadge tone={row.is_admin ? "success" : "neutral"}>
+        {row.is_admin ? "Admin" : "Member"}
+      </StatusBadge>
+    ),
+  },
+  {
+    key: "updated",
+    header: "Joined",
+    render: (row) => (
+      <span className="text-slate-500 dark:text-slate-400">
+        {formatDate(row.created_at ?? row.updated_at)}
+      </span>
+    ),
+  },
+];
+
 function ResourceTable({
   title,
   resource,
   actions,
+  columns,
   compact = false,
 }: {
   title: string;
   resource: ReturnType<typeof usePagedResource<Entity>>;
   actions?: ReactNode;
+  columns?: PremiumColumn<Entity>[];
   compact?: boolean;
 }) {
+  const tableColumns = columns ?? (compact ? baseColumns.slice(0, 2) : baseColumns);
+
   return (
     <PremiumDataTable
       title={title}
@@ -960,7 +985,7 @@ function ResourceTable({
           ? "Refreshing records..."
           : `Live workspace list${resource.lastUpdatedAt ? ` • Updated ${formatRelativeTime(resource.lastUpdatedAt)}` : ""}.`)
       }
-      columns={compact ? baseColumns.slice(0, 2) : baseColumns}
+      columns={tableColumns}
       rows={resource.rows}
       getRowKey={(row, index) => `${row.id}-${index}`}
       next={resource.next}
@@ -982,10 +1007,6 @@ function formatRelativeTime(timestamp: number): string {
   if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
   const deltaHours = Math.floor(deltaMinutes / 60);
   return `${deltaHours}h ago`;
-}
-
-function displayName(row: Entity): string {
-  return String(row.name ?? row.title ?? row.email ?? row.number ?? `Record ${row.id}`);
 }
 
 function formatDate(value: unknown): string {
