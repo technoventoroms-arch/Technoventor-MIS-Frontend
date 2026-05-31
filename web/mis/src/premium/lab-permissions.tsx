@@ -12,6 +12,7 @@ import { useParams } from "react-router-dom";
 import { apiClient, endpoints } from "@mono/api_client";
 
 import { useIsOrgAdmin } from "./use-org-admin";
+import { mergeRolePermissions } from "./role-defaults";
 
 type LabPermissionsPayload = {
   permissions: string[];
@@ -64,9 +65,11 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
           res && typeof res === "object" && "data" in res && res.data
             ? res.data
             : (res as LabPermissionsPayload);
-        const list = Array.isArray(payload?.permissions) ? payload.permissions : [];
+        const apiList = Array.isArray(payload?.permissions) ? payload.permissions : [];
+        const role = String(payload?.role_name ?? "");
+        const list = mergeRolePermissions(apiList, role);
         setPermissions(new Set(list));
-        setRoleName(String(payload?.role_name ?? ""));
+        setRoleName(role);
       })
       .catch(() => {
         if (!cancelled) {

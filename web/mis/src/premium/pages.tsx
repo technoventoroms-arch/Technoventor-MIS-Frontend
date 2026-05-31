@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
+  ArrowRight,
   BadgeCheck,
   Boxes,
   CalendarCheck,
@@ -24,6 +25,7 @@ import {
   SectionHeader,
   StatusBadge,
   type PremiumColumn,
+  type ShellNavItem,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
@@ -35,6 +37,14 @@ import { usePagedResource } from "./api-hooks";
 import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
+import { useOrganisationAccess } from "./use-organisation-access";
+import {
+  WorkspaceHomeHero,
+  WorkspaceHomeMetrics,
+  WorkspaceQuickActions,
+} from "./workspace-home";
+import { ManagerLabDashboard } from "./manager-lab-dashboard";
+import { resolveLabNavPersona } from "./lab-role";
 
 type Metric = {
   label: string;
@@ -203,6 +213,7 @@ function MisShellInner() {
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
+  const { canCreateOrganisation } = useOrganisationAccess(!orgId);
 
   useEffect(() => {
     if (!orgId) {
@@ -249,8 +260,17 @@ function MisShellInner() {
   }, [orgId, labId]);
 
   const navItems = useMemo(
-    () => buildMisNav({ orgId, labId, isOrgAdmin, can, canAny }),
-    [can, canAny, isOrgAdmin, labId, orgId]
+    () =>
+      buildMisNav({
+        orgId,
+        labId,
+        isOrgAdmin,
+        roleName,
+        canCreateOrganisation,
+        can,
+        canAny,
+      }),
+    [can, canAny, canCreateOrganisation, isOrgAdmin, labId, orgId, roleName]
   );
   const contexts = [
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
@@ -291,57 +311,39 @@ export function MisShell() {
 }
 
 export function OrganisationSwitcherPage() {
-  const resource = usePagedResource<Entity>(endpoints.organisations.list);
+  const { user } = useAuth();
+  const { resource, organisationCount, canCreateOrganisation, isLoading } =
+    useOrganisationAccess(true);
 
   return (
-    <PageFrame
-      eyebrow="Workspace"
-      title="Your organisations"
-      description="Open a workspace, start a new organisation, or join an existing lab."
-    >
-      <PremiumSurface className="grid gap-4 p-6 md:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">New organisation</p>
-          <p className="text-sm text-slate-500">
-            SaaS signup: create your tenant, add labs, invite managers and members.
-          </p>
-          <Button asChild className="mt-2">
-            <Link to="/create-organization">
-              <Plus className="size-4" />
-              Create organisation
-            </Link>
-          </Button>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Join a lab</p>
-          <p className="text-sm text-slate-500">
-            Already have an account? Request access to a published lab; a manager approves you.
-          </p>
-          <Button asChild variant="outline" className="mt-2">
-            <Link to="/request_lab">Browse labs to join</Link>
-          </Button>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">Invited?</p>
-          <p className="text-sm text-slate-500">
-            Accept email invites or paste an invite token on your profile page.
-          </p>
-          <Button asChild variant="outline" className="mt-2">
-            <Link to="/profile">Profile &amp; invites</Link>
-          </Button>
-        </div>
-      </PremiumSurface>
+    <div className="space-y-8">
+      <WorkspaceHomeHero
+        userName={fullName(user)}
+        organisationCount={organisationCount}
+        canCreateOrganisation={canCreateOrganisation}
+        isLoading={isLoading}
+      />
+      <WorkspaceHomeMetrics organisationCount={organisationCount} isLoading={isLoading} />
+      <WorkspaceQuickActions canCreateOrganisation={canCreateOrganisation} />
       <PremiumDataTable
-        title="Organisations"
-        description={resource.error?.message ?? "Your organisations and available workspaces."}
+        title="Your organisations"
+        description={
+          resource.error?.message ??
+          (organisationCount > 0
+            ? "Select an organisation to open labs and tools for your role."
+            : "You are not linked to an organisation yet — join a lab or accept an invite.")
+        }
         columns={[
           ...baseColumns,
           {
             key: "action",
             header: "Open",
             render: (row) => (
-              <Button asChild size="sm">
-                <Link to={`/${row.id}/labs`}>Open workspace</Link>
+              <Button asChild size="sm" className="bg-teal-600 hover:bg-teal-700">
+                <Link to={`/${row.id}/labs`}>
+                  Open
+                  <ArrowRight className="size-4" />
+                </Link>
               </Button>
             ),
           },
@@ -352,23 +354,29 @@ export function OrganisationSwitcherPage() {
         previous={resource.previous}
         onNext={resource.loadNext}
         onPrevious={resource.loadPrevious}
-        emptyTitle="No organisations found"
-        emptyDescription="Create or join an organisation to unlock the MIS workspace."
+        emptyTitle="No organisations yet"
+        emptyDescription={
+          canCreateOrganisation
+            ? "Create your first organisation, or join a lab if you were invited to an existing team."
+            : "Ask your administrator for an invite, or browse labs to request membership."
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
               <Link to="/request_lab">Join a lab</Link>
             </Button>
-            <Button asChild>
-              <Link to="/create-organization">
-                <Plus className="size-4" />
-                New organisation
-              </Link>
-            </Button>
+            {canCreateOrganisation ? (
+              <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                <Link to="/create-organization">
+                  <Plus className="size-4" />
+                  Create organisation
+                </Link>
+              </Button>
+            ) : null}
           </div>
         }
       />
-    </PageFrame>
+    </div>
   );
 }
 
@@ -473,15 +481,70 @@ export function BillingPage() {
 
 export function LabDashboardPage() {
   const { orgId, labId } = useParams();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { roleName, isLoading: permissionsLoading } = useLabPermissions();
+  const [labName, setLabName] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!orgId || !labId) {
+      setLabName(undefined);
+      return;
+    }
+    let cancelled = false;
+    void apiClient
+      .get<Entity>(endpoints.labs.detail(orgId, labId), { orgId })
+      .then((lab) => {
+        if (!cancelled) setLabName(String(lab.name ?? ""));
+      })
+      .catch(() => {
+        if (!cancelled) setLabName(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, labId]);
+
+  if (permissionsLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500">
+        Loading lab workspace…
+      </div>
+    );
+  }
+
+  const persona = resolveLabNavPersona(isOrgAdmin, roleName);
+
+  if (persona === "lab-manager") {
+    return <ManagerLabDashboard labName={labName} />;
+  }
+
+  if (persona === "org-admin") {
+    return <AdminLabDashboard labName={labName} />;
+  }
+
+  return <MemberLabDashboard labName={labName} />;
+}
+
+function MemberLabDashboard({ labName }: { labName?: string }) {
+  const { orgId, labId } = useParams();
+  const { can, canAny, isLoading: permissionsLoading } = useLabPermissions();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
   const machines = usePagedResource<Entity>(labId ? endpoints.machines.list(labId) : null, orgId);
   const inventory = usePagedResource<Entity>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const projects = usePagedResource<Entity>(labId ? endpoints.projects.list(labId) : null, orgId);
 
+  const labShortcuts = useMemo(() => {
+    if (!orgId || !labId) return [];
+    return buildMisNav({ orgId, labId, isOrgAdmin, roleName: "Lab Member", can, canAny }).filter(
+      (item) => !["Back to labs", "Profile", "Notifications"].includes(item.label)
+    );
+  }, [can, canAny, isOrgAdmin, labId, orgId]);
+
   return (
     <PageFrame
       eyebrow="Lab"
-      title="Lab operations cockpit"
-      description="Monitor machines, inventory, projects, and attendance for this lab."
+      title={labName ? `${labName}` : "Lab workspace"}
+      description="Your projects, machines, inventory, and attendance for this lab."
       metrics={[
         {
           label: "Machines",
@@ -503,6 +566,78 @@ export function LabDashboardPage() {
         },
       ]}
     >
+      {!permissionsLoading && labShortcuts.length > 0 ? (
+        <LabShortcutGrid items={labShortcuts} />
+      ) : null}
+      <OpsPulsePanel
+        title="Lab pulse"
+        lines={[
+          { label: "Machine availability", value: scoreLabel(machines.rows.length) },
+          { label: "Inventory readiness", value: scoreLabel(inventory.rows.length) },
+          { label: "Project throughput", value: scoreLabel(projects.rows.length) },
+        ]}
+      />
+      <div className="grid gap-6 xl:grid-cols-3">
+        <ResourceTable title="Machines" resource={machines} compact />
+        <ResourceTable title="Inventory" resource={inventory} compact />
+        <ResourceTable title="Projects" resource={projects} compact />
+      </div>
+    </PageFrame>
+  );
+}
+
+function AdminLabDashboard({ labName }: { labName?: string }) {
+  const { orgId, labId } = useParams();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { can, canAny } = useLabPermissions();
+  const machines = usePagedResource<Entity>(labId ? endpoints.machines.list(labId) : null, orgId);
+  const inventory = usePagedResource<Entity>(labId ? endpoints.inventory.items(labId) : null, orgId);
+  const projects = usePagedResource<Entity>(labId ? endpoints.projects.list(labId) : null, orgId);
+  const members = usePagedResource<Entity>(
+    orgId && labId ? endpoints.labs.members(orgId, labId) : null,
+    orgId
+  );
+
+  const labShortcuts = useMemo(() => {
+    if (!orgId || !labId) return [];
+    return buildMisNav({ orgId, labId, isOrgAdmin: true, roleName: "", can, canAny }).filter(
+      (item) => !["Back to labs", "Profile", "Notifications"].includes(item.label)
+    );
+  }, [can, canAny, labId, orgId]);
+
+  return (
+    <PageFrame
+      eyebrow="Organisation admin"
+      title={labName ? `${labName} — full control` : "Lab operations cockpit"}
+      description="Full lab access: operations, commerce, approvals, people, and settings."
+      metrics={[
+        {
+          label: "Machines",
+          value: String(machines.rows.length),
+          helper: "Equipment records",
+          icon: <Wrench className="size-5" />,
+        },
+        {
+          label: "Inventory",
+          value: String(inventory.rows.length),
+          helper: "Stock items",
+          icon: <Boxes className="size-5" />,
+        },
+        {
+          label: "Members",
+          value: String(members.rows.length),
+          helper: "Lab memberships",
+          icon: <Users className="size-5" />,
+        },
+        {
+          label: "Projects",
+          value: String(projects.rows.length),
+          helper: "Research work",
+          icon: <ListChecks className="size-5" />,
+        },
+      ]}
+    >
+      {labShortcuts.length > 0 ? <LabShortcutGrid items={labShortcuts} /> : null}
       <OpsPulsePanel
         title="Lab pulse"
         lines={[
@@ -741,6 +876,34 @@ function PageFrame({
       ) : null}
       {children}
     </div>
+  );
+}
+
+function LabShortcutGrid({ items }: { items: ShellNavItem[] }) {
+  return (
+    <PremiumSurface className="p-5">
+      <h3 className="text-base font-semibold text-slate-950 dark:text-white">Your lab tools</h3>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        Quick access based on your role — same items as the sidebar.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-medium text-slate-800 transition hover:border-teal-200 hover:bg-teal-50/80 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-100 dark:hover:border-teal-800/50 dark:hover:bg-teal-950/30"
+            >
+              <span className="inline-flex rounded-xl bg-teal-600/10 p-2 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
+                <Icon className="size-4" />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </PremiumSurface>
   );
 }
 

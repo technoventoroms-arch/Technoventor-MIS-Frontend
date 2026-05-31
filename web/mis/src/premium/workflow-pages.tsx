@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
   Boxes,
@@ -57,6 +57,8 @@ import {
 } from "@mono/api_client";
 
 import { usePagedResource } from "./api-hooks";
+import { useOrganisationAccess } from "./use-organisation-access";
+import { RequireLabFeature } from "./lab-feature-guard";
 import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
 import { P } from "./permission-codes";
@@ -133,8 +135,9 @@ const projectFields: ResourceField[] = [
   { name: "description", label: "Description", type: "textarea" },
 ];
 
+/** @deprecated Use `OrganisationSwitcherPage` from `./pages` (router entry). */
 export function OrganisationSwitcherPage() {
-  const resource = usePagedResource<ApiRow>(endpoints.organisations.list);
+  const { resource, canCreateOrganisation } = useOrganisationAccess(true);
 
   return (
     <PageFrame
@@ -163,7 +166,7 @@ export function OrganisationSwitcherPage() {
             header: "Open",
             render: (row) => (
               <Button asChild size="sm">
-                <Link to={`/${row.id}/dashboard`}>Open workspace</Link>
+                <Link to={`/${row.id}/labs`}>Open workspace</Link>
               </Button>
             ),
           },
@@ -175,7 +178,11 @@ export function OrganisationSwitcherPage() {
         onNext={resource.loadNext}
         onPrevious={resource.loadPrevious}
         emptyTitle="No organisations found"
-        emptyDescription="Create an organisation to unlock the MIS workspace."
+        emptyDescription={
+          canCreateOrganisation
+            ? "Create an organisation to unlock the MIS workspace."
+            : "Join a lab or accept an invite to get access."
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
@@ -184,12 +191,14 @@ export function OrganisationSwitcherPage() {
                 Join Lab
               </Link>
             </Button>
-            <Button asChild>
-              <Link to="/create-organizations">
-                <Plus className="size-4" />
-                Create Org
-              </Link>
-            </Button>
+            {canCreateOrganisation ? (
+              <Button asChild>
+                <Link to="/create-organization">
+                  <Plus className="size-4" />
+                  Create Org
+                </Link>
+              </Button>
+            ) : null}
           </div>
         }
       />
@@ -199,6 +208,26 @@ export function OrganisationSwitcherPage() {
 
 export function CreateOrganisationPage() {
   const navigate = useNavigate();
+  const { canCreateOrganisation, isLoading } = useOrganisationAccess(true);
+
+  if (isLoading) {
+    return (
+      <PageFrame
+        eyebrow="Create"
+        title="Create New Organization"
+        description="Checking your workspace access…"
+      >
+        <PremiumSurface className="flex items-center justify-center p-12">
+          <Loader2 className="size-8 animate-spin text-teal-600" />
+        </PremiumSurface>
+      </PageFrame>
+    );
+  }
+
+  if (!canCreateOrganisation) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <PageFrame
       eyebrow="Create"
@@ -1660,6 +1689,7 @@ export function CartPage() {
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
 
   return (
+    <RequireLabFeature feature="projects-order">
     <PageFrame
       eyebrow="Cart"
       title="Cart"
@@ -1743,6 +1773,7 @@ export function CartPage() {
         </DialogContent>
       </Dialog>
     </PageFrame>
+    </RequireLabFeature>
   );
 }
 
@@ -1758,6 +1789,7 @@ export function MyOrdersPage() {
   );
 
   return (
+    <RequireLabFeature feature="projects-order">
     <PageFrame
       eyebrow="Orders"
       title="My Orders"
@@ -1805,6 +1837,7 @@ export function MyOrdersPage() {
         </TabsContent>
       </Tabs>
     </PageFrame>
+    </RequireLabFeature>
   );
 }
 
@@ -1887,109 +1920,13 @@ export function NotificationsPage() {
   );
 }
 
+/** Scan machine removed from product; legacy URL redirects to lab dashboard. */
 export function ScanMachinePage() {
   const { orgId, labId } = useParams();
-  const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
-  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
-  const [scannerError, setScannerError] = useState<string | null>(null);
-  const [scannedMachineId, setScannedMachineId] = useState<string | null>(null);
-  const machineRows = scannedMachineId
-    ? machines.rows.filter((row) => String(row.id) === scannedMachineId)
-    : machines.rows;
-  const visibleMachines = { ...machines, rows: machineRows };
-
-  useEffect(() => {
-    const scannerId = "mis-machine-qr-reader";
-    let isCancelled = false;
-
-    import("html5-qrcode")
-      .then(({ Html5Qrcode }) => {
-        if (isCancelled || !document.getElementById(scannerId)) return;
-        const scanner = new Html5Qrcode(scannerId);
-        scannerRef.current = scanner;
-        scanner
-          .start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            (decodedText) => {
-              try {
-                const parsed = JSON.parse(decodedText) as { id?: unknown; machine_id?: unknown };
-                const machineId = parsed.id ?? parsed.machine_id;
-                if (!machineId) throw new Error("This QR code does not contain valid machine information.");
-                setScannedMachineId(String(machineId));
-              } catch {
-                setScannerError("Invalid machine QR code.");
-                return;
-              }
-              void scanner.stop().then(() => scanner.clear()).catch(() => undefined);
-            },
-            () => undefined
-          )
-          .catch((error: Error) => setScannerError(error.message));
-      })
-      .catch((error: Error) => setScannerError(error.message));
-
-    return () => {
-      isCancelled = true;
-      void scannerRef.current?.stop().then(() => scannerRef.current?.clear()).catch(() => undefined);
-    };
-  }, []);
-
-  return (
-    <PageFrame
-      eyebrow="Machine access"
-      title="Scan Machine"
-      description="Scan machine QR, validate reservations, and start or stop sessions."
-      metrics={[
-        metric("Equipment", machines.rows.length, "In this lab", <ScanBarcode />),
-        metric("Scanning", "Camera", "Point at the machine QR code", <Radio />),
-      ]}
-    >
-      <PremiumSurface className="mb-6 p-6">
-        <SectionHeader
-          eyebrow="Camera"
-          title={scannedMachineId ? `Machine ${scannedMachineId}` : "Scan machine QR code"}
-          description={
-            scannerError ??
-            "Allow camera access, scan the machine QR code, then start or complete your session from the list below."
-          }
-        />
-        <div id="mis-machine-qr-reader" className="mt-4 overflow-hidden rounded-xl border" />
-        {scannedMachineId ? (
-          <Button className="mt-4" variant="outline" onClick={() => setScannedMachineId(null)}>
-            Scan Again
-          </Button>
-        ) : null}
-      </PremiumSurface>
-      <ResourceCrudTable
-        title="Scan Machine"
-        description={machines.error?.message ?? "Select a scanned machine record to start or stop your current approved reservation."}
-        resource={visibleMachines}
-        fields={[]}
-        orgId={orgId}
-        columns={[
-          nameColumn(),
-          statusColumn(),
-          textColumn("model_number", "Model"),
-          textColumn("serial_number", "Serial"),
-        ]}
-        rowActions={[
-          {
-            label: "Use machine",
-            run: async (row) => {
-              const current = await apiClient.list<ApiRow>(endpoints.machines.currentReservation(String(labId), row.id), { orgId });
-              const reservation = current.results[0];
-              if (!reservation) {
-                throw new Error("No approved booking is active for this machine right now.");
-              }
-              const nextStatus = row.status === "ACTIVE" ? "OFF" : "ACTIVE";
-              await apiClient.create(endpoints.machines.reservationConsume(reservation.id), { status: nextStatus }, { orgId });
-            },
-          },
-        ]}
-      />
-    </PageFrame>
-  );
+  if (orgId && labId) {
+    return <Navigate to={`/${orgId}/lab/${labId}`} replace />;
+  }
+  return <Navigate to="/" replace />;
 }
 
 export function MachineSchedulePage() {

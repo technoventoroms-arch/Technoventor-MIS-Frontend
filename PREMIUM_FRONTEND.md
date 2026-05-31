@@ -86,6 +86,11 @@ Provides:
 Lab sidebar items are filtered from the user’s **lab role permissions** (`module:action` codenames from IAM, e.g. `machines:read`, `attendance:write`).
 
 - API: `GET /api/v1/labs/organisations/{orgId}/labs/{labId}/my-permissions/`
+- **Lab Member (student)**: Dashboard, Projects, Machines, Inventory, Attendance + Notifications, Profile.
+- **Lab Manager**: Manager dashboard (approvals pulse, team, settings, reports links); sidebar — Dashboard, Approvals, Lab settings, Lab members, Reports + account basics.
+- **Organisation admin** (in lab): Full sidebar — all student modules plus Cart, My orders, approvals, settings, members, reports. Scan machine removed.
+- **Create organisation**: shown for users with **no org yet** or **org admin** on any organisation (founders can create multiple tenants).
+- Backfill existing orgs: `python manage.py sync_default_role_permissions`
 - Frontend: `LabPermissionsProvider` + `buildMisNav()` in `web/mis/src/premium/nav-policy.ts`
 - Organisation admins see org billing/users; lab members only see items their role allows.
 
