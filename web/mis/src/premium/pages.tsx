@@ -2,26 +2,16 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
-  ArrowLeft,
   BadgeCheck,
-  BarChart3,
   Boxes,
-  Building2,
   CalendarCheck,
   CreditCard,
-  FileText,
   FlaskConical,
   Gauge,
-  LayoutDashboard,
   ListChecks,
   PackagePlus,
   Plus,
-  QrCode,
-  ScanBarcode,
   Settings,
-  ShoppingCart,
-  Bell,
-  UserCircle,
   Users,
   Wrench,
 } from "lucide-react";
@@ -34,7 +24,6 @@ import {
   SectionHeader,
   StatusBadge,
   type PremiumColumn,
-  type ShellNavItem,
 } from "@mono/shared_ui/components/premium";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
@@ -514,11 +503,6 @@ export function LabDashboardPage() {
         },
       ]}
     >
-      <VisualShowcase
-        title="Production Floor View"
-        description="Live visibility for planning, execution, and approvals."
-        tiles={ERP_LRP_VISUALS.slice(1)}
-      />
       <OpsPulsePanel
         title="Lab pulse"
         lines={[
@@ -760,41 +744,6 @@ function PageFrame({
   );
 }
 
-function VisualShowcase({
-  title,
-  description,
-  tiles,
-}: {
-  title: string;
-  description: string;
-  tiles: VisualTile[];
-}) {
-  return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/70">
-      <div className="mb-4">
-        <h3 className="text-base font-semibold text-slate-950 dark:text-white">{title}</h3>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tiles.map((tile) => (
-          <article
-            key={tile.title}
-            className={`relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br ${tile.accent} p-4 text-white`}
-          >
-            <div className="absolute -right-6 -top-8 size-24 rounded-full bg-white/15 blur-xl" />
-            <div className="absolute -bottom-10 left-10 size-24 rounded-full bg-white/10 blur-xl" />
-            <div className="relative">
-              <div className="mb-8 inline-flex rounded-xl bg-white/20 p-2">{tile.icon}</div>
-              <p className="text-sm font-semibold">{tile.title}</p>
-              <p className="text-xs text-white/85">{tile.subtitle}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function OpsPulsePanel({
   title,
   lines,
@@ -819,23 +768,6 @@ function OpsPulsePanel({
         ))}
       </div>
     </PremiumSurface>
-  );
-}
-
-function PriorityRail({
-  items,
-}: {
-  items: { title: string; detail: string; tone: string }[];
-}) {
-  return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {items.map((item) => (
-        <div key={item.title} className={`rounded-2xl border p-4 text-sm ${item.tone}`}>
-          <p className="font-semibold">{item.title}</p>
-          <p className="mt-1 opacity-90">{item.detail}</p>
-        </div>
-      ))}
-    </div>
   );
 }
 
