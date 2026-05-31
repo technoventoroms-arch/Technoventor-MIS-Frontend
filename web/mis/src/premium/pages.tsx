@@ -43,6 +43,9 @@ import { apiClient, endpoints, normalizeApiError, type Entity } from "@mono/api_
 
 import { useAuth } from "./auth";
 import { usePagedResource } from "./api-hooks";
+import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
+import { buildMisNav } from "./nav-policy";
+import { useIsOrgAdmin } from "./use-org-admin";
 
 type Metric = {
   label: string;
@@ -50,34 +53,6 @@ type Metric = {
   helper: string;
   icon: ReactNode;
 };
-
-type VisualTile = {
-  title: string;
-  subtitle: string;
-  accent: string;
-  icon: ReactNode;
-};
-
-const ERP_LRP_VISUALS: VisualTile[] = [
-  {
-    title: "Organisation Control",
-    subtitle: "Users, billing, compliance",
-    accent: "from-indigo-600 to-blue-500",
-    icon: <Building2 className="size-5" />,
-  },
-  {
-    title: "Lab Operations",
-    subtitle: "Machines, scheduling, uptime",
-    accent: "from-cyan-600 to-teal-500",
-    icon: <Wrench className="size-5" />,
-  },
-  {
-    title: "Inventory & Projects",
-    subtitle: "Stock, orders, execution",
-    accent: "from-amber-600 to-orange-500",
-    icon: <Boxes className="size-5" />,
-  },
-];
 
 const baseColumns: PremiumColumn<Entity>[] = [
   {
@@ -229,7 +204,7 @@ export function LoginPage() {
   );
 }
 
-export function MisShell() {
+function MisShellInner() {
   const { user, logout } = useAuth();
   const params = useParams();
   const orgId = params.orgId;
@@ -237,6 +212,8 @@ export function MisShell() {
   const [orgLabel, setOrgLabel] = useState<string | null>(null);
   const [labLabel, setLabLabel] = useState<string | null>(null);
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
 
   useEffect(() => {
     if (!orgId) {
@@ -282,20 +259,20 @@ export function MisShell() {
     };
   }, [orgId, labId]);
 
-  const isOrgAdmin = useIsOrgAdmin(orgId);
   const navItems = useMemo(
-    () => buildMisNav(orgId, labId, isOrgAdmin),
-    [isOrgAdmin, labId, orgId]
+    () => buildMisNav({ orgId, labId, isOrgAdmin, can, canAny }),
+    [can, canAny, isOrgAdmin, labId, orgId]
   );
   const contexts = [
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
     labId ? { label: "Lab", value: labLabel ?? "Loading…" } : null,
+    labId && roleName ? { label: "Role", value: roleName } : null,
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
     <PremiumShell
       appName="Technoventor MIS"
-      appSubtitle="Laboratory operations"
+      appSubtitle={permissionsLoading && labId ? "Loading access…" : "Laboratory operations"}
       logoSrc="/technoventor-logo.svg"
       navItems={navItems}
       contexts={contexts}
@@ -310,59 +287,61 @@ export function MisShell() {
       userName={fullName(user)}
       userEmail={user?.email}
       onSignOut={logout}
-    />
+    >
+      <Outlet />
+    </PremiumShell>
+  );
+}
+
+export function MisShell() {
+  return (
+    <LabPermissionsProvider>
+      <MisShellInner />
+    </LabPermissionsProvider>
   );
 }
 
 export function OrganisationSwitcherPage() {
   const resource = usePagedResource<Entity>(endpoints.organisations.list);
-  const metrics: Metric[] = [
-    {
-      label: "Organisations",
-      value: String(resource.rows.length),
-      helper: "Your organisations",
-      icon: <Building2 className="size-5" />,
-    },
-    {
-      label: "Access",
-      value: "Secure",
-      helper: "Account protected",
-      icon: <BadgeCheck className="size-5" />,
-    },
-    {
-      label: "Workspace",
-      value: "Active",
-      helper: "Live data sync",
-      icon: <Gauge className="size-5" />,
-    },
-  ];
 
   return (
     <PageFrame
       eyebrow="Workspace"
-      title="Choose your organisation"
-      description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
-      metrics={metrics}
+      title="Your organisations"
+      description="Open a workspace, start a new organisation, or join an existing lab."
     >
-      <VisualShowcase
-        title="Technoventor ERP + LRP Experience"
-        description="A unified operating layer for business workflows and lab execution."
-        tiles={ERP_LRP_VISUALS}
-      />
-      <PriorityRail
-        items={[
-          {
-            title: "Pick your workspace",
-            detail: "Open the active organisation to continue operations.",
-            tone: "bg-blue-50 text-blue-700 dark:bg-blue-400/15 dark:text-blue-200",
-          },
-          {
-            title: "Action next",
-            detail: "Create organisation or join lab to onboard new teams quickly.",
-            tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
-          },
-        ]}
-      />
+      <PremiumSurface className="grid gap-4 p-6 md:grid-cols-3">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">New organisation</p>
+          <p className="text-sm text-slate-500">
+            SaaS signup: create your tenant, add labs, invite managers and members.
+          </p>
+          <Button asChild className="mt-2">
+            <Link to="/create-organization">
+              <Plus className="size-4" />
+              Create organisation
+            </Link>
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Join a lab</p>
+          <p className="text-sm text-slate-500">
+            Already have an account? Request access to a published lab; a manager approves you.
+          </p>
+          <Button asChild variant="outline" className="mt-2">
+            <Link to="/request_lab">Browse labs to join</Link>
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">Invited?</p>
+          <p className="text-sm text-slate-500">
+            Accept email invites or paste an invite token on your profile page.
+          </p>
+          <Button asChild variant="outline" className="mt-2">
+            <Link to="/profile">Profile &amp; invites</Link>
+          </Button>
+        </div>
+      </PremiumSurface>
       <PremiumDataTable
         title="Organisations"
         description={resource.error?.message ?? "Your organisations and available workspaces."}
@@ -387,12 +366,17 @@ export function OrganisationSwitcherPage() {
         emptyTitle="No organisations found"
         emptyDescription="Create or join an organisation to unlock the MIS workspace."
         actions={
-          <Button asChild>
-            <Link to="/create-organization">
-              <Plus className="size-4" />
-              New organisation
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/request_lab">Join a lab</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/create-organization">
+                <Plus className="size-4" />
+                New organisation
+              </Link>
+            </Button>
+          </div>
         }
       />
     </PageFrame>
@@ -437,19 +421,6 @@ export function OrgDashboardPage() {
         },
       ]}
     >
-      <VisualShowcase
-        title="Executive Snapshot"
-        description="Track operations, teams, and commercial health in one view."
-        tiles={ERP_LRP_VISUALS}
-      />
-      <OpsPulsePanel
-        title="Organisation pulse"
-        lines={[
-          { label: "Operational capacity", value: scoreLabel(labs.rows.length + members.rows.length) },
-          { label: "People readiness", value: scoreLabel(members.rows.length) },
-          { label: "Commercial status", value: subscriptions.rows.length ? "Configured" : "Needs setup" },
-        ]}
-      />
       <div className="grid gap-6 xl:grid-cols-2">
         <ResourceTable title="Labs" resource={labs} />
         <ResourceTable title="Members" resource={members} />
@@ -919,79 +890,6 @@ function formatRelativeTime(timestamp: number): string {
   return `${deltaHours}h ago`;
 }
 
-type OrgMember = Entity & {
-  user?: { id?: number | string };
-  is_admin?: boolean;
-};
-
-function useIsOrgAdmin(orgId?: string): boolean {
-  const { user } = useAuth();
-  const members = usePagedResource<OrgMember>(
-    orgId ? endpoints.organisations.members(orgId) : null,
-    orgId
-  );
-
-  return useMemo(() => {
-    const member = members.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
-    return Boolean(member?.is_admin);
-  }, [members.rows, user?.id]);
-}
-
-function buildMisNav(orgId?: string, labId?: string, isOrgAdmin = false): ShellNavItem[] {
-  const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
-
-  if (!orgId) {
-    return [
-      { label: "My Organization", to: "/", icon: Building2, end: true },
-      { label: "Create New Organization", to: "/create-organization", icon: Plus },
-      profileItem,
-    ];
-  }
-
-  const orgBase = `/${orgId}`;
-
-  if (labId) {
-    const labBase = `${orgBase}/lab/${labId}`;
-    return [
-      { label: "Back to Labs", to: `${orgBase}/labs`, icon: ArrowLeft },
-      { label: "Dashboard", to: labBase, icon: Gauge, end: true },
-      { label: "Projects", to: `${labBase}/projects`, icon: ListChecks },
-      { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
-      { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
-      { label: "Lab Members", to: `${labBase}/users`, icon: Users },
-      { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
-      { label: "My Orders", to: `${labBase}/orders`, icon: FileText },
-      { label: "Notifications", to: `${labBase}/notifications`, icon: Bell },
-      { label: "My Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
-      { label: "Scan Machine", to: `${labBase}/scan-machine`, icon: ScanBarcode },
-      { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
-      { label: "Lab Settings", to: `${labBase}/edit-lab`, icon: QrCode },
-      { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
-      profileItem,
-    ];
-  }
-
-  return [
-    ...(isOrgAdmin
-      ? [{ label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard }]
-      : []),
-    { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
-    ...(isOrgAdmin
-      ? [
-          { label: "Users", to: `${orgBase}/users`, icon: Users },
-          { label: "Organization", to: `${orgBase}/organization`, icon: Settings },
-          {
-            label: "Subscriptions",
-            to: `${orgBase}/organization/transactions`,
-            icon: CreditCard,
-          },
-        ]
-      : []),
-    { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
-    profileItem,
-  ];
-}
-
 function displayName(row: Entity): string {
   return String(row.name ?? row.title ?? row.email ?? row.number ?? `Record ${row.id}`);
 }
@@ -1044,7 +942,7 @@ export function RegisterPage() {
       });
 
       await login(email, password);
-      navigate("/create-organization", { replace: true });
+      navigate("/", { replace: true });
     } catch (regError) {
       setError(
         regError instanceof Error
@@ -1096,7 +994,7 @@ export function RegisterPage() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Enter your details to register as a new organization administrator.
+            Create an account, then start a new organisation or join an existing lab.
           </p>
           <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">

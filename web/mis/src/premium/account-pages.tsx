@@ -25,6 +25,9 @@ import { Switch } from "@mono/shared_ui/components/ui/switch";
 import { UserInvitation } from "@mono/shared_ui/interfaces/user";
 
 import { useAuth } from "./auth";
+import { useLabPermissions } from "./lab-permissions";
+import { P } from "./permission-codes";
+import { useIsOrgAdmin } from "./use-org-admin";
 import {
   defaultBookingPolicy,
   formatMinutesAsTime,
@@ -297,11 +300,11 @@ export function OrganisationSettingsPage() {
 
 export function LabSettingsPage() {
   const { orgId, labId } = useParams();
-  const { user } = useAuth();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { canAny } = useLabPermissions();
+  const canManageBooking = isOrgAdmin || canAny(P.SETTINGS_WRITE, P.LABS_WRITE);
   const [lab, setLab] = useState<Entity | null>(null);
   const [booking, setBooking] = useState<LabBookingPolicy>(defaultBookingPolicy);
-  const [canManageBooking, setCanManageBooking] = useState(false);
-  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
   const [isSavingBooking, setIsSavingBooking] = useState(false);
 
   useEffect(() => {
@@ -311,33 +314,7 @@ export function LabSettingsPage() {
       .get<LabBookingPolicy>(endpoints.labs.bookingPolicy(orgId, labId), { orgId })
       .then((policy) => setBooking({ ...defaultBookingPolicy, ...policy }))
       .catch(() => {});
-    apiClient
-      .get<{ results?: Array<{ user?: { id?: number }; role?: { name?: string } }> }>(
-        endpoints.labs.members(orgId, labId),
-        { orgId }
-      )
-      .then((res) => {
-        const rows = Array.isArray(res) ? res : res.results ?? [];
-        const mine = rows.find((row) => Number(row.user?.id) === user?.id);
-        const roleName = String(mine?.role?.name ?? "").toLowerCase();
-        setCanManageBooking(roleName.includes("manager") || roleName.includes("mentor"));
-      })
-      .catch(() => {});
-    apiClient
-      .get<{ results?: Array<{ user?: { id?: number }; is_admin?: boolean }> }>(
-        endpoints.organisations.members(orgId),
-        { orgId }
-      )
-      .then((res) => {
-        const rows = Array.isArray(res) ? res : res.results ?? [];
-        const mine = rows.find((row) => Number(row.user?.id) === user?.id);
-        if (mine?.is_admin) {
-          setIsOrgAdmin(true);
-          setCanManageBooking(true);
-        }
-      })
-      .catch(() => {});
-  }, [labId, orgId, user?.id]);
+  }, [labId, orgId]);
 
   if (!orgId || !labId) return null;
 

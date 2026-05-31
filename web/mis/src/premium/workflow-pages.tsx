@@ -58,6 +58,8 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useAuth } from "./auth";
+import { useLabPermissions } from "./lab-permissions";
+import { P } from "./permission-codes";
 import {
   buildSlotCandidates,
   defaultBookingPolicy,
@@ -1505,7 +1507,7 @@ export function AttendancePage() {
 
 export function ApprovalsPage() {
   const { orgId, labId } = useParams();
-  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
+  const { canAny } = useLabAccessRole(orgId, labId);
   const attendance = usePagedResource<ApiRow>(labId ? endpoints.attendance.list(labId) : null, orgId);
   const joinRequests = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.joinRequests(orgId) : null,
@@ -1532,10 +1534,10 @@ export function ApprovalsPage() {
         metric("Machines", machineReservations.rows.length, "Pending reservations", <Wrench />),
       ]}
     >
-      {!isOrgAdmin && !isLabManager ? (
+      {!canAny(P.ATTENDANCE_WRITE, P.INVENTORY_WRITE, P.MACHINES_WRITE, P.PROJECTS_WRITE) ? (
         <EmptyState
           title="Approval access required"
-          description="This page is available to organisation admins and lab managers."
+          description="Your role does not include approval permissions for this lab."
         />
       ) : (
       <Tabs defaultValue="join" className="gap-6">
@@ -2561,22 +2563,13 @@ function dateColumn<T extends ApiRow>(): PremiumColumn<T> {
   };
 }
 
-function useLabAccessRole(orgId?: string, labId?: string) {
-  const { user } = useAuth();
-  const orgMembers = usePagedResource<ApiRow>(orgId ? endpoints.organisations.members(orgId) : null, orgId);
-  const labMembers = usePagedResource<ApiRow>(
-    orgId && labId ? endpoints.labs.members(orgId, labId) : null,
-    orgId
-  );
-
-  return useMemo(() => {
-    const orgMember = orgMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
-    const labMember = labMembers.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
-    const roleName = String(labMember?.role?.name ?? "").toLowerCase();
-    const isOrgAdmin = Boolean(orgMember?.is_admin);
-    const isLabManager = roleName.includes("manager") || roleName.includes("mentor");
-    return { isOrgAdmin, isLabManager };
-  }, [labMembers.rows, orgMembers.rows, user?.id]);
+function useLabAccessRole(_orgId?: string, _labId?: string) {
+  const { isOrgAdmin, can, canAny, roleName } = useLabPermissions();
+  const isLabManager =
+    isOrgAdmin ||
+    roleName.toLowerCase().includes("manager") ||
+    canAny(P.ATTENDANCE_WRITE, P.MACHINES_WRITE, P.LABS_WRITE, P.INVENTORY_WRITE);
+  return { isOrgAdmin, isLabManager, can, canAny };
 }
 
 function useOrgRole(orgId?: string) {

@@ -81,6 +81,23 @@ Provides:
 - `EmptyState`
 - `SectionHeader`
 
+## Role-based navigation (RBAC)
+
+Lab sidebar items are filtered from the user’s **lab role permissions** (`module:action` codenames from IAM, e.g. `machines:read`, `attendance:write`).
+
+- API: `GET /api/v1/labs/organisations/{orgId}/labs/{labId}/my-permissions/`
+- Frontend: `LabPermissionsProvider` + `buildMisNav()` in `web/mis/src/premium/nav-policy.ts`
+- Organisation admins see org billing/users; lab members only see items their role allows.
+
+## SaaS signup paths
+
+| Path | Who | Result |
+|------|-----|--------|
+| `/register` | New user | Account → home → create org **or** join lab **or** accept invite |
+| `/create-organization` | Org founder | New tenant + first lab setup |
+| `/request_lab` | Member/student | Join request → manager approves in **Approvals** |
+| Profile → invites | Invited user | Accept/reject org/lab invite or paste token |
+
 ## MIS App Routes
 
 | Route | Purpose |
