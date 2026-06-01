@@ -531,13 +531,21 @@ export function LabMembersPage() {
         {selectedMember ? (
           <ResourceCrudTable
             title="Access cards"
+            description="Enter the full ID from the reader (UID and name), e.g. 0232F200-BHAIRAVIDEWALKAR — exactly as shown on the OLED or in Serial Monitor."
             resource={rfids}
-            fields={[{ name: "rfid_uid", label: "Card UID", required: true }]}
+            fields={[
+              {
+                name: "rfid_uid",
+                label: "Full card ID",
+                required: true,
+                placeholder: "0232F200-BHAIRAVIDEWALKAR",
+              },
+            ]}
             orgId={orgId}
             createPath={isOrgAdmin || isLabManager ? endpoints.labs.rfids(labId, selectedMember.id) : undefined}
             deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/` : undefined}
             createLabel="Add card"
-            columns={[textColumn("rfid_uid", "Card UID"), dateColumn()]}
+            columns={[textColumn("rfid_uid", "Full card ID"), dateColumn()]}
           />
         ) : (
           <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
