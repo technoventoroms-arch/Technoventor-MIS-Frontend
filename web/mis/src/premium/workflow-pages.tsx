@@ -552,6 +552,7 @@ export function LabMembersPage() {
             deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/` : undefined}
             createLabel="Add card"
             columns={[textColumn("rfid_uid", "Full card ID"), dateColumn()]}
+            description="The same physical card may be registered for other labs and other members. Add one entry per person in this lab."
           />
         ) : (
           <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
