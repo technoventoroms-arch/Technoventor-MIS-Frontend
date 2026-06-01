@@ -1,8 +1,8 @@
 "use client";
 
-import { LogOutIcon, Moon, MoreVerticalIcon, Sun } from "lucide-react";
+import { LogOutIcon, MoreVerticalIcon } from "lucide-react";
 
-import ThemeSwitcher from "@mono/shared_ui/components/shared/theme-switcher";
+
 import {
   Avatar,
   AvatarFallback,

@@ -19,7 +19,7 @@ const ThemeProvider = ({ children }: PropsWithChildren) => {
   const setTheme = () => {
     document.documentElement.classList.toggle("dark", false);
   };
-  const toggleTheme = (theme?: "light" | "dark") => {
+  const toggleTheme = (_theme?: "light" | "dark") => {
     // Disable switching to dark theme temporarily
     applyThemeTransition(() => {
       document.documentElement.classList.toggle("dark", false);

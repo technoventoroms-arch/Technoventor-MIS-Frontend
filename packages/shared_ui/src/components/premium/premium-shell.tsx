@@ -5,14 +5,11 @@ import {
   Command,
   LogOut,
   Menu,
-  Moon,
   Search,
-  Sun,
 } from "lucide-react";
 
 import { TECHNOVENTOR_LOGO_CLASS, TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { cn } from "@mono/shared_ui/lib/utils";
-import { useThemeContext } from "@mono/shared_ui/provider/theme-provider";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Badge } from "@mono/shared_ui/components/ui/badge";
 import {
@@ -77,7 +74,6 @@ export function PremiumShell({
   onSignOut?: () => void;
   children?: ReactNode;
 }) {
-  const { darkTheme, toggleTheme } = useThemeContext();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
