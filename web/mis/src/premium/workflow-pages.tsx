@@ -79,6 +79,7 @@ import {
 import {
   BookingMaterialsEditor,
   materialsToApiPayload,
+  validateMaterialLines,
   type BookingMaterialLine,
 } from "./booking-materials-editor";
 import {
@@ -1003,6 +1004,10 @@ export function MachinesPage() {
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventoryItems = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const labUnits = usePagedResource<ApiRow>(labId ? endpoints.inventory.units(labId) : null, orgId);
+  const unitConversions = usePagedResource<ApiRow>(
+    labId ? endpoints.inventory.unitConversions(labId) : null,
+    orgId
+  );
   const reservations = usePagedResource<ApiRow>(
     labId && reservationMachine ? endpoints.machines.reservations(labId, reservationMachine.id) : null,
     orgId
@@ -1031,36 +1036,16 @@ export function MachinesPage() {
       .catch(() => {});
   }, [orgId, labId]);
 
-  useEffect(() => {
-    if (bookingStep !== 4 || bookingMaterialLines.length > 0 || !bookingMachineData) {
-      return;
-    }
-    const defaultMaterialsAttr = (
-      bookingMachineData as { attributes?: { key: string; value: string }[] }
-    )?.attributes?.find((attr) => attr.key === "default_materials");
-    if (!defaultMaterialsAttr?.value) {
-      return;
-    }
+  const suggestedMaterialIds = useMemo(() => {
+    const attr = (bookingMachineData as { attributes?: { key: string; value: string }[] } | null)
+      ?.attributes?.find((a) => a.key === "default_materials");
+    if (!attr?.value) return [] as number[];
     try {
-      const defaultMaterialIds: number[] = JSON.parse(defaultMaterialsAttr.value);
-      const prefilled = defaultMaterialIds
-        .map((id) => {
-          const item = inventoryItems.rows.find((row) => Number(row.id) === id);
-          if (!item) return null;
-          return {
-            itemId: String(item.id),
-            quantity: "",
-            unitId: item.unit ? String(item.unit) : String(labUnits.rows[0]?.id ?? ""),
-          };
-        })
-        .filter(Boolean) as BookingMaterialLine[];
-      if (prefilled.length) {
-        setBookingMaterialLines(prefilled);
-      }
+      return JSON.parse(attr.value) as number[];
     } catch {
-      /* ignore invalid default_materials JSON */
+      return [];
     }
-  }, [bookingStep, bookingMachineData, bookingMaterialLines.length, inventoryItems.rows, labUnits.rows]);
+  }, [bookingMachineData]);
 
   if (!labId) return null;
   return (
@@ -1402,6 +1387,14 @@ export function MachinesPage() {
                     onChange={setBookingMaterialLines}
                     inventoryItems={inventoryItems.rows}
                     labUnits={labUnits.rows}
+                    unitConversions={
+                      unitConversions.rows as unknown as {
+                        from_unit: number;
+                        to_unit: number;
+                        factor: number;
+                      }[]
+                    }
+                    suggestedItemIds={suggestedMaterialIds}
                   />
                   <div className="space-y-2">
                     <Label>Notes</Label>
@@ -1447,9 +1440,20 @@ export function MachinesPage() {
                         setBookingError(validationError);
                         return;
                       }
-                      const materialPayload = materialsToApiPayload(
-                        bookingMaterialLines.length > 0 ? bookingMaterialLines : []
+                      const materialValidation = validateMaterialLines(
+                        bookingMaterialLines,
+                        inventoryItems.rows,
+                        unitConversions.rows as unknown as {
+                          from_unit: number;
+                          to_unit: number;
+                          factor: number;
+                        }[]
                       );
+                      if (materialValidation) {
+                        setBookingError(materialValidation);
+                        return;
+                      }
+                      const materialPayload = materialsToApiPayload(bookingMaterialLines);
                       setIsBooking(true);
                       setBookingError(null);
                       try {
