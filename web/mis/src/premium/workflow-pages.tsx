@@ -1225,18 +1225,19 @@ export function MachinesPage() {
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(90vh,720px)] w-[calc(100%-2rem)] flex-col overflow-hidden sm:max-w-xl">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Book machine slot</DialogTitle>
             <DialogDescription>
               Calendar + open slots + machine matrix with material request.
             </DialogDescription>
           </DialogHeader>
           {bookingMachine ? (
-            <div className="space-y-4">
-              <div className="text-xs text-slate-500">Step {bookingStep} of 4</div>
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+              <div className="shrink-0 text-xs text-slate-500">Step {bookingStep} of 4</div>
+              <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto pr-1">
               {bookingStep === 1 ? (
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <Label>Choose project</Label>
                   <Select
                     value={bookingProject}
@@ -1248,7 +1249,7 @@ export function MachinesPage() {
                       setBookingProject(value);
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full min-w-0">
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1396,14 +1397,21 @@ export function MachinesPage() {
                     }
                     suggestedItemIds={suggestedMaterialIds}
                   />
-                  <div className="space-y-2">
+                  <div className="min-w-0 space-y-2">
                     <Label>Notes</Label>
-                    <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
+                    <Textarea
+                      className="min-h-20 w-full min-w-0 resize-y"
+                      value={bookingNotes}
+                      onChange={(event) => setBookingNotes(event.target.value)}
+                    />
                   </div>
                 </div>
               ) : null}
-              {bookingError ? <div className="text-sm text-rose-600">{bookingError}</div> : null}
-              <DialogFooter>
+              </div>
+              {bookingError ? (
+                <div className="shrink-0 text-sm text-rose-600">{bookingError}</div>
+              ) : null}
+              <DialogFooter className="shrink-0 border-t border-slate-200 pt-4 dark:border-slate-800">
                 <Button variant="outline" onClick={() => setBookingStep((current) => Math.max(1, current - 1))} disabled={bookingStep === 1}>
                   Back
                 </Button>

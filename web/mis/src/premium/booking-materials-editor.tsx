@@ -136,8 +136,8 @@ export function BookingMaterialsEditor({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <Label>Materials (optional)</Label>
           <p className="text-xs text-muted-foreground">
@@ -186,12 +186,11 @@ export function BookingMaterialsEditor({
         return (
           <div
             key={`material-${index}`}
-            className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+            className="min-w-0 space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
           >
-            <div className="grid gap-2 sm:grid-cols-[1fr_110px_100px_auto]">
-              <div className="space-y-1">
-                <Label className="text-xs">Item</Label>
-                <Select
+            <div className="min-w-0 space-y-1">
+              <Label className="text-xs">Item</Label>
+              <Select
                   value={line.itemId}
                   onValueChange={(itemId) => {
                     const selected = inventoryItems.find((row) => String(row.id) === itemId);
@@ -213,33 +212,35 @@ export function BookingMaterialsEditor({
                     updateLine(index, { itemId, unitId: defaultUnitId });
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inventoryItems.map((row) => (
-                      <SelectItem key={String(row.id)} value={String(row.id)}>
-                        {formatInventoryItemOption(row)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
+                <SelectTrigger className="w-full min-w-0 max-w-full">
+                  <SelectValue placeholder="Select item" />
+                </SelectTrigger>
+                <SelectContent className="max-w-[min(100vw-2rem,var(--radix-select-trigger-width))]">
+                  {inventoryItems.map((row) => (
+                    <SelectItem key={String(row.id)} value={String(row.id)}>
+                      {formatInventoryItemOption(row)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
+              <div className="min-w-0 space-y-1">
                 <Label className="text-xs">Quantity</Label>
                 <Input
+                  className="w-full min-w-0"
                   type="number"
                   min={0}
                   step="any"
-                  placeholder={stockSymbol === "kg" ? "e.g. 0.4 or 400" : "Amount"}
+                  placeholder={stockSymbol === "kg" ? "e.g. 400" : "Amount"}
                   value={line.quantity}
                   onChange={(e) => updateLine(index, { quantity: e.target.value })}
                 />
               </div>
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <Label className="text-xs">Unit</Label>
                 <Select value={line.unitId} onValueChange={(unitId) => updateLine(index, { unitId })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full min-w-0 max-w-full">
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
                   <SelectContent>
@@ -251,11 +252,15 @@ export function BookingMaterialsEditor({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
-                <Button type="button" size="icon" variant="ghost" onClick={() => removeLine(index)}>
-                  <Trash2 className="size-4 text-rose-600" />
-                </Button>
-              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="shrink-0"
+                onClick={() => removeLine(index)}
+              >
+                <Trash2 className="size-4 text-rose-600" />
+              </Button>
             </div>
             {item ? (
               <div className="space-y-1 text-xs text-muted-foreground">
