@@ -7,6 +7,7 @@ import {
   CalendarClock,
   FlaskConical,
   Settings,
+  Trash2,
   UserCircle,
 } from "lucide-react";
 
@@ -17,6 +18,17 @@ import {
   PremiumSurface,
   SectionHeader,
 } from "@mono/shared_ui/components/premium";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@mono/shared_ui/components/ui/alert-dialog";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
@@ -269,7 +281,10 @@ export function ProfilePage() {
 
 export function OrganisationSettingsPage() {
   const { orgId } = useParams();
+  const navigate = useNavigate();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
   const [organisation, setOrganisation] = useState<Entity | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
@@ -277,6 +292,25 @@ export function OrganisationSettingsPage() {
   }, [orgId]);
 
   if (!orgId) return null;
+
+  const orgName = organisation?.name ?? `Organisation ${orgId}`;
+
+  async function deleteOrganisation() {
+    setIsDeleting(true);
+    try {
+      await apiClient.remove(endpoints.organisations.detail(orgId), { orgId });
+      toast.success("Organisation deleted.");
+      navigate("/");
+    } catch (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message: string }).message)
+          : "Could not delete organisation.";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <PageFrame
@@ -287,21 +321,63 @@ export function OrganisationSettingsPage() {
         metric("Organisation", organisation?.name ?? `#${orgId}`, "Profile", <Building2 />),
       ]}
     >
-      <PremiumSurface className="p-6">
-        <ResourceForm
-          fields={organisationFields}
-          initialValues={organisation}
-          submitLabel="Save Organization"
-          onSubmit={async (values) => {
-            const updated = await apiClient.update<Entity>(
-              endpoints.organisations.detail(orgId),
-              values,
-              { orgId }
-            );
-            setOrganisation(updated);
-          }}
-        />
-      </PremiumSurface>
+      <div className="space-y-6">
+        <PremiumSurface className="p-6">
+          <ResourceForm
+            fields={organisationFields}
+            initialValues={organisation}
+            submitLabel="Save Organization"
+            onSubmit={async (values) => {
+              const updated = await apiClient.update<Entity>(
+                endpoints.organisations.detail(orgId),
+                values,
+                { orgId }
+              );
+              setOrganisation(updated);
+              toast.success("Organisation saved.");
+            }}
+          />
+        </PremiumSurface>
+
+        {isOrgAdmin ? (
+          <PremiumSurface className="border-destructive/30 p-6">
+            <SectionHeader
+              title="Danger zone"
+              description="Permanently remove this organisation and hide it from all members. Labs, projects, and history are soft-deleted with the organisation."
+            />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive" disabled={isDeleting}>
+                  <Trash2 className="size-4" />
+                  Delete organisation
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {orgName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This soft-deletes the organisation and hides it from all members. Everyone loses
+                    access immediately. This cannot be undone from the app.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeleting}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void deleteOrganisation();
+                    }}
+                  >
+                    {isDeleting ? "Deleting…" : "Delete organisation"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </PremiumSurface>
+        ) : null}
+      </div>
     </PageFrame>
   );
 }
