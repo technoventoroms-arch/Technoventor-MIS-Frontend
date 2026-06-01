@@ -363,6 +363,14 @@ export function OrgUsersPage() {
   const { isOrgAdmin } = useOrgRole(orgId);
   const labs = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
   const roles = usePagedResource<ApiRow>(orgId ? endpoints.iam.roles(orgId) : null, orgId);
+  const labLabelById = useMemo(
+    () => new Map(labs.rows.map((row) => [String(row.id), displayName(row)])),
+    [labs.rows]
+  );
+  const roleLabelById = useMemo(
+    () => new Map(roles.rows.map((row) => [String(row.id), displayName(row)])),
+    [roles.rows]
+  );
   const members = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.members(orgId) : null,
     orgId
@@ -457,8 +465,16 @@ export function OrgUsersPage() {
             columns={[
               textColumn("email", "Email"),
               textColumn("status", "Status"),
-              textColumn("lab", "Lab"),
-              textColumn("role", "Role"),
+              {
+                key: "lab",
+                header: "Lab",
+                render: (row) => labLabelById.get(String(row.lab)) ?? formatValue(row.lab),
+              },
+              {
+                key: "role",
+                header: "Role",
+                render: (row) => roleLabelById.get(String(row.role)) ?? formatValue(row.role),
+              },
               dateColumn(),
             ]}
           />
@@ -803,12 +819,12 @@ export function BookingCalendarPage() {
 
 export function MachinesPage() {
   const { orgId, labId } = useParams();
-  const navigate = useNavigate();
   const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [statusMachine, setStatusMachine] = useState<ApiRow | null>(null);
   const [reservationMachine, setReservationMachine] = useState<ApiRow | null>(null);
   const [logMachine, setLogMachine] = useState<ApiRow | null>(null);
   const [bookingMachine, setBookingMachine] = useState<ApiRow | null>(null);
+  const [isBookingCreateProjectOpen, setIsBookingCreateProjectOpen] = useState(false);
   const [bookingMachineId, setBookingMachineId] = useState<string>("");
   const [bookingDate, setBookingDate] = useState<string>("");
   const [bookingSlotStart, setBookingSlotStart] = useState<string>("");
@@ -1034,8 +1050,7 @@ export function MachinesPage() {
                     value={bookingProject}
                     onValueChange={(value) => {
                       if (value === "__create_new__") {
-                        setBookingMachine(null);
-                        navigate(`/${orgId}/lab/${labId}/projects`);
+                        setIsBookingCreateProjectOpen(true);
                         return;
                       }
                       setBookingProject(value);
@@ -1330,6 +1345,28 @@ export function MachinesPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+      {labId ? (
+        <ResourceFormDialog
+          title="New project"
+          description="Create a project for this booking without leaving the wizard."
+          open={isBookingCreateProjectOpen}
+          onOpenChange={setIsBookingCreateProjectOpen}
+          fields={projectFields}
+          onSubmit={async (values) => {
+            const created = await apiClient.create<ApiRow>(
+              endpoints.projects.list(labId),
+              values,
+              { orgId }
+            );
+            await projects.reload();
+            if (created?.id != null) {
+              setBookingProject(String(created.id));
+            }
+            setBookingError(null);
+            toast.success("Project created — select it above if needed.");
+          }}
+        />
+      ) : null}
       {logMachine ? (
         <PremiumDataTable
           title="Machine status logs"
