@@ -9,10 +9,11 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 
-import { apiClient, endpoints } from "@mono/api_client";
+import { apiClient, endpoints, type Entity } from "@mono/api_client";
 
+import { useAuth } from "./auth";
 import { useIsOrgAdmin } from "./use-org-admin";
-import { mergeRolePermissions } from "./role-defaults";
+import { mergeRolePermissions, normalizeRoleKey } from "./role-defaults";
 
 type LabPermissionsPayload = {
   permissions: string[];
@@ -41,8 +42,15 @@ const LabPermissionsContext = createContext<LabPermissionsContextValue>({
   canAny: () => false,
 });
 
+function readMembershipInventoryFlag(rows: Entity[], userId?: number): boolean {
+  if (!userId) return false;
+  const mine = rows.find((row) => Number((row.user as Entity | undefined)?.id ?? row.id) === userId);
+  return Boolean(mine?.can_manage_inventory);
+}
+
 export function LabPermissionsProvider({ children }: { children: ReactNode }) {
   const { orgId, labId } = useParams();
+  const { user } = useAuth();
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [roleName, setRoleName] = useState("");
@@ -59,23 +67,37 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
     setIsLoading(true);
-    void apiClient
-      .get<{ error?: boolean; data?: LabPermissionsPayload }>(
+    void Promise.all([
+      apiClient.get<{ error?: boolean; data?: LabPermissionsPayload }>(
         endpoints.labs.myPermissions(orgId, labId),
         { orgId }
-      )
-      .then((res) => {
+      ),
+      apiClient.list<Entity>(endpoints.labs.members(orgId, labId), { orgId }).catch(() => ({
+        results: [] as Entity[],
+        next: null,
+        previous: null,
+      })),
+    ])
+      .then(([permRes, membersPage]) => {
         if (cancelled) return;
         const payload =
-          res && typeof res === "object" && "data" in res && res.data
-            ? res.data
-            : (res as LabPermissionsPayload);
+          permRes && typeof permRes === "object" && "data" in permRes && permRes.data
+            ? permRes.data
+            : (permRes as LabPermissionsPayload);
         const apiList = Array.isArray(payload?.permissions) ? payload.permissions : [];
         const role = String(payload?.role_name ?? "");
-        const list = mergeRolePermissions(apiList, role);
+        const fromMembership = readMembershipInventoryFlag(membersPage.results, user?.id);
+        const inventoryGranted =
+          Boolean(payload?.can_manage_inventory) ||
+          fromMembership ||
+          (normalizeRoleKey(role) === "lab manager" &&
+            apiList.includes("inventory:write"));
+        const list = mergeRolePermissions(apiList, role, {
+          canManageInventory: inventoryGranted,
+        });
         setPermissions(new Set(list));
         setRoleName(role);
-        setCanManageInventory(Boolean(payload?.can_manage_inventory));
+        setCanManageInventory(inventoryGranted);
       })
       .catch(() => {
         if (!cancelled) {
@@ -91,7 +113,7 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [orgId, labId]);
+  }, [orgId, labId, user?.id]);
 
   const can = useCallback(
     (codename: string) => isOrgAdmin || permissions.has(codename),

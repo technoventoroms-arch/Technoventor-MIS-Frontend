@@ -48,7 +48,17 @@ export function defaultPermissionsForRole(roleName: string): string[] {
   return ROLE_DEFAULT_PERMISSIONS[key] ?? [];
 }
 
-export function mergeRolePermissions(apiPermissions: string[], roleName: string): string[] {
+/** Granted when a Lab Manager is invited/assigned with inventory access (backend 9587025+). */
+export const LAB_MANAGER_INVENTORY_PERMISSIONS: PermissionCode[] = [
+  P.INVENTORY_READ,
+  P.INVENTORY_WRITE,
+];
+
+export function mergeRolePermissions(
+  apiPermissions: string[],
+  roleName: string,
+  options?: { canManageInventory?: boolean }
+): string[] {
   const key = normalizeRoleKey(roleName);
   const base =
     apiPermissions.length > 0 ? apiPermissions : defaultPermissionsForRole(roleName);
@@ -57,6 +67,9 @@ export function mergeRolePermissions(apiPermissions: string[], roleName: string)
     return [...new Set([...base, ...RESEARCHER_PERMISSIONS])].filter((codename) =>
       allowed.has(codename)
     );
+  }
+  if (key === "lab manager" && options?.canManageInventory) {
+    return [...new Set([...base, ...LAB_MANAGER_INVENTORY_PERMISSIONS])];
   }
   return base;
 }
