@@ -12,14 +12,22 @@ import { CalendarWeekView } from "./week-and-day-view/calendar-week-view";
 import { CalendarYearView } from "./year-view/calendar-year-view";
 
 interface IProps {
-  view: TCalendarView;
+  /** Initial calendar view (legacy callers pass `view="month"`). */
+  view?: TCalendarView;
   eventName?: string;
   showBookNow?: boolean;
+  /** Fired when a day is chosen in month/year view (before switching to day timeline). */
+  onDateSelect?: (date: Date) => void;
 }
 
-export function ClientContainer({ eventName, showBookNow }: IProps) {
+export function ClientContainer({
+  view: initialView = "month",
+  eventName,
+  showBookNow,
+  onDateSelect,
+}: IProps) {
   const { selectedDate, events, handleBookNow } = useCalendar();
-  const [view, setView] = useState<TCalendarView>("month");
+  const [view, setView] = useState<TCalendarView>(initialView);
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       const eventStartDate = event.startDate;
@@ -161,7 +169,10 @@ export function ClientContainer({ eventName, showBookNow }: IProps) {
         <CalendarMonthView
           singleDayEvents={singleDayEvents}
           multiDayEvents={multiDayEvents}
-          handleDateClick={() => setView("day")}
+          handleDateClick={(date) => {
+            onDateSelect?.(date);
+            setView("day");
+          }}
         />
       )}
       {view === "week" && (
@@ -174,7 +185,10 @@ export function ClientContainer({ eventName, showBookNow }: IProps) {
         <CalendarYearView
           handleMonthClick={() => setView("month")}
           allEvents={eventStartDates}
-          handleDateClick={() => setView("day")}
+          handleDateClick={(date) => {
+            onDateSelect?.(date);
+            setView("day");
+          }}
         />
       )}
       {view === "agenda" && (

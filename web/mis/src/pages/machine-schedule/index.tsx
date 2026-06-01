@@ -380,7 +380,7 @@ const MachineSchedule = () => {
       />
       <div className="@container/main flex flex-1 flex-row gap-2 p-2 overflow-hidden">
         <section className="h-full overflow-hidden flex-1">
-          <ClientContainer eventName="Reservations" showBookNow />
+          <ClientContainer view="month" eventName="Reservations" showBookNow />
         </section>
       </div>
       {addReservationModal && (

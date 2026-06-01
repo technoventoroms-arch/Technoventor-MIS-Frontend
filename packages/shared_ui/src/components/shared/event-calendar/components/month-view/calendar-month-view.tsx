@@ -9,7 +9,7 @@ import { ScrollArea } from "@mono/shared_ui/components/ui/scroll-area";
 interface IProps {
   singleDayEvents: IEvent[];
   multiDayEvents: IEvent[];
-  handleDateClick: () => void;
+  handleDateClick: (date: Date) => void;
 }
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

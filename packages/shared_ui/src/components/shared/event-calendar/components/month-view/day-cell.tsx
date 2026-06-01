@@ -11,7 +11,7 @@ interface IProps {
   cell: ICalendarCell;
   events: IEvent[];
   eventPositions: Record<string, number>;
-  handleCellClick: () => void;
+  handleCellClick: (date: Date) => void;
   isLastWeek: boolean;
 }
 
@@ -35,8 +35,8 @@ export function DayCell({
   const isSunday = date.getDay() === 0;
 
   const handleClick = () => {
-    handleCellClick();
     setSelectedDate(date);
+    handleCellClick(date);
   };
 
   return (
