@@ -435,6 +435,7 @@ export const endpoints = {
       `machines/labs/${labId}/${machineId}/reservations/`,
     currentReservation: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/reservations/current/`,
+    labReservations: (labId: string | number) => `machines/labs/${labId}/reservations/`,
     userReservations: "machines/reservations/me/",
     pendingReservations: "machines/reservations/pending/",
     reservationAction: (reservationId: string | number) =>

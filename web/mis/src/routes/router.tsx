@@ -86,6 +86,7 @@ const routes: RouteObject[] = [
           { path: ":orgId/lab/:labId/inventory", element: workflowPage("InventoryPage") },
           { path: ":orgId/lab/:labId/inventory/:itemId", element: workflowPage("InventoryPage") },
           { path: ":orgId/lab/:labId/machines", element: workflowPage("MachinesPage") },
+          { path: ":orgId/lab/:labId/bookings", element: workflowPage("BookingCalendarPage") },
           { path: ":orgId/lab/:labId/machine", element: workflowPage("MachinesPage") },
           { path: ":orgId/lab/:labId/machine/:machineId", element: workflowPage("MachineSchedulePage") },
           { path: ":orgId/lab/:labId/machine/:machineId/details", element: workflowPage("MachineDetailsPage") },

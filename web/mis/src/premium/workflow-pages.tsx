@@ -75,6 +75,7 @@ import {
   type LabBookingPolicy,
 } from "./booking-utils";
 import { MachineDevicePanel } from "./machine-device-panel";
+import { BookingCalendar } from "./booking-calendar";
 import { toast } from "sonner";
 import {
   ResourceCrudTable,
@@ -730,6 +731,29 @@ export function InventoryPage() {
           emptyDescription="Movements appear after stock adjustments are recorded."
         />
       ) : null}
+    </PageFrame>
+  );
+}
+
+export function BookingCalendarPage() {
+  const { orgId, labId } = useParams();
+  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
+
+  if (!orgId || !labId) return null;
+
+  const mode = isOrgAdmin || isLabManager ? "manager" : "researcher";
+
+  return (
+    <PageFrame
+      eyebrow="Machines"
+      title={mode === "manager" ? "Lab booking calendar" : "My bookings"}
+      description={
+        mode === "manager"
+          ? "All machine reservations in this lab."
+          : "Your machine reservations in this lab."
+      }
+    >
+      <BookingCalendar orgId={orgId} labId={labId} mode={mode} />
     </PageFrame>
   );
 }
