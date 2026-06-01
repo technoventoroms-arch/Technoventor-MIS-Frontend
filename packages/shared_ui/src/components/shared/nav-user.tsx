@@ -114,6 +114,7 @@ export const NavUser = ({
           </div>
         </DropdownMenuLabel>
         {children}
+        {/* Temporarily hide theme switcher
         <DropdownMenuSeparator />
         <ThemeSwitcher
           isMobile={!!isMobile}
@@ -130,6 +131,7 @@ export const NavUser = ({
             </>
           )}
         </ThemeSwitcher>
+        */}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {

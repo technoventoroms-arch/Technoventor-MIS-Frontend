@@ -211,6 +211,7 @@ export function PremiumShell({
                 </button>
               </div>
               <div className="flex items-center gap-2">
+                {/* Temporarily hide theme switcher button
                 <Button
                   variant="ghost"
                   size="icon"
@@ -220,6 +221,7 @@ export function PremiumShell({
                   <Sun className="size-4 dark:hidden" />
                   <Moon className="hidden size-4 dark:block" />
                 </Button>
+                */}
                 <Button
                   variant="ghost"
                   size="icon"

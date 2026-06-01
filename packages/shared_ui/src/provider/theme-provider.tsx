@@ -13,46 +13,18 @@ type Props = {
 const ThemeContext = createContext<Props>({} as any);
 export const useThemeContext = () => useContext(ThemeContext);
 const ThemeProvider = ({ children }: PropsWithChildren) => {
-  const [darkTheme, setDarkTheme] = useState(
-    localStorage.theme === "dark" ||
-      (!("theme" in localStorage) &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-  );
+  // Temporarily disable dark mode (always use light theme)
+  const [darkTheme, setDarkTheme] = useState(false);
 
   const setTheme = () => {
-    document.documentElement.classList.toggle(
-      "dark",
-      localStorage.theme === "dark" ||
-        (!("theme" in localStorage) &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-    );
+    document.documentElement.classList.toggle("dark", false);
   };
   const toggleTheme = (theme?: "light" | "dark") => {
-    switch (theme) {
-      case "light":
-        localStorage.theme = "light";
-        applyThemeTransition(() => {
-          document.documentElement.classList.toggle("dark", false);
-          setDarkTheme(false);
-        });
-        break;
-      case "dark":
-        localStorage.theme = "dark";
-        applyThemeTransition(() => {
-          document.documentElement.classList.toggle("dark", true);
-          setDarkTheme(true);
-        });
-        break;
-      default:
-        localStorage.removeItem("theme");
-        const isDark = window.matchMedia(
-          "(prefers-color-scheme: dark)"
-        ).matches;
-        applyThemeTransition(() => {
-          document.documentElement.classList.toggle("dark", isDark);
-          setDarkTheme(isDark);
-        });
-    }
+    // Disable switching to dark theme temporarily
+    applyThemeTransition(() => {
+      document.documentElement.classList.toggle("dark", false);
+      setDarkTheme(false);
+    });
   };
   useEffect(() => {
     setTheme();
