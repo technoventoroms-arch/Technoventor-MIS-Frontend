@@ -11,6 +11,7 @@ import {
   type MachineIoTInstallResponse,
 } from "@mono/api_client";
 import { PremiumSurface } from "@mono/shared_ui/components/premium";
+import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { StatusBadge } from "@mono/shared_ui/components/premium/status-badge";
 
@@ -31,7 +32,7 @@ function formatLastSeen(iso: string | null | undefined): string {
   if (mins < 60) return `${mins} min ago`;
   const hours = Math.round(mins / 60);
   if (hours < 48) return `${hours} h ago`;
-  return date.toLocaleString();
+  return formatLocalDateTime(iso);
 }
 
 export function MachineDevicePanel({

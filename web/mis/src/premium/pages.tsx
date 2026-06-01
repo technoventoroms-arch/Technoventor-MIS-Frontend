@@ -37,6 +37,7 @@ import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
 import { useOrganisationAccess } from "./use-organisation-access";
+import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { entityNameCell } from "./entity-display";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
 import { resolveLabNavPersona } from "./lab-role";
@@ -981,13 +982,11 @@ function formatRelativeTime(timestamp: number): string {
 }
 
 function formatDate(value: unknown): string {
-  if (typeof value !== "string") return "Not updated";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not updated";
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  if (value === null || value === undefined || value === "") {
+    return "Not updated";
+  }
+  const text = formatLocalDateTime(value);
+  return text === "—" ? "Not updated" : text;
 }
 
 function fullName(user: { first_name?: string; last_name?: string; email?: string } | null): string {

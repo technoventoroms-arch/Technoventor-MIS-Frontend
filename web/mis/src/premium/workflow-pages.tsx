@@ -48,6 +48,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@mono/shared_ui/components/ui/tabs";
 import { Textarea } from "@mono/shared_ui/components/ui/textarea";
 import {
+  formatDisplayValue,
+  formatLocalDateTime,
+} from "@mono/shared_ui/lib/format-datetime";
+import {
   apiClient,
   endpoints,
   normalizeApiError,
@@ -2266,7 +2270,7 @@ export function ProjectDetailsPage() {
 }
 
 function machineDetailField(label: string, value: unknown) {
-  const text = value === null || value === undefined || value === "" ? "—" : String(value);
+  const text = formatDisplayValue(value);
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -2436,14 +2440,17 @@ function displayName(row: Partial<ApiRow> | undefined): string {
 }
 
 function formatValue(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "-";
-  if (typeof value === "object") return displayName(value as ApiRow);
-  return String(value);
+  if (typeof value === "object" && value !== null) {
+    return displayName(value as ApiRow);
+  }
+  const text = formatDisplayValue(value);
+  return text === "—" ? "-" : text;
 }
 
 function formatDate(value: unknown): string {
-  if (typeof value !== "string") return "Not updated";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not updated";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+  if (value === null || value === undefined || value === "") {
+    return "Not updated";
+  }
+  const text = formatLocalDateTime(value);
+  return text === "—" ? "Not updated" : text;
 }
