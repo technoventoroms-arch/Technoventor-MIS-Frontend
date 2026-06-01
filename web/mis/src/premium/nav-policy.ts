@@ -146,7 +146,7 @@ function buildLabNav({
     ];
   }
 
-  if (persona === "lab-member") {
+  if (persona === "researcher") {
     return [
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
@@ -154,6 +154,8 @@ function buildLabNav({
       { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
       { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
+      { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
+      { label: "My orders", to: `${labBase}/orders`, icon: FileText },
       ...accountBasics,
     ];
   }

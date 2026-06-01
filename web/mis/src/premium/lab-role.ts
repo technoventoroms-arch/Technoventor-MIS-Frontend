@@ -1,4 +1,4 @@
-export type LabNavPersona = "org-admin" | "lab-manager" | "lab-member" | "other";
+export type LabNavPersona = "org-admin" | "lab-manager" | "researcher" | "other";
 
 export function resolveLabNavPersona(
   isOrgAdmin: boolean,
@@ -7,6 +7,6 @@ export function resolveLabNavPersona(
   if (isOrgAdmin) return "org-admin";
   const key = roleName.trim().toLowerCase();
   if (key === "lab manager") return "lab-manager";
-  if (key === "lab member") return "lab-member";
+  if (key === "researcher" || key === "lab member") return "researcher";
   return "other";
 }

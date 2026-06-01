@@ -2,29 +2,21 @@ import { P, type PermissionCode } from "./permission-codes";
 
 /**
  * Fallback IAM codenames when a lab role exists in the DB but has no RolePermission rows yet.
- * Keeps student/manager navigation usable until org roles are fully provisioned.
+ * "Lab Member" is legacy; it is treated as Researcher everywhere in the app.
  */
-/** Students (Lab Member): view-only lab operations — no scan, cart, or orders. */
-export const LAB_MEMBER_PERMISSIONS: PermissionCode[] = [
+export const RESEARCHER_PERMISSIONS: PermissionCode[] = [
   P.LABS_READ,
   P.PROJECTS_READ,
+  P.PROJECTS_WRITE,
+  P.PROJECTS_ORDER,
   P.MACHINES_READ,
+  P.MACHINES_RESERVE,
   P.INVENTORY_READ,
   P.ATTENDANCE_READ,
 ];
 
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, PermissionCode[]> = {
-  "lab member": LAB_MEMBER_PERMISSIONS,
-  researcher: [
-    P.LABS_READ,
-    P.PROJECTS_READ,
-    P.PROJECTS_WRITE,
-    P.PROJECTS_ORDER,
-    P.MACHINES_READ,
-    P.MACHINES_RESERVE,
-    P.INVENTORY_READ,
-    P.ATTENDANCE_READ,
-  ],
+  researcher: RESEARCHER_PERMISSIONS,
   "lab manager": [
     P.LABS_READ,
     P.LABS_WRITE,
@@ -47,18 +39,26 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, PermissionCode[]> = {
   ],
 };
 
-export function defaultPermissionsForRole(roleName: string): string[] {
+export function normalizeRoleKey(roleName: string): string {
   const key = roleName.trim().toLowerCase();
+  if (key === "lab member") return "researcher";
+  return key;
+}
+
+export function defaultPermissionsForRole(roleName: string): string[] {
+  const key = normalizeRoleKey(roleName);
   return ROLE_DEFAULT_PERMISSIONS[key] ?? [];
 }
 
 export function mergeRolePermissions(apiPermissions: string[], roleName: string): string[] {
-  const key = roleName.trim().toLowerCase();
+  const key = normalizeRoleKey(roleName);
   const base =
     apiPermissions.length > 0 ? apiPermissions : defaultPermissionsForRole(roleName);
-  if (key === "lab member") {
-    const allowed = new Set<string>(LAB_MEMBER_PERMISSIONS);
-    return base.filter((codename) => allowed.has(codename));
+  if (key === "researcher") {
+    const allowed = new Set<string>(RESEARCHER_PERMISSIONS);
+    return [...new Set([...base, ...RESEARCHER_PERMISSIONS])].filter((codename) =>
+      allowed.has(codename)
+    );
   }
   return base;
 }

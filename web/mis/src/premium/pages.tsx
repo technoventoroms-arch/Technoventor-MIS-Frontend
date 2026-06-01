@@ -488,12 +488,12 @@ export function LabDashboardPage() {
     return <AdminLabDashboard labName={labName} />;
   }
 
-  return <MemberLabDashboard labName={labName} />;
+  return <ResearcherLabDashboard labName={labName} />;
 }
 
-function MemberLabDashboard({ labName }: { labName?: string }) {
+function ResearcherLabDashboard({ labName }: { labName?: string }) {
   const { orgId, labId } = useParams();
-  const { can, canAny, isLoading: permissionsLoading } = useLabPermissions();
+  const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const machines = usePagedResource<Entity>(labId ? endpoints.machines.list(labId) : null, orgId);
   const inventory = usePagedResource<Entity>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -501,16 +501,16 @@ function MemberLabDashboard({ labName }: { labName?: string }) {
 
   const labShortcuts = useMemo(() => {
     if (!orgId || !labId) return [];
-    return buildMisNav({ orgId, labId, isOrgAdmin, roleName: "Lab Member", can, canAny }).filter(
+    return buildMisNav({ orgId, labId, isOrgAdmin, roleName, can, canAny }).filter(
       (item) => !["Back to labs", "Profile", "Notifications"].includes(item.label)
     );
-  }, [can, canAny, isOrgAdmin, labId, orgId]);
+  }, [can, canAny, isOrgAdmin, labId, orgId, roleName]);
 
   return (
     <PageFrame
       eyebrow="Lab"
       title={labName ? `${labName}` : "Lab workspace"}
-      description="Your projects, machines, inventory, and attendance for this lab."
+      description="Your projects, machines, inventory orders, and attendance for this lab."
       metrics={[
         {
           label: "Machines",
