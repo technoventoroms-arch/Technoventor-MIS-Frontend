@@ -34,6 +34,7 @@ export function buildMisNav(options: {
   showJoinLab?: boolean;
   can: (codename: string) => boolean;
   canAny: (...codenames: string[]) => boolean;
+  canManageInventory?: boolean;
 }): ShellNavItem[] {
   const {
     orgId,
@@ -44,6 +45,7 @@ export function buildMisNav(options: {
     showJoinLab = true,
     can,
     canAny,
+    canManageInventory = false,
   } = options;
   const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
 
@@ -70,6 +72,7 @@ export function buildMisNav(options: {
       roleName,
       can,
       canAny,
+      canManageInventory,
       profileItem,
     });
   }
@@ -99,6 +102,7 @@ function buildLabNav({
   roleName,
   can,
   canAny,
+  canManageInventory,
   profileItem,
 }: {
   orgBase: string;
@@ -107,6 +111,7 @@ function buildLabNav({
   roleName: string;
   can: (codename: string) => boolean;
   canAny: (...codenames: string[]) => boolean;
+  canManageInventory: boolean;
   profileItem: ShellNavItem;
 }): ShellNavItem[] {
   const back: ShellNavItem = { label: "Back to labs", to: `${orgBase}/labs`, icon: ArrowLeft };
@@ -137,16 +142,19 @@ function buildLabNav({
   }
 
   if (persona === "lab-manager") {
-    return [
+    const managerItems: ShellNavItem[] = [
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
       { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
       { label: "Booking calendar", to: `${labBase}/bookings`, icon: CalendarDays },
       { label: "Lab settings", to: `${labBase}/edit-lab`, icon: QrCode },
       { label: "Lab members", to: `${labBase}/users`, icon: Users },
-      { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
-      ...accountBasics,
     ];
+    if (isOrgAdmin || canManageInventory) {
+      managerItems.push({ label: "Inventory", to: `${labBase}/inventory`, icon: Boxes });
+    }
+    managerItems.push({ label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 }, ...accountBasics);
+    return managerItems;
   }
 
   if (persona === "researcher") {

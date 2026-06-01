@@ -48,6 +48,8 @@ export type ShellNotification = {
   message: string;
   createdAt?: string;
   isRead?: boolean;
+  /** When true, counts toward the bell alert dot (separate from read state). */
+  isRed?: boolean;
   to?: string;
 };
 
@@ -88,7 +90,7 @@ export function PremiumShell({
         item.to.toLowerCase().includes(normalizedQuery)
     );
   }, [navItems, searchQuery]);
-  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
+  const alertCount = notifications.filter((notification) => notification.isRed).length;
 
   useEffect(() => {
     function handleKeyboardShortcut(event: KeyboardEvent) {
@@ -221,7 +223,7 @@ export function PremiumShell({
                   onClick={() => setIsNotificationsOpen(true)}
                 >
                   <Bell className="size-4" />
-                  {unreadCount ? (
+                  {alertCount ? (
                     <span className="absolute right-1 top-1 inline-flex size-2 rounded-full bg-rose-500" />
                   ) : null}
                 </Button>

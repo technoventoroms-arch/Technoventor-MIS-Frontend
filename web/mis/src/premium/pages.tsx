@@ -199,7 +199,8 @@ function MisShellInner() {
   const [labLabel, setLabLabel] = useState<string | null>(null);
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
   const isOrgAdmin = useIsOrgAdmin(orgId);
-  const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
+  const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
+    useLabPermissions();
   const { canCreateOrganisation, isOrgAdminSomewhere } = useOrganisationAccess(!orgId);
 
   useEffect(() => {
@@ -257,8 +258,19 @@ function MisShellInner() {
         showJoinLab: !isOrgAdminSomewhere,
         can,
         canAny,
+        canManageInventory,
       }),
-    [can, canAny, canCreateOrganisation, isOrgAdmin, isOrgAdminSomewhere, labId, orgId, roleName]
+    [
+      can,
+      canAny,
+      canCreateOrganisation,
+      canManageInventory,
+      isOrgAdmin,
+      isOrgAdminSomewhere,
+      labId,
+      orgId,
+      roleName,
+    ]
   );
   const contexts = [
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
@@ -279,6 +291,7 @@ function MisShellInner() {
         message: String(row.message ?? ""),
         createdAt: typeof row.created_at === "string" ? row.created_at : undefined,
         isRead: Boolean(row.is_read),
+        isRed: Boolean(row.is_red),
         to: orgId && labId ? `/${orgId}/lab/${labId}/notifications` : undefined,
       }))}
       userName={fullName(user)}
@@ -494,7 +507,8 @@ export function LabDashboardPage() {
 
 function ResearcherLabDashboard({ labName }: { labName?: string }) {
   const { orgId, labId } = useParams();
-  const { can, canAny, roleName, isLoading: permissionsLoading } = useLabPermissions();
+  const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
+    useLabPermissions();
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const machines = usePagedResource<Entity>(labId ? endpoints.machines.list(labId) : null, orgId);
   const inventory = usePagedResource<Entity>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -502,10 +516,10 @@ function ResearcherLabDashboard({ labName }: { labName?: string }) {
 
   const labShortcuts = useMemo(() => {
     if (!orgId || !labId) return [];
-    return buildMisNav({ orgId, labId, isOrgAdmin, roleName, can, canAny }).filter(
+    return buildMisNav({ orgId, labId, isOrgAdmin, roleName, can, canAny, canManageInventory }).filter(
       (item) => !["Back to labs", "Profile", "Notifications"].includes(item.label)
     );
-  }, [can, canAny, isOrgAdmin, labId, orgId, roleName]);
+  }, [can, canAny, canManageInventory, isOrgAdmin, labId, orgId, roleName]);
 
   return (
     <PageFrame
@@ -566,7 +580,15 @@ function AdminLabDashboard({ labName }: { labName?: string }) {
 
   const labShortcuts = useMemo(() => {
     if (!orgId || !labId) return [];
-    return buildMisNav({ orgId, labId, isOrgAdmin: true, roleName: "", can, canAny }).filter(
+    return buildMisNav({
+      orgId,
+      labId,
+      isOrgAdmin: true,
+      roleName: "",
+      can,
+      canAny,
+      canManageInventory: true,
+    }).filter(
       (item) => !["Back to labs", "Profile", "Notifications"].includes(item.label)
     );
   }, [can, canAny, labId, orgId]);

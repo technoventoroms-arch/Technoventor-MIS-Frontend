@@ -77,6 +77,9 @@ import {
 } from "./booking-utils";
 import { MachineDevicePanel } from "./machine-device-panel";
 import { BookingCalendar } from "./booking-calendar";
+import { InviteMemberDialog } from "./invite-member-dialog";
+import { LabMemberAssignDialog } from "./lab-member-assign-dialog";
+import { isLabManagerRoleName } from "./lab-manager-access";
 import { toast } from "sonner";
 import {
   ResourceCrudTable,
@@ -360,6 +363,8 @@ export function LabsPage() {
 export function OrgUsersPage() {
   const { orgId } = useParams();
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [editingInvite, setEditingInvite] = useState<ApiRow | null>(null);
   const { isOrgAdmin } = useOrgRole(orgId);
   const labs = usePagedResource<ApiRow>(orgId ? endpoints.labs.list(orgId) : null, orgId);
   const roles = usePagedResource<ApiRow>(orgId ? endpoints.iam.roles(orgId) : null, orgId);
@@ -427,41 +432,58 @@ export function OrgUsersPage() {
           ) : null}
         </TabsContent>
         <TabsContent value="invites">
+          {isOrgAdmin ? (
+            <InviteMemberDialog
+              open={isInviteDialogOpen}
+              onOpenChange={setIsInviteDialogOpen}
+              orgId={orgId}
+              labs={labs.rows}
+              roles={roles.rows}
+              createPath={endpoints.organisations.invites(orgId)}
+              updatePath={
+                editingInvite ? endpoints.organisations.invite(orgId, editingInvite.id) : undefined
+              }
+              initialInvite={editingInvite}
+              onSaved={async () => {
+                setEditingInvite(null);
+                await invites.reload();
+              }}
+            />
+          ) : null}
+          {isOrgAdmin ? (
+            <div className="mb-4 flex justify-end">
+              <Button
+                onClick={() => {
+                  setEditingInvite(null);
+                  setIsInviteDialogOpen(true);
+                }}
+              >
+                <Plus className="size-4" />
+                Invite member
+              </Button>
+            </div>
+          ) : null}
           <ResourceCrudTable
             title="Invites"
             resource={invites}
-            fields={[
-              { name: "email", label: "Email", type: "email", required: true },
-              {
-                name: "lab",
-                label: "Lab",
-                type: "select",
-                required: true,
-                options: toOptions(labs.rows),
-                helper: "Required — invitee is assigned to this lab.",
-              },
-              {
-                name: "role",
-                label: "Role",
-                type: "select",
-                required: true,
-                options: toOptions(roles.rows),
-              },
-            ]}
+            fields={[]}
             orgId={orgId}
-            createPath={isOrgAdmin ? endpoints.organisations.invites(orgId) : undefined}
-            updatePath={
-              isOrgAdmin ? (row) => endpoints.organisations.invite(orgId, row.id) : undefined
-            }
             deletePath={
               isOrgAdmin ? (row) => endpoints.organisations.invite(orgId, row.id) : undefined
             }
-            createLabel="Invite member"
-            transformPayload={(values) => ({
-              email: values.email,
-              lab: values.lab ? Number(values.lab) : undefined,
-              role: values.role ? Number(values.role) : undefined,
-            })}
+            rowActions={
+              isOrgAdmin
+                ? [
+                    {
+                      label: "Edit",
+                      run: async (row) => {
+                        setEditingInvite(row);
+                        setIsInviteDialogOpen(true);
+                      },
+                    },
+                  ]
+                : []
+            }
             columns={[
               textColumn("email", "Email"),
               textColumn("status", "Status"),
@@ -474,6 +496,15 @@ export function OrgUsersPage() {
                 key: "role",
                 header: "Role",
                 render: (row) => roleLabelById.get(String(row.role)) ?? formatValue(row.role),
+              },
+              {
+                key: "inventory",
+                header: "Inventory",
+                render: (row) => {
+                  const roleName = roleLabelById.get(String(row.role)) ?? "";
+                  if (!isLabManagerRoleName(roleName)) return "—";
+                  return row.can_manage_inventory ? "Yes" : "No";
+                },
               },
               dateColumn(),
             ]}
@@ -533,6 +564,8 @@ export function LabMembersPage() {
   const { orgId, labId } = useParams();
   const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [selectedMember, setSelectedMember] = useState<ApiRow | null>(null);
+  const [isAssignMemberOpen, setIsAssignMemberOpen] = useState(false);
+  const [labName, setLabName] = useState<string | undefined>();
   const orgMembers = usePagedResource<ApiRow>(
     orgId ? endpoints.organisations.members(orgId) : null,
     orgId
@@ -547,6 +580,14 @@ export function LabMembersPage() {
     orgId
   );
 
+  useEffect(() => {
+    if (!orgId || !labId) return;
+    void apiClient
+      .get<ApiRow>(endpoints.labs.detail(orgId, labId), { orgId })
+      .then((lab) => setLabName(String(lab.name ?? "")))
+      .catch(() => setLabName(undefined));
+  }, [orgId, labId]);
+
   if (!orgId || !labId) return null;
   return (
     <PageFrame
@@ -559,29 +600,44 @@ export function LabMembersPage() {
       ]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        {isOrgAdmin ? (
+          <LabMemberAssignDialog
+            open={isAssignMemberOpen}
+            onOpenChange={setIsAssignMemberOpen}
+            orgId={orgId}
+            labName={labName}
+            orgMembers={orgMembers.rows}
+            roles={roles.rows}
+            createPath={`${endpoints.labs.members(orgId, labId)}add/`}
+            onSaved={async () => members.reload()}
+          />
+        ) : null}
+        {isOrgAdmin ? (
+          <div className="mb-4 flex justify-end xl:col-span-2">
+            <Button onClick={() => setIsAssignMemberOpen(true)}>
+              <Plus className="size-4" />
+              Assign member
+            </Button>
+          </div>
+        ) : null}
         <ResourceCrudTable
           title="Lab members"
           resource={members}
-          fields={[
-            {
-              name: "user_id",
-              label: "Organisation user",
-              type: "select",
-              required: true,
-              options: orgMembers.rows.map((row) => ({
-                value: String(row.user?.id ?? row.id),
-                label: displayName(row.user ?? row),
-              })),
-            },
-            { name: "role_id", label: "Role", type: "select", required: true, options: toOptions(roles.rows) },
-          ]}
+          fields={[]}
           orgId={orgId}
-          createPath={isOrgAdmin || isLabManager ? `${endpoints.labs.members(orgId, labId)}add/` : undefined}
-          deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/` : undefined}
-          createLabel="Assign member"
+          deletePath={isOrgAdmin ? (row) => `${endpoints.labs.members(orgId, labId)}${row.id}/remove/` : undefined}
           columns={[
             memberColumn(),
             roleColumn(),
+            {
+              key: "inventory",
+              header: "Inventory",
+              render: (row) => {
+                const roleName = displayName(row.role as ApiRow | undefined);
+                if (!isLabManagerRoleName(roleName)) return "—";
+                return row.can_manage_inventory ? "Yes" : "No";
+              },
+            },
             {
               key: "rfid",
               header: "Access",
@@ -648,7 +704,7 @@ export function LabDashboardPage() {
 
 export function InventoryPage() {
   const { orgId, labId } = useParams();
-  const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
+  const { isOrgAdmin, isLabManager, canManageInventory, can } = useLabAccessRole(orgId, labId);
   const [adjusting, setAdjusting] = useState<ApiRow | null>(null);
   const [movementItem, setMovementItem] = useState<ApiRow | null>(null);
   const items = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
@@ -659,7 +715,36 @@ export function InventoryPage() {
     orgId
   );
 
+  const canManageLabInventory = isOrgAdmin || canManageInventory;
+  const canBrowseInventory = canManageLabInventory || can(P.INVENTORY_READ);
+  const isManagerWithoutInventory =
+    isLabManager && !isOrgAdmin && !canManageInventory && !can(P.INVENTORY_READ);
+
   if (!labId) return null;
+
+  if (isManagerWithoutInventory) {
+    return (
+      <PageFrame
+        eyebrow="Stock"
+        title="Inventory"
+        description="Inventory management was not granted for your lab manager role."
+      >
+        <EmptyState
+          title="No inventory access"
+          description="Your organisation admin can enable “Allow inventory management” when inviting or assigning you as a Lab Manager."
+        />
+      </PageFrame>
+    );
+  }
+
+  if (!canBrowseInventory) {
+    return (
+      <PageFrame eyebrow="Stock" title="Inventory" description="You do not have access to inventory for this lab.">
+        <EmptyState title="Access denied" description="Contact your lab administrator if you need inventory access." />
+      </PageFrame>
+    );
+  }
+
   return (
     <PageFrame
       eyebrow="Stock"
@@ -673,8 +758,12 @@ export function InventoryPage() {
       <Tabs defaultValue="items" className="gap-6">
         <TabsList>
           <TabsTrigger value="items">Items</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="units">Units</TabsTrigger>
+          {canManageLabInventory ? (
+            <>
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+              <TabsTrigger value="units">Units</TabsTrigger>
+            </>
+          ) : null}
         </TabsList>
         <TabsContent value="items">
           <ResourceCrudTable
@@ -691,9 +780,9 @@ export function InventoryPage() {
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
-            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.items(labId) : undefined}
-            updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
-            deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
+            createPath={canManageLabInventory ? endpoints.inventory.items(labId) : undefined}
+            updatePath={canManageLabInventory ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
+            deletePath={canManageLabInventory ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
             createLabel="Add item"
             columns={[
               nameColumn(),
@@ -705,7 +794,7 @@ export function InventoryPage() {
                 header: "Stock",
                 render: (row) => (
                   <div className="flex flex-wrap gap-2">
-                    {isOrgAdmin || isLabManager ? (
+                    {canManageLabInventory ? (
                       <Button size="sm" variant="outline" onClick={() => setAdjusting(row)}>
                         Adjust
                       </Button>
@@ -728,9 +817,9 @@ export function InventoryPage() {
               { name: "parent", label: "Parent category", type: "select", options: toOptions(categories.rows) },
             ]}
             orgId={orgId}
-            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.categories(labId) : undefined}
-            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
-            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
+            createPath={canManageLabInventory ? endpoints.inventory.categories(labId) : undefined}
+            updatePath={canManageLabInventory ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
+            deletePath={canManageLabInventory ? (row) => `${endpoints.inventory.categories(labId)}${row.id}/` : undefined}
             createLabel="Add category"
             columns={[nameColumn(), dateColumn()]}
           />
@@ -744,15 +833,15 @@ export function InventoryPage() {
               { name: "symbol", label: "Symbol", required: true },
             ]}
             orgId={orgId}
-            createPath={isOrgAdmin || isLabManager ? endpoints.inventory.units(labId) : undefined}
-            updatePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
-            deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
+            createPath={canManageLabInventory ? endpoints.inventory.units(labId) : undefined}
+            updatePath={canManageLabInventory ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
+            deletePath={canManageLabInventory ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
             createLabel="Add unit"
             columns={[nameColumn(), textColumn("symbol", "Symbol"), dateColumn()]}
           />
         </TabsContent>
       </Tabs>
-      {isOrgAdmin || isLabManager ? <ResourceFormDialog
+      {canManageLabInventory ? <ResourceFormDialog
         title="Adjust stock"
         description={adjusting ? `Update quantity for ${displayName(adjusting)}.` : undefined}
         open={Boolean(adjusting)}
@@ -2531,12 +2620,12 @@ function dateColumn<T extends ApiRow>(): PremiumColumn<T> {
 }
 
 function useLabAccessRole(_orgId?: string, _labId?: string) {
-  const { isOrgAdmin, can, canAny, roleName } = useLabPermissions();
+  const { isOrgAdmin, can, canAny, roleName, canManageInventory } = useLabPermissions();
   const isLabManager =
     isOrgAdmin ||
     roleName.toLowerCase().includes("manager") ||
-    canAny(P.ATTENDANCE_WRITE, P.MACHINES_WRITE, P.LABS_WRITE, P.INVENTORY_WRITE);
-  return { isOrgAdmin, isLabManager, can, canAny };
+    canAny(P.ATTENDANCE_WRITE, P.MACHINES_WRITE, P.LABS_WRITE);
+  return { isOrgAdmin, isLabManager, can, canAny, canManageInventory, roleName };
 }
 
 function useOrgRole(orgId?: string) {

@@ -18,12 +18,14 @@ type LabPermissionsPayload = {
   permissions: string[];
   role_name: string;
   is_org_admin: boolean;
+  can_manage_inventory?: boolean;
 };
 
 type LabPermissionsContextValue = {
   permissions: Set<string>;
   roleName: string;
   isOrgAdmin: boolean;
+  canManageInventory: boolean;
   isLoading: boolean;
   can: (codename: string) => boolean;
   canAny: (...codenames: string[]) => boolean;
@@ -33,6 +35,7 @@ const LabPermissionsContext = createContext<LabPermissionsContextValue>({
   permissions: new Set(),
   roleName: "",
   isOrgAdmin: false,
+  canManageInventory: false,
   isLoading: false,
   can: () => false,
   canAny: () => false,
@@ -43,12 +46,14 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [roleName, setRoleName] = useState("");
+  const [canManageInventory, setCanManageInventory] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!orgId || !labId) {
       setPermissions(new Set());
       setRoleName("");
+      setCanManageInventory(false);
       return;
     }
 
@@ -70,11 +75,13 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
         const list = mergeRolePermissions(apiList, role);
         setPermissions(new Set(list));
         setRoleName(role);
+        setCanManageInventory(Boolean(payload?.can_manage_inventory));
       })
       .catch(() => {
         if (!cancelled) {
           setPermissions(new Set());
           setRoleName("");
+          setCanManageInventory(false);
         }
       })
       .finally(() => {
@@ -97,16 +104,19 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
     [isOrgAdmin, permissions]
   );
 
+  const effectiveCanManageInventory = isOrgAdmin || canManageInventory;
+
   const value = useMemo(
     () => ({
       permissions,
       roleName,
       isOrgAdmin,
+      canManageInventory: effectiveCanManageInventory,
       isLoading,
       can,
       canAny,
     }),
-    [can, canAny, isLoading, isOrgAdmin, permissions, roleName]
+    [can, canAny, effectiveCanManageInventory, isLoading, isOrgAdmin, permissions, roleName]
   );
 
   return (

@@ -482,3 +482,10 @@ export const endpoints = {
       `billing/subscriptions/${subscriptionId}/invoices/`,
   },
 };
+
+export type {
+  OrganisationInvite,
+  OrganisationInviteCreate,
+  UserInvitation,
+  LabMemberAdd,
+} from "./organisation-types";

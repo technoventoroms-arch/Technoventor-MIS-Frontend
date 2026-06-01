@@ -22,7 +22,8 @@ import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
 import { Switch } from "@mono/shared_ui/components/ui/switch";
 
-import { UserInvitation } from "@mono/shared_ui/interfaces/user";
+import { type UserInvitation } from "@mono/api_client";
+import { isLabManagerRoleName } from "./lab-manager-access";
 
 import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
@@ -227,11 +228,18 @@ export function ProfilePage() {
                   <div className="text-sm text-slate-500 dark:text-slate-400">
                     Lab: <span className="font-medium">{invite.lab_name}</span>
                   </div>
-                  <div className="mt-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center rounded-md bg-pink-50 px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-700/10 dark:bg-pink-400/10 dark:text-pink-400 dark:ring-pink-400/20">
                       {invite.role_name}
                     </span>
                   </div>
+                  {isLabManagerRoleName(invite.role_name) ? (
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      {invite.can_manage_inventory === true
+                        ? `Includes inventory management for ${invite.lab_name}.`
+                        : "Does not include inventory management."}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex gap-2">
                   <Button

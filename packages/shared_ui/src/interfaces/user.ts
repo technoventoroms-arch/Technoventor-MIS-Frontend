@@ -26,11 +26,12 @@ export type OrgUser = {
 
 export interface UserInvitation {
   id: number;
-  email: string;
+  email?: string;
   role_name: string;
-  status: "PENDING" | "APPROVED" | "REJECTED"; // can be stricter or just string
+  status: "PENDING" | "APPROVED" | "REJECTED" | string;
   lab_name: string;
   organisation_name: string;
   organisation_id?: number;
   lab_id?: number;
+  can_manage_inventory?: boolean;
 }
