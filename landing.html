@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Technoventor Innovations — Makerspace Operating System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --teal: #3ecfcb;
+            --teal-light: #e8faf9;
+            --teal-mid: #b2edeb;
+            --teal-dark: #1fa8a4;
+            --teal-deep: #0d7a76;
+            --white: #ffffff;
+            --bg: #f7fafa;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --font-head: 'Nunito', sans-serif;
+            --font-body: 'Nunito Sans', sans-serif;
+            --tr: 0.2s ease;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: #fff;
+            color: var(--slate-800);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+        }
+
+        /* ── NAV ─────────────────────────────────── */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #eef2f5;
+            padding: 0 40px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            text-decoration: none;
+            font-family: var(--font-head);
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--slate-900);
+            letter-spacing: -0.02em;
+        }
+
+        .nav-logo-mark {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--teal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-logo-mark svg {
+            width: 17px;
+            height: 17px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .nav-link {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--slate-500);
+            text-decoration: none;
+            transition: color var(--tr);
+        }
+
+        .nav-link:hover {
+            color: var(--teal-dark);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-signin {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--slate-600);
+            text-decoration: none;
+            padding: 7px 16px;
+            border-radius: 8px;
+            transition: background var(--tr), color var(--tr);
+        }
+
+        .nav-signin:hover {
+            background: var(--slate-100);
+            color: var(--slate-800);
+        }
+
+        .nav-cta {
+            background: var(--teal);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 9px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background var(--tr), transform var(--tr), box-shadow var(--tr);
+            box-shadow: 0 2px 8px rgba(62, 207, 203, 0.35);
+        }
+
+        .nav-cta:hover {
+            background: var(--teal-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(62, 207, 203, 0.4);
+        }
+
+        /* ── HERO ────────────────────────────────── */
+        .hero {
+            padding: 92px 40px 80px;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.05fr;
+            align-items: center;
+            gap: 72px;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--teal-light);
+            color: var(--teal-deep);
+            font-family: var(--font-head);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 5px 12px;
+            border-radius: 999px;
+            margin-bottom: 22px;
+            border: 1px solid var(--teal-mid);
+        }
+
+        .hero-tag-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--teal);
+        }
+
+        .hero-h1 {
+            font-family: var(--font-head);
+            font-size: clamp(38px, 5.5vw, 60px);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.035em;
+            color: var(--slate-900);
+            margin-bottom: 22px;
+        }
+
+        .hero-h1 .accent {
+            color: var(--teal-dark);
+        }
+
+        .hero-sub {
+            font-size: 17.5px;
+            line-height: 1.75;
+            color: var(--slate-500);
+            max-width: 460px;
+            margin-bottom: 38px;
+            font-weight: 400;
+        }
+
+        .hero-btns {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: var(--teal);
+            color: white;
+            padding: 13px 28px;
+            border-radius: 10px;
+            font-family: var(--font-head);
+            font-size: 15px;
+            font-weight: 800;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            transition: background var(--tr), transform var(--tr), box-shadow var(--tr);
+            box-shadow: 0 4px 16px rgba(62, 207, 203, 0.38);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background: var(--teal-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(62, 207, 203, 0.45);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--slate-700);
+            padding: 13px 28px;
+            border-radius: 10px;
+            font-family: var(--font-head);
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            border: 1.5px solid var(--slate-200);
+            transition: border-color var(--tr), color var(--tr), background var(--tr);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--teal);
+            color: var(--teal-dark);
+            background: var(--teal-light);
+        }
+
+        .hero-note {
+            margin-top: 18px;
+            font-size: 13px;
+            color: var(--slate-400);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-note svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--slate-400);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        /* ── HERO SCREENSHOT ─────────────────────── */
+        .hero-screenshot {
+            position: relative;
+        }
+
+        .hero-screenshot-inner {
+            background: #fff;
+            border: 1px solid #e4eaee;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px -16px rgba(15, 23, 42, 0.18), 0 4px 16px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+
+        .screenshot-topbar {
+            background: #f7f9fb;
+            border-bottom: 1px solid #edf0f3;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .topbar-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .topbar-url {
+            flex: 1;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--slate-400);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .screenshot-body {
+            padding: 20px;
+        }
+
+        /* Dashboard mini UI */
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .dash-title {
+            font-family: var(--font-head);
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--slate-800);
+        }
+
+        .dash-date {
+            font-size: 11px;
+            color: var(--slate-400);
+        }
+
+        .dash-kpis {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .kpi {
+            background: var(--bg);
+            border: 1px solid #edf1f5;
+            border-radius: 12px;
+            padding: 13px 14px;
+        }
+
+        .kpi-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--slate-400);
+            margin-bottom: 6px;
+        }
+
+        .kpi-val {
+            font-family: var(--font-head);
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--slate-900);
+            line-height: 1;
+        }
+
+        .kpi-change {
+            font-size: 11px;
+            font-weight: 600;
+            color: #22c55e;
+            margin-top: 3px;
+        }
+
+        .kpi-change.warn {
+            color: #f59e0b;
+        }
+
+        .dash-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: var(--slate-400);
+            margin-bottom: 8px;
+        }
+
+        .machine-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 14px;
+        }
+
+        .machine-row-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid #edf1f5;
+            border-radius: 9px;
+            padding: 9px 12px;
+        }
+
+        .mri-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .mri-icon svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .ic-teal {
+            background: var(--teal-light);
+        }
+
+        .ic-teal svg {
+            stroke: var(--teal-dark);
+        }
+
+        .ic-blue {
+            background: #eff6ff;
+        }
+
+        .ic-blue svg {
+            stroke: #3b82f6;
+        }
+
+        .ic-amber {
+            background: #fffbeb;
+        }
+
+        .ic-amber svg {
+            stroke: #d97706;
+        }
+
+        .mri-info {
+            flex: 1;
+        }
+
+        .mri-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--slate-700);
+        }
+
+        .mri-sub {
+            font-size: 10.5px;
+            color: var(--slate-400);
+            margin-top: 1px;
+        }
+
+        .status-pill {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+
+        .sp-green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .sp-teal {
+            background: var(--teal-light);
+            color: var(--teal-deep);
+        }
+
+        .sp-amber {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        .sp-gray {
+            background: var(--slate-100);
+            color: var(--slate-500);
+        }
+
+        .approval-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .approval-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid #edf1f5;
+            border-radius: 9px;
+            padding: 8px 12px;
+        }
+
+        .ai-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .ai-text {
+            flex: 1;
+        }
+
+        .ai-name {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--slate-700);
+        }
+
+        .ai-req {
+            font-size: 10.5px;
+            color: var(--slate-400);
+        }
+
+        .ai-btn {
+            background: var(--teal-light);
+            color: var(--teal-deep);
+            border: 1px solid var(--teal-mid);
+            border-radius: 6px;
+            padding: 3px 9px;
+            font-size: 10.5px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--font-body);
+            white-space: nowrap;
+        }
+
+        /* Floating badge */
+        .hero-float-badge {
+            position: absolute;
+            bottom: -16px;
+            left: -20px;
+            background: white;
+            border: 1px solid #e4eaee;
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .float-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--teal-light);
+            border: 1px solid var(--teal-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .float-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--teal-dark);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .float-text .ft-top {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--slate-800);
+            font-family: var(--font-head);
+        }
+
+        .float-text .ft-bot {
+            font-size: 11px;
+            color: var(--slate-400);
+            margin-top: 1px;
+        }
+
+        /* ── LOGOS ───────────────────────────────── */
+        .logos-strip {
+            border-top: 1px solid #eef2f5;
+            border-bottom: 1px solid #eef2f5;
+            background: #fafbfc;
+            padding: 32px 40px;
+        }
+
+        .logos-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .logos-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--slate-400);
+            white-space: nowrap;
+            letter-spacing: 0.03em;
+        }
+
+        .logos-row {
+            display: flex;
+            align-items: center;
+            gap: 36px;
+            flex-wrap: wrap;
+        }
+
+        .logo-text {
+            font-family: var(--font-head);
+            font-size: 14.5px;
+            font-weight: 800;
+            color: #c1cdd8;
+            letter-spacing: -0.01em;
+            transition: color var(--tr);
+        }
+
+        .logo-text:hover {
+            color: var(--slate-400);
+        }
+
+        /* ── SECTIONS ────────────────────────────── */
+        .section {
+            padding: 88px 40px;
+        }
+
+        .section-alt {
+            background: #fafbfc;
+        }
+
+        .section-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-family: var(--font-head);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--teal-dark);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .section-h2 {
+            font-family: var(--font-head);
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            color: var(--slate-900);
+            line-height: 1.18;
+            margin-bottom: 16px;
+        }
+
+        .section-lead {
+            font-size: 17px;
+            line-height: 1.75;
+            color: var(--slate-500);
+            max-width: 540px;
+            margin-bottom: 48px;
+        }
+
+        .centered {
+            text-align: center;
+        }
+
+        .centered .section-lead {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ── FEATURE GRID ────────────────────────── */
+        .feat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .feat-card {
+            background: white;
+            border: 1.5px solid #edf2f7;
+            border-radius: 18px;
+            padding: 28px 26px;
+            transition: border-color var(--tr), transform var(--tr), box-shadow var(--tr);
+        }
+
+        .feat-card:hover {
+            border-color: var(--teal-mid);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px -12px rgba(62, 207, 203, 0.2);
+        }
+
+        .feat-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+
+        .feat-icon-wrap svg {
+            width: 22px;
+            height: 22px;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .fi-teal {
+            background: var(--teal-light);
+        }
+
+        .fi-teal svg {
+            stroke: var(--teal-dark);
+        }
+
+        .fi-blue {
+            background: #eff6ff;
+        }
+
+        .fi-blue svg {
+            stroke: #3b82f6;
+        }
+
+        .fi-violet {
+            background: #f5f3ff;
+        }
+
+        .fi-violet svg {
+            stroke: #7c3aed;
+        }
+
+        .fi-amber {
+            background: #fffbeb;
+        }
+
+        .fi-amber svg {
+            stroke: #d97706;
+        }
+
+        .fi-rose {
+            background: #fff1f2;
+        }
+
+        .fi-rose svg {
+            stroke: #e11d48;
+        }
+
+        .fi-green {
+            background: #f0fdf4;
+        }
+
+        .fi-green svg {
+            stroke: #16a34a;
+        }
+
+        .feat-title {
+            font-family: var(--font-head);
+            font-size: 16.5px;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: 9px;
+            letter-spacing: -0.02em;
+        }
+
+        .feat-desc {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--slate-500);
+        }
+
+        /* ── SPLIT SECTION ───────────────────────── */
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 72px;
+            align-items: center;
+        }
+
+        .split-reversed {
+            direction: rtl;
+        }
+
+        .split-reversed>* {
+            direction: ltr;
+        }
+
+        .split-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .split-step {
+            display: flex;
+            gap: 18px;
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f4f8;
+            transition: padding-left var(--tr);
+        }
+
+        .split-step:last-child {
+            border-bottom: none;
+        }
+
+        .split-step:hover {
+            padding-left: 6px;
+        }
+
+        .step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--teal-light);
+            border: 2px solid var(--teal-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+            font-family: var(--font-head);
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--teal-dark);
+        }
+
+        .step-body {}
+
+        .step-title {
+            font-family: var(--font-head);
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--slate-800);
+            margin-bottom: 5px;
+            letter-spacing: -0.02em;
+        }
+
+        .step-desc {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--slate-500);
+        }
+
+        /* The mock panels */
+        .mock-panel {
+            background: white;
+            border: 1.5px solid #e8eff5;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 16px 48px -16px rgba(15, 23, 42, 0.14);
+        }
+
+        .mock-header {
+            background: #f7f9fb;
+            border-bottom: 1px solid #edf0f3;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mock-header-title {
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--slate-600);
+        }
+
+        .mock-header-badge {
+            margin-left: auto;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--teal-light);
+            color: var(--teal-deep);
+        }
+
+        .mock-body {
+            padding: 18px;
+        }
+
+        /* Inventory mock */
+        .inv-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f4f7fa;
+        }
+
+        .inv-row:last-child {
+            border-bottom: none;
+        }
+
+        .inv-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .inv-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--slate-700);
+        }
+
+        .inv-qty {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--slate-500);
+        }
+
+        .inv-bar {
+            width: 60px;
+            height: 6px;
+            border-radius: 3px;
+            background: #edf1f5;
+            overflow: hidden;
+        }
+
+        .inv-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .inv-alert {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+        }
+
+        .ia-ok {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .ia-warn {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        .ia-low {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        /* QR mock */
+        .qr-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .qr-center {
+            display: flex;
+            justify-content: center;
+            padding: 16px 0;
+        }
+
+        .qr-svg-box {
+            width: 120px;
+            height: 120px;
+            background: #f7f9fb;
+            border: 2px dashed var(--teal-mid);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-scan-hint {
+            text-align: center;
+            font-size: 12px;
+            color: var(--slate-400);
+            font-weight: 500;
+        }
+
+        .qr-booking-card {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            background: var(--teal-light);
+            border: 1px solid var(--teal-mid);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .qbc-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: white;
+            border: 1px solid var(--teal-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .qbc-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--teal-dark);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .qbc-info {
+            flex: 1;
+        }
+
+        .qbc-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--teal-deep);
+            font-family: var(--font-head);
+        }
+
+        .qbc-time {
+            font-size: 11px;
+            color: var(--teal-dark);
+            margin-top: 1px;
+        }
+
+        .qbc-btn {
+            background: var(--teal);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            font-family: var(--font-head);
+        }
+
+        /* ── ROLES ───────────────────────────────── */
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .role-card {
+            border-radius: 18px;
+            padding: 26px 22px;
+            border: 1.5px solid transparent;
+            background: white;
+            border-color: #edf2f7;
+            transition: border-color var(--tr), transform var(--tr);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card:hover {
+            border-color: var(--teal-mid);
+            transform: translateY(-3px);
+        }
+
+        .role-card-accent {
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--teal);
+            margin-bottom: 16px;
+        }
+
+        .role-num {
+            font-family: var(--font-head);
+            font-size: 46px;
+            font-weight: 900;
+            line-height: 1;
+            color: rgba(62, 207, 203, 0.12);
+            margin-bottom: 12px;
+            letter-spacing: -0.04em;
+        }
+
+        .role-title {
+            font-family: var(--font-head);
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .role-desc {
+            font-size: 13px;
+            line-height: 1.65;
+            color: var(--slate-500);
+            margin-bottom: 14px;
+        }
+
+        .role-caps {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .role-cap {
+            display: flex;
+            align-items: flex-start;
+            gap: 7px;
+            font-size: 12.5px;
+            color: var(--slate-600);
+        }
+
+        .rc-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--teal);
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        /* ── TESTIMONIALS ────────────────────────── */
+        .testi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .testi-card {
+            background: white;
+            border: 1.5px solid #edf2f7;
+            border-radius: 18px;
+            padding: 26px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            transition: border-color var(--tr), box-shadow var(--tr);
+        }
+
+        .testi-card:hover {
+            border-color: var(--teal-mid);
+            box-shadow: 0 8px 28px rgba(62, 207, 203, 0.12);
+        }
+
+        .testi-quote-mark {
+            font-family: Georgia, serif;
+            font-size: 48px;
+            line-height: 0.8;
+            color: var(--teal-mid);
+            margin-bottom: -8px;
+        }
+
+        .testi-text {
+            font-size: 14.5px;
+            line-height: 1.75;
+            color: var(--slate-600);
+            font-style: italic;
+            flex: 1;
+        }
+
+        .testi-person {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .testi-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-head);
+            font-size: 13px;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .testi-name {
+            font-family: var(--font-head);
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--slate-800);
+        }
+
+        .testi-role {
+            font-size: 12px;
+            color: var(--slate-400);
+            margin-top: 1px;
+        }
+
+        /* ── STATS BAR ───────────────────────────── */
+        .stats-bar {
+            background: var(--teal);
+            padding: 56px 40px;
+        }
+
+        .stats-bar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-num {
+            font-family: var(--font-head);
+            font-size: 46px;
+            font-weight: 900;
+            color: white;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.75);
+            margin-top: 8px;
+        }
+
+        /* ── API SECTION ─────────────────────────── */
+        .api-section {
+            background: var(--slate-900);
+            padding: 72px 40px;
+        }
+
+        .api-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .api-label {
+            font-family: var(--font-head);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--teal);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .api-h2 {
+            font-family: var(--font-head);
+            font-size: 36px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .api-desc {
+            font-size: 15.5px;
+            line-height: 1.75;
+            color: var(--slate-400);
+            margin-bottom: 28px;
+        }
+
+        .code-block {
+            background: #1a2535;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 22px;
+            font-family: 'Courier New', monospace;
+            font-size: 12.5px;
+            line-height: 1.8;
+            color: #94a3b8;
+            overflow-x: auto;
+        }
+
+        .code-block .c-teal {
+            color: #3ecfcb;
+        }
+
+        .code-block .c-green {
+            color: #86efac;
+        }
+
+        .code-block .c-amber {
+            color: #fcd34d;
+        }
+
+        .code-block .c-white {
+            color: #f1f5f9;
+        }
+
+        /* ── CTA ─────────────────────────────────── */
+        .cta-section {
+            padding: 96px 40px;
+            text-align: center;
+            background: #fafbfc;
+            border-top: 1px solid #eef2f5;
+        }
+
+        .cta-inner {
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        .cta-h2 {
+            font-family: var(--font-head);
+            font-size: clamp(32px, 5vw, 50px);
+            font-weight: 900;
+            color: var(--slate-900);
+            letter-spacing: -0.035em;
+            line-height: 1.15;
+            margin-bottom: 18px;
+        }
+
+        .cta-sub {
+            font-size: 17px;
+            line-height: 1.75;
+            color: var(--slate-500);
+            margin-bottom: 36px;
+        }
+
+        .cta-btns {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .cta-note {
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--slate-400);
+        }
+
+        /* ── FOOTER ──────────────────────────────── */
+        footer {
+            background: #fff;
+            border-top: 1px solid #edf2f7;
+            padding: 52px 40px 32px;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 1.7fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            text-decoration: none;
+            font-family: var(--font-head);
+            font-size: 17px;
+            font-weight: 900;
+            color: var(--slate-800);
+            margin-bottom: 14px;
+        }
+
+        .footer-tagline {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--slate-400);
+            max-width: 250px;
+        }
+
+        .footer-col-title {
+            font-family: var(--font-head);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--slate-400);
+            margin-bottom: 14px;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .footer-link {
+            font-size: 14px;
+            color: var(--slate-500);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color var(--tr);
+        }
+
+        .footer-link:hover {
+            color: var(--teal-dark);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #edf2f7;
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-copy {
+            font-size: 13px;
+            color: var(--slate-400);
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-social a {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--slate-400);
+            text-decoration: none;
+            transition: color var(--tr);
+        }
+
+        .footer-social a:hover {
+            color: var(--teal-dark);
+        }
+
+        /* ── ANIMATIONS ──────────────────────────── */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .au {
+            opacity: 0;
+            animation: fadeUp 0.65s ease forwards;
+        }
+
+        .d1 {
+            animation-delay: 0.1s;
+        }
+
+        .d2 {
+            animation-delay: 0.2s;
+        }
+
+        .d3 {
+            animation-delay: 0.3s;
+        }
+
+        .d4 {
+            animation-delay: 0.4s;
+        }
+
+        .d5 {
+            animation-delay: 0.5s;
+        }
+
+        /* ── RESPONSIVE ──────────────────────────── */
+        @media (max-width: 960px) {
+            .hero {
+                grid-template-columns: 1fr;
+                gap: 48px;
+                padding-top: 56px;
+            }
+
+            .hero-screenshot {
+                display: none;
+            }
+
+            .feat-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .roles-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+
+            .split {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .split-reversed {
+                direction: ltr;
+            }
+
+            .testi-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .api-inner {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+            }
+
+            .stats-bar-inner {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 28px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .feat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .roles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .testi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav class="nav">
+        <a href="#" class="nav-logo">
+            <div class="nav-logo-mark">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" />
+                    <path d="M12 7v10M2 7l10 5 10-5" />
+                </svg>
+            </div>
+            Technoventor
+        </a>
+        <div class="nav-links">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="#roles" class="nav-link">Who It's For</a>
+            <a href="#workflow" class="nav-link">How It Works</a>
+            <a href="#" class="nav-link">Pricing</a>
+            <a href="#" class="nav-link">Blog</a>
+        </div>
+        <div class="nav-actions">
+            <a href="#" class="nav-signin">Sign in</a>
+            <a href="#" class="nav-cta">Try it free →</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <div class="hero" style="padding-left:clamp(20px,5vw,40px); padding-right:clamp(20px,5vw,40px);">
+        <div>
+            <div class="hero-tag au"><span class="hero-tag-dot"></span>Makerspace Operating System</div>
+            <h1 class="hero-h1 au d1">The all-in-one platform for your <span class="accent">lab & makerspace</span></h1>
+            <p class="hero-sub au d2">Manage your machines, members, inventory, and approvals from one place — designed
+                specifically for makerspaces, FabLabs, and academic workshops.</p>
+            <div class="hero-btns au d3">
+                <a href="#" class="btn-primary">Try it for free →</a>
+                <a href="#" class="btn-secondary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Request a demo
+                </a>
+            </div>
+            <p class="hero-note au d4">
+                <svg viewBox="0 0 24 24">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                No commitment. No credit card needed.
+            </p>
+        </div>
+
+        <div class="hero-screenshot au d2" style="position:relative; padding-bottom: 20px;">
+            <div class="hero-screenshot-inner">
+                <div class="screenshot-topbar">
+                    <div class="topbar-dots">
+                        <div class="topbar-dot" style="background:#ff5f57;"></div>
+                        <div class="topbar-dot" style="background:#ffbd2e;"></div>
+                        <div class="topbar-dot" style="background:#28c840;"></div>
+                    </div>
+                    <div class="topbar-url">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        app.technoventor.io/dashboard
+                    </div>
+                </div>
+                <div class="screenshot-body">
+                    <div class="dash-header">
+                        <div>
+                            <div class="dash-title">Lab Overview</div>
+                            <div class="dash-date">Tuesday, June 2, 2026</div>
+                        </div>
+                        <span class="status-pill sp-teal">● Live</span>
+                    </div>
+                    <div class="dash-kpis">
+                        <div class="kpi">
+                            <div class="kpi-label">Bookings Today</div>
+                            <div class="kpi-val">24</div>
+                            <div class="kpi-change">↑ 3 new</div>
+                        </div>
+                        <div class="kpi">
+                            <div class="kpi-label">Approvals</div>
+                            <div class="kpi-val">7</div>
+                            <div class="kpi-change warn">Pending</div>
+                        </div>
+                        <div class="kpi">
+                            <div class="kpi-label">Members</div>
+                            <div class="kpi-val">142</div>
+                            <div class="kpi-change">Active now: 18</div>
+                        </div>
+                    </div>
+                    <div class="dash-section-label">Machine Status</div>
+                    <div class="machine-rows">
+                        <div class="machine-row-item">
+                            <div class="mri-icon ic-teal"><svg viewBox="0 0 24 24">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                                    <line x1="8" y1="21" x2="16" y2="21" />
+                                    <line x1="12" y1="17" x2="12" y2="21" />
+                                </svg></div>
+                            <div class="mri-info">
+                                <div class="mri-name">3D Printer — Bay A</div>
+                                <div class="mri-sub">Aman M. · until 12:30 PM</div>
+                            </div>
+                            <span class="status-pill sp-teal">In Use</span>
+                        </div>
+                        <div class="machine-row-item">
+                            <div class="mri-icon ic-blue"><svg viewBox="0 0 24 24">
+                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                                    <polyline points="13 2 13 9 20 9" />
+                                </svg></div>
+                            <div class="mri-info">
+                                <div class="mri-name">Laser Cutter</div>
+                                <div class="mri-sub">Priya S. · until 2:00 PM</div>
+                            </div>
+                            <span class="status-pill sp-green">Available</span>
+                        </div>
+                        <div class="machine-row-item">
+                            <div class="mri-icon ic-amber"><svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+                                </svg></div>
+                            <div class="mri-info">
+                                <div class="mri-name">CNC Router</div>
+                                <div class="mri-sub">Maintenance scheduled</div>
+                            </div>
+                            <span class="status-pill sp-amber">Offline</span>
+                        </div>
+                    </div>
+                    <div class="dash-section-label" style="margin-top:12px;">Recent Approvals</div>
+                    <div class="approval-rows">
+                        <div class="approval-item">
+                            <div class="ai-avatar" style="background:#0d9488;">AM</div>
+                            <div class="ai-text">
+                                <div class="ai-name">Aman Mehta</div>
+                                <div class="ai-req">Machine booking · 3D Printer A</div>
+                            </div>
+                            <button class="ai-btn">✓ Approve</button>
+                        </div>
+                        <div class="approval-item">
+                            <div class="ai-avatar" style="background:#8b5cf6;">PS</div>
+                            <div class="ai-text">
+                                <div class="ai-name">Priya Shah</div>
+                                <div class="ai-req">Material order · 500g PLA Filament</div>
+                            </div>
+                            <button class="ai-btn">✓ Approve</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Floating badge -->
+            <div class="hero-float-badge">
+                <div class="float-icon">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                </div>
+                <div class="float-text">
+                    <div class="ft-top">Booking confirmed</div>
+                    <div class="ft-bot">Laser Cutter · 10:30 – 12:00 PM</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOS -->
+    <div class="logos-strip">
+        <div class="logos-inner">
+            <span class="logos-label">Trusted by</span>
+            <div class="logos-row">
+                <span class="logo-text">IIT Mumbai</span>
+                <span class="logo-text">FabLab India</span>
+                <span class="logo-text">TechWorks</span>
+                <span class="logo-text">MakerHub</span>
+                <span class="logo-text">BITS Pilani</span>
+                <span class="logo-text">Innovate Labs</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEATURES -->
+    <section class="section" id="features">
+        <div class="section-inner">
+            <div class="centered">
+                <span class="section-label">Platform features</span>
+                <h2 class="section-h2">Everything you need to run<br />your makerspace smoothly</h2>
+                <p class="section-lead">Purpose-built workflows for shared physical spaces — from booking machines to
+                    tracking inventory, all under one roof.</p>
+            </div>
+            <div class="feat-grid">
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-teal">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">Smart machine booking</h3>
+                    <p class="feat-desc">Interactive calendar with real-time availability, custom booking windows,
+                        no-show grace periods, and automatic double-booking prevention.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-teal">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                            <polyline points="16 6 12 2 8 6" />
+                            <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">QR scan & IoT access</h3>
+                    <p class="feat-desc">Members scan a QR code on any machine to instantly load their booking and start
+                        their session. Triggers hardware relay unlocking directly from the browser.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-amber">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                            <line x1="12" y1="22.08" x2="12" y2="12" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">Inventory & stock tracking</h3>
+                    <p class="feat-desc">Material catalogue with stock adjustment logs, low-stock alerts, and custom
+                        units per category. Never run out of filament mid-print again.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-blue">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">Material checkout cart</h3>
+                    <p class="feat-desc">Researchers add materials to a cart, attach them to a project, and request
+                        checkout — all in a clean, streamlined workflow with manager approval.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-violet">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">Project collaboration</h3>
+                    <p class="feat-desc">Shared project workspaces that link consumed inventory and machine time for
+                        cost tracking, progress logging, and team coordination.</p>
+                </div>
+                <div class="feat-card">
+                    <div class="feat-icon-wrap fi-green">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                    </div>
+                    <h3 class="feat-title">Unified approval inbox</h3>
+                    <p class="feat-desc">One real-time inbox for lab managers to handle bookings, join requests,
+                        material orders, and attendance regularizations. No more chasing on WhatsApp.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPLIT 1: Inventory -->
+    <section class="section section-alt" id="workflow">
+        <div class="section-inner">
+            <div class="split">
+                <div class="mock-panel">
+                    <div class="mock-header">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"
+                            stroke-linecap="round">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                        </svg>
+                        <span class="mock-header-title">Inventory</span>
+                        <span class="mock-header-badge">3 low-stock alerts</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#3ecfcb;"></div>
+                            <span class="inv-name">PLA Filament (White)</span>
+                            <span class="inv-qty">240g</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:24%;background:#3ecfcb;"></div>
+                            </div>
+                            <span class="inv-alert ia-low">Low</span>
+                        </div>
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#3b82f6;"></div>
+                            <span class="inv-name">Acrylic Sheet 3mm</span>
+                            <span class="inv-qty">18 pcs</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:72%;background:#3b82f6;"></div>
+                            </div>
+                            <span class="inv-alert ia-ok">OK</span>
+                        </div>
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#f59e0b;"></div>
+                            <span class="inv-name">Solder Wire (60/40)</span>
+                            <span class="inv-qty">3 rolls</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:30%;background:#f59e0b;"></div>
+                            </div>
+                            <span class="inv-alert ia-warn">Watch</span>
+                        </div>
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#8b5cf6;"></div>
+                            <span class="inv-name">MDF Board 6mm</span>
+                            <span class="inv-qty">52 pcs</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:85%;background:#8b5cf6;"></div>
+                            </div>
+                            <span class="inv-alert ia-ok">OK</span>
+                        </div>
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#ef4444;"></div>
+                            <span class="inv-name">Resin (Clear)</span>
+                            <span class="inv-qty">120ml</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:12%;background:#ef4444;"></div>
+                            </div>
+                            <span class="inv-alert ia-low">Low</span>
+                        </div>
+                        <div class="inv-row">
+                            <div class="inv-color" style="background:#22c55e;"></div>
+                            <span class="inv-name">Copper PCB Blank</span>
+                            <span class="inv-qty">34 pcs</span>
+                            <div class="inv-bar">
+                                <div class="inv-bar-fill" style="width:68%;background:#22c55e;"></div>
+                            </div>
+                            <span class="inv-alert ia-ok">OK</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <span class="section-label">Inventory management</span>
+                    <h2 class="section-h2">Stay on top of every material in your lab</h2>
+                    <p class="section-lead" style="margin-bottom:32px;">Track raw materials, consumables, and parts with
+                        real-time stock levels. Automatic low-stock alerts mean you reorder before you run dry — not
+                        after.</p>
+                    <div class="split-steps">
+                        <div class="split-step">
+                            <div class="step-dot">1</div>
+                            <div class="step-body">
+                                <div class="step-title">Manage your catalogue</div>
+                                <div class="step-desc">Add materials by category with custom units. Adjust stock on
+                                    every supply run or scrap event — all logged automatically.</div>
+                            </div>
+                        </div>
+                        <div class="split-step">
+                            <div class="step-dot">2</div>
+                            <div class="step-body">
+                                <div class="step-title">Get proactive alerts</div>
+                                <div class="step-desc">Set a minimum threshold per item. Technoventor flags low-stock
+                                    before it becomes a problem for your researchers.</div>
+                            </div>
+                        </div>
+                        <div class="split-step">
+                            <div class="step-dot">3</div>
+                            <div class="step-body">
+                                <div class="step-title">Link to projects & orders</div>
+                                <div class="step-desc">Every material request ties back to a project for accurate cost
+                                    reporting across teams.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SPLIT 2: QR + Booking -->
+    <section class="section">
+        <div class="section-inner">
+            <div class="split split-reversed">
+                <div>
+                    <span class="section-label">IoT machine access</span>
+                    <h2 class="section-h2">Scan. Book. Start. It's that simple.</h2>
+                    <p class="section-lead" style="margin-bottom:32px;">No apps to install. Every machine gets a QR code
+                        — members scan it from their phone to view their booking and start the session instantly.</p>
+                    <div class="split-steps">
+                        <div class="split-step">
+                            <div class="step-dot">1</div>
+                            <div class="step-body">
+                                <div class="step-title">Book from the calendar</div>
+                                <div class="step-desc">Browse live availability, select a slot, and confirm. The
+                                    calendar prevents double-bookings automatically.</div>
+                            </div>
+                        </div>
+                        <div class="split-step">
+                            <div class="step-dot">2</div>
+                            <div class="step-body">
+                                <div class="step-title">Scan the machine's QR code</div>
+                                <div class="step-desc">Walk up to any machine, open your browser camera, scan the code —
+                                    your active booking loads instantly.</div>
+                            </div>
+                        </div>
+                        <div class="split-step">
+                            <div class="step-dot">3</div>
+                            <div class="step-body">
+                                <div class="step-title">Start & stop your session</div>
+                                <div class="step-desc">Tap Start to unlock the machine. Tap Stop when done —
+                                    Technoventor logs time and can trigger hardware relay control.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mock-panel">
+                    <div class="mock-header">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"
+                            stroke-linecap="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                        </svg>
+                        <span class="mock-header-title">Machine Access</span>
+                        <span class="mock-header-badge">● Camera ready</span>
+                    </div>
+                    <div class="mock-body">
+                        <div class="qr-wrap">
+                            <div class="qr-center">
+                                <div class="qr-svg-box">
+                                    <svg width="72" height="72" viewBox="0 0 80 80" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="6" y="6" width="26" height="26" rx="4" fill="rgba(62,207,203,0.1)"
+                                            stroke="#3ecfcb" stroke-width="2" />
+                                        <rect x="12" y="12" width="14" height="14" rx="2" fill="#3ecfcb" />
+                                        <rect x="48" y="6" width="26" height="26" rx="4" fill="rgba(62,207,203,0.1)"
+                                            stroke="#3ecfcb" stroke-width="2" />
+                                        <rect x="54" y="12" width="14" height="14" rx="2" fill="#3ecfcb" />
+                                        <rect x="6" y="48" width="26" height="26" rx="4" fill="rgba(62,207,203,0.1)"
+                                            stroke="#3ecfcb" stroke-width="2" />
+                                        <rect x="12" y="54" width="14" height="14" rx="2" fill="#3ecfcb" />
+                                        <rect x="48" y="48" width="8" height="8" rx="1" fill="#3ecfcb" />
+                                        <rect x="60" y="48" width="8" height="8" rx="1" fill="#3ecfcb" />
+                                        <rect x="60" y="60" width="8" height="8" rx="1" fill="#3ecfcb" />
+                                        <rect x="48" y="66" width="8" height="8" rx="1" fill="#3ecfcb" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <p class="qr-scan-hint">Point your camera at any machine's QR code</p>
+                            <div class="qr-booking-card">
+                                <div class="qbc-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <rect x="2" y="7" width="20" height="14" rx="2" />
+                                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                                    </svg>
+                                </div>
+                                <div class="qbc-info">
+                                    <div class="qbc-title">Laser Cutter — Bay 2</div>
+                                    <div class="qbc-time">10:30 AM – 12:00 PM · Aman M.</div>
+                                </div>
+                                <button class="qbc-btn">▶ Start</button>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <span class="status-pill sp-teal">Active booking found</span>
+                                <span class="status-pill sp-gray">Relay: ready</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROLES -->
+    <section class="section section-alt" id="roles">
+        <div class="section-inner">
+            <div class="centered" style="margin-bottom:48px;">
+                <span class="section-label">Designed for every role</span>
+                <h2 class="section-h2">One platform, purpose-built<br />for your whole team</h2>
+            </div>
+            <div class="roles-grid">
+                <div class="role-card">
+                    <div class="role-card-accent"></div>
+                    <div class="role-num">01</div>
+                    <h3 class="role-title">Researcher / Student</h3>
+                    <p class="role-desc">Standard members who interact with the space daily.</p>
+                    <div class="role-caps">
+                        <div class="role-cap"><span class="rc-dot"></span>Book machines & scan QR to start sessions
+                        </div>
+                        <div class="role-cap"><span class="rc-dot"></span>Track active projects & consumed materials
+                        </div>
+                        <div class="role-cap"><span class="rc-dot"></span>Request inventory via checkout cart</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Log check-in / check-out attendance</div>
+                    </div>
+                </div>
+                <div class="role-card">
+                    <div class="role-card-accent"></div>
+                    <div class="role-num">02</div>
+                    <h3 class="role-title">Lab Manager</h3>
+                    <p class="role-desc">Facilitators who oversee approvals and daily operations.</p>
+                    <div class="role-caps">
+                        <div class="role-cap"><span class="rc-dot"></span>Unified approval inbox for all request types
+                        </div>
+                        <div class="role-cap"><span class="rc-dot"></span>Monitor machine status & utilisation</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Manage inventory stock & reorder alerts</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Approve attendance regularizations</div>
+                    </div>
+                </div>
+                <div class="role-card">
+                    <div class="role-card-accent"></div>
+                    <div class="role-num">03</div>
+                    <h3 class="role-title">Organisation Admin</h3>
+                    <p class="role-desc">Institutional tenants who manage billing and access.</p>
+                    <div class="role-caps">
+                        <div class="role-cap"><span class="rc-dot"></span>Manage subscriptions & billing</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Configure default lab settings & policies
+                        </div>
+                        <div class="role-cap"><span class="rc-dot"></span>Control roles, permissions, and onboarding
+                        </div>
+                        <div class="role-cap"><span class="rc-dot"></span>Multi-lab context switching</div>
+                    </div>
+                </div>
+                <div class="role-card">
+                    <div class="role-card-accent"></div>
+                    <div class="role-num">04</div>
+                    <h3 class="role-title">Operator Admin</h3>
+                    <p class="role-desc">Platform operators with global system oversight.</p>
+                    <div class="role-caps">
+                        <div class="role-cap"><span class="rc-dot"></span>Manage all organisations & tenants</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Configure plan catalogues & pricing</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Monitor system health & uptime</div>
+                        <div class="role-cap"><span class="rc-dot"></span>Global admin controls & audit logs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="section">
+        <div class="section-inner">
+            <div class="centered" style="margin-bottom:48px;">
+                <span class="section-label">What people say</span>
+                <h2 class="section-h2">Loved by the makerspace<br />community</h2>
+            </div>
+            <div class="testi-grid">
+                <div class="testi-card">
+                    <div class="testi-quote-mark">"</div>
+                    <p class="testi-text">Technoventor completely replaced our spreadsheets and WhatsApp group. Booking
+                        conflicts dropped to zero in the first week.</p>
+                    <div class="testi-person">
+                        <div class="testi-avatar" style="background:#0d9488;">AM</div>
+                        <div>
+                            <div class="testi-name">Aman Mehta</div>
+                            <div class="testi-role">Lab Manager · FabLab Mumbai</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testi-card">
+                    <div class="testi-quote-mark">"</div>
+                    <p class="testi-text">The QR machine access is a game-changer. Students just scan and start — no
+                        logins, no friction. It's exactly what a busy workshop needs.</p>
+                    <div class="testi-person">
+                        <div class="testi-avatar" style="background:#7c3aed;">SR</div>
+                        <div>
+                            <div class="testi-name">Shreya Rajan</div>
+                            <div class="testi-role">Faculty Coordinator · IIT Design Studio</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testi-card">
+                    <div class="testi-quote-mark">"</div>
+                    <p class="testi-text">Finally a platform that understands multi-role workflows. Our researchers,
+                        managers, and admins all see exactly what they need — nothing more.</p>
+                    <div class="testi-person">
+                        <div class="testi-avatar" style="background:#2563eb;">PK</div>
+                        <div>
+                            <div class="testi-name">Prasad Kulkarni</div>
+                            <div class="testi-role">Organisation Admin · MakerHub Pune</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- STATS -->
+    <div class="stats-bar">
+        <div class="stats-bar-inner">
+            <div class="stat-item">
+                <div class="stat-num">200+</div>
+                <div class="stat-label">Active researchers onboarded</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">12+</div>
+                <div class="stat-label">Institutions & makerspaces</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">98%</div>
+                <div class="stat-label">Reduction in booking conflicts</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">&lt;4h</div>
+                <div class="stat-label">Average time to go live</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API -->
+    <div class="api-section">
+        <div class="api-inner">
+            <div>
+                <span class="api-label">Built for extension</span>
+                <h2 class="api-h2">Full API access for your developers</h2>
+                <p class="api-desc">All platform data and functionality is available via our open REST API. Import
+                    existing data, integrate your favourite tools, or build custom extensions on top of Technoventor.
+                </p>
+                <a href="#"
+                    style="display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:white;padding:11px 22px;border-radius:8px;text-decoration:none;font-family:var(--font-head);font-size:14px;font-weight:800;transition:background 0.2s ease;"
+                    onmouseover="this.style.background='#1fa8a4'" onmouseout="this.style.background='#3ecfcb'">View API
+                    docs →</a>
+            </div>
+            <div class="code-block">
+                <span class="c-teal">GET</span> <span class="c-white">/api/v1/machines?lab=42</span>
+                <span class="c-amber">Authorization:</span> Bearer <span class="c-green">your-api-key</span>
+
+                <span class="c-white">[</span>
+                <span class="c-white">{</span>
+                <span class="c-amber">"id"</span>: <span class="c-green">1104</span>,
+                <span class="c-amber">"name"</span>: <span class="c-green">"3D Printer — Bay A"</span>,
+                <span class="c-amber">"status"</span>: <span class="c-green">"in_use"</span>,
+                <span class="c-amber">"currentBooking"</span>: <span class="c-white">{</span>
+                <span class="c-amber">"member"</span>: <span class="c-green">"Aman Mehta"</span>,
+                <span class="c-amber">"endsAt"</span>: <span class="c-green">"2026-06-02T12:30:00Z"</span>
+                <span class="c-white">}</span>
+                <span class="c-white">},</span>
+                <span class="c-white">{</span>
+                <span class="c-amber">"id"</span>: <span class="c-green">1105</span>,
+                <span class="c-amber">"name"</span>: <span class="c-green">"Laser Cutter"</span>,
+                <span class="c-amber">"status"</span>: <span class="c-green">"available"</span>
+                <span class="c-white">}</span>
+                <span class="c-white">]</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="cta-inner">
+            <h2 class="cta-h2">Ready to modernise your makerspace?</h2>
+            <p class="cta-sub">Join makerspaces and institutions that have already moved beyond spreadsheets. Get set up
+                in less than a day.</p>
+            <div class="cta-btns">
+                <a href="#" class="btn-primary">Try it for free →</a>
+                <a href="#" class="btn-secondary">Request a demo call</a>
+            </div>
+            <p class="cta-note">No commitment. No credit card needed.</p>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-top">
+                <div>
+                    <a href="#" class="footer-logo">
+                        <div class="nav-logo-mark">
+                            <svg viewBox="0 0 24 24"
+                                style="width:17px;height:17px;stroke:white;fill:none;stroke-width:2.2;stroke-linecap:round;">
+                                <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" />
+                                <path d="M12 7v10M2 7l10 5 10-5" />
+                            </svg>
+                        </div>
+                        Technoventor
+                    </a>
+                    <p class="footer-tagline">A modern multi-tenant SaaS platform for managing makerspaces, FabLabs, and
+                        academic laboratories.</p>
+                </div>
+                <div>
+                    <p class="footer-col-title">Platform</p>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">Machine Booking</a>
+                        <a href="#" class="footer-link">Inventory</a>
+                        <a href="#" class="footer-link">Project Collaboration</a>
+                        <a href="#" class="footer-link">Approval Workflows</a>
+                        <a href="#" class="footer-link">Attendance Tracking</a>
+                        <a href="#" class="footer-link">API</a>
+                    </div>
+                </div>
+                <div>
+                    <p class="footer-col-title">Company</p>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">About</a>
+                        <a href="#" class="footer-link">Blog</a>
+                        <a href="#" class="footer-link">Pricing</a>
+                        <a href="#" class="footer-link">Careers</a>
+                        <a href="#" class="footer-link">Contact</a>
+                    </div>
+                </div>
+                <div>
+                    <p class="footer-col-title">Support</p>
+                    <div class="footer-links">
+                        <a href="#" class="footer-link">Help & FAQ</a>
+                        <a href="#" class="footer-link">Forum</a>
+                        <a href="#" class="footer-link">Privacy Policy</a>
+                        <a href="#" class="footer-link">Terms of Service</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copy">© 2026 Technoventor Innovations — A Makerspace Company</p>
+                <div class="footer-social">
+                    <a href="#">Twitter</a>
+                    <a href="#">LinkedIn</a>
+                    <a href="#">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Scroll reveal
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+
+        document.querySelectorAll('.feat-card, .role-card, .testi-card').forEach((el, i) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(18px)';
+            el.style.transition = `opacity 0.55s ease ${(i % 3) * 0.08}s, transform 0.55s ease ${(i % 3) * 0.08}s, border-color 0.2s ease, box-shadow 0.2s ease`;
+            obs.observe(el);
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const t = document.querySelector(a.getAttribute('href'));
+                if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            });
+        });
+    </script>
+</body>
+
+</html>

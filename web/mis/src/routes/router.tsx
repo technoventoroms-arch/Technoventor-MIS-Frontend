@@ -37,6 +37,10 @@ const accountPage = (exportName: keyof typeof import("@/premium/account-pages"))
 
 const routes: RouteObject[] = [
   {
+    index: true,
+    element: page("LandingPage"),
+  },
+  {
     path: "login",
     element: <PublicOnlyRoute />,
     children: [{ index: true, element: page("LoginPage") }],
@@ -47,7 +51,7 @@ const routes: RouteObject[] = [
     children: [{ index: true, element: page("RegisterPage") }],
   },
   {
-    path: "",
+    path: "workspace",
     element: <AuthenticatedRoute />,
     children: [
       {
@@ -115,3 +119,4 @@ const routes: RouteObject[] = [
 ];
 
 export default routes;
+

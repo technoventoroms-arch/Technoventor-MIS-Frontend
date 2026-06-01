@@ -1190,3 +1190,5 @@ export function RegisterPage() {
 }
 
 export { Outlet };
+export { LandingPage } from "./landing-page";
+
