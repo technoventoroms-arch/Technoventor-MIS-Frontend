@@ -60,6 +60,7 @@ import {
 
 import { usePagedResource } from "./api-hooks";
 import { useOrganisationAccess } from "./use-organisation-access";
+import { useJoinLabVisibility } from "./use-join-lab-visibility";
 import { entityNameCell, entityTitle } from "./entity-display";
 import { RequireLabFeature } from "./lab-feature-guard";
 import { useAuth } from "./auth";
@@ -140,6 +141,7 @@ const projectFields: ResourceField[] = [
 /** @deprecated Use `OrganisationSwitcherPage` from `./pages` (router entry). */
 export function OrganisationSwitcherPage() {
   const { resource, canCreateOrganisation } = useOrganisationAccess(true);
+  const { showJoinLab } = useJoinLabVisibility();
 
   return (
     <PageFrame
@@ -187,12 +189,14 @@ export function OrganisationSwitcherPage() {
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/request_lab">
-                <DoorOpen className="size-4" />
-                Join Lab
-              </Link>
-            </Button>
+            {showJoinLab ? (
+              <Button asChild variant="outline">
+                <Link to="/request_lab">
+                  <DoorOpen className="size-4" />
+                  Join Lab
+                </Link>
+              </Button>
+            ) : null}
             {canCreateOrganisation ? (
               <Button asChild>
                 <Link to="/create-organization">
@@ -253,7 +257,12 @@ export function CreateOrganisationPage() {
 }
 
 export function RequestLabPage() {
+  const { showJoinLab, isLoading } = useJoinLabVisibility();
   const availableLabs = usePagedResource<ApiRow>(endpoints.labs.available);
+
+  if (!isLoading && !showJoinLab) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <PageFrame

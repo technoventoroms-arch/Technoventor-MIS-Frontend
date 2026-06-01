@@ -37,6 +37,7 @@ import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
 import { useOrganisationAccess } from "./use-organisation-access";
+import { useJoinLabVisibility } from "./use-join-lab-visibility";
 import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { entityNameCell } from "./entity-display";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
@@ -201,7 +202,8 @@ function MisShellInner() {
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
     useLabPermissions();
-  const { canCreateOrganisation, isOrgAdminSomewhere } = useOrganisationAccess(!orgId);
+  const { canCreateOrganisation } = useOrganisationAccess(!orgId);
+  const { showJoinLab } = useJoinLabVisibility();
 
   useEffect(() => {
     if (!orgId) {
@@ -255,7 +257,7 @@ function MisShellInner() {
         isOrgAdmin,
         roleName,
         canCreateOrganisation,
-        showJoinLab: !isOrgAdminSomewhere,
+        showJoinLab,
         can,
         canAny,
         canManageInventory,
@@ -266,10 +268,10 @@ function MisShellInner() {
       canCreateOrganisation,
       canManageInventory,
       isOrgAdmin,
-      isOrgAdminSomewhere,
       labId,
       orgId,
       roleName,
+      showJoinLab,
     ]
   );
   const contexts = [
@@ -313,9 +315,8 @@ export function MisShell() {
 
 export function OrganisationSwitcherPage() {
   const { user } = useAuth();
-  const { resource, organisationCount, canCreateOrganisation, isOrgAdminSomewhere } =
-    useOrganisationAccess(true);
-  const showJoinLab = !isOrgAdminSomewhere;
+  const { resource, organisationCount, canCreateOrganisation } = useOrganisationAccess(true);
+  const { showJoinLab } = useJoinLabVisibility();
   const displayName = fullName(user);
   const firstName = displayName.split(" ")[0] || "there";
 
