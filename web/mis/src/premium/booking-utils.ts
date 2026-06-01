@@ -26,6 +26,27 @@ export function formatMinutesAsTime(totalMinutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+/**
+ * Send lab slot times with the browser's UTC offset (not `.toISOString()` UTC).
+ * Backend validates against local wall-clock time; UTC-only strings fail for non-UTC users.
+ */
+export function localDateTimeToApiIso(value: string): string {
+  if (!value) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offsetMin = date.getTimezoneOffset();
+  const sign = offsetMin <= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMin);
+  const offH = pad(Math.floor(abs / 60));
+  const offM = pad(abs % 60);
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
+    `${sign}${offH}:${offM}`
+  );
+}
+
 export function toDatetimeLocalValue(isoOrLocal: string): string {
   const date = new Date(isoOrLocal);
   if (Number.isNaN(date.getTime())) return "";

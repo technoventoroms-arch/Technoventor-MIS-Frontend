@@ -66,6 +66,7 @@ import {
   defaultBookingPolicy,
   formatMinutesAsTime,
   parseTimeToMinutes,
+  localDateTimeToApiIso,
   validateCustomReservation,
   type LabBookingPolicy,
 } from "./booking-utils";
@@ -1194,17 +1195,28 @@ export function MachinesPage() {
                         setBookingError(validationError);
                         return;
                       }
+                      const finalItemId =
+                        bookingMaterialItem === "custom"
+                          ? bookingCustomMaterialItem
+                          : bookingMaterialItem;
+                      if (bookingMaterialQty && !finalItemId) {
+                        setBookingError("Select a material item or clear the quantity.");
+                        return;
+                      }
+                      if (finalItemId && bookingMaterialQty && Number(bookingMaterialQty) <= 0) {
+                        setBookingError("Material quantity must be greater than zero.");
+                        return;
+                      }
                       setIsBooking(true);
                       setBookingError(null);
                       try {
                         const payload: Record<string, unknown> = {
                           project: Number(bookingProject),
                           machine: Number(bookingMachineId),
-                          booked_from: new Date(bookingSlotStart).toISOString(),
-                          booked_till: new Date(bookingSlotEnd).toISOString(),
+                          booked_from: localDateTimeToApiIso(bookingSlotStart),
+                          booked_till: localDateTimeToApiIso(bookingSlotEnd),
                           notes: bookingNotes,
                         };
-                        const finalItemId = bookingMaterialItem === "custom" ? bookingCustomMaterialItem : bookingMaterialItem;
                         if (finalItemId && bookingMaterialQty) {
                           payload.materials = [{ item_id: Number(finalItemId), quantity: Number(bookingMaterialQty) }];
                         }

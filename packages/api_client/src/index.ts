@@ -161,11 +161,16 @@ export function normalizeApiError(error: unknown): ApiError {
         }
       }
 
+      const fieldMessages = Object.entries(fields).flatMap(([key, messages]) =>
+        messages.map((msg) => (key === "non_field_errors" ? msg : `${key}: ${msg}`))
+      );
+
       const message =
         stringValue(data.message) ??
         stringValue(data.detail) ??
         stringValue(data.error) ??
         stringValue(data.data) ??
+        (fieldMessages.length ? fieldMessages.join(" ") : undefined) ??
         axiosError.message ??
         "Request failed";
 
