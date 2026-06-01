@@ -567,9 +567,16 @@ export function LabSettingsPage() {
 
 export function ReportsPage() {
   const { orgId, labId } = useParams();
-  const reportingBaseUrl = getReportingBaseUrl();
+  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { roleName } = useLabPermissions();
+  const persona = isOrgAdmin
+    ? "org_admin"
+    : roleName.toLowerCase().includes("manager")
+      ? "lab_manager"
+      : "researcher";
+  const reportingBaseUrl = getReportingBaseUrl(persona);
   const reportUrl = reportingBaseUrl
-    ? buildReportUrl(reportingBaseUrl, { orgId, labId })
+    ? buildReportUrl(reportingBaseUrl, { orgId, labId, persona })
     : null;
 
   return (
@@ -648,19 +655,26 @@ function metric(label: string, value: unknown, helper: string, icon: ReactNode):
   return { label, value: String(value), helper, icon };
 }
 
-function getReportingBaseUrl(): string | null {
+function getReportingBaseUrl(persona: string): string | null {
   const meta = import.meta as ImportMeta & {
     env?: Record<string, string | undefined>;
   };
-  return meta.env?.VITE_PUBLIC_METABASE_ENDPOINT ?? null;
+  const env = meta.env ?? {};
+  const byPersona: Record<string, string | undefined> = {
+    org_admin: env.VITE_METABASE_ORG_ADMIN_URL,
+    lab_manager: env.VITE_METABASE_LAB_MANAGER_URL,
+    researcher: env.VITE_METABASE_RESEARCHER_URL,
+  };
+  return byPersona[persona] ?? env.VITE_PUBLIC_METABASE_ENDPOINT ?? null;
 }
 
 function buildReportUrl(
   baseUrl: string,
-  context: { orgId?: string; labId?: string }
+  context: { orgId?: string; labId?: string; persona?: string }
 ): string {
   const url = new URL(baseUrl, window.location.origin);
   if (context.orgId) url.searchParams.set("orgId", context.orgId);
   if (context.labId) url.searchParams.set("labId", context.labId);
+  if (context.persona) url.searchParams.set("persona", context.persona);
   return url.toString();
 }

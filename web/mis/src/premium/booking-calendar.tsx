@@ -246,6 +246,22 @@ export function BookingCalendar({ orgId, labId, mode }: BookingCalendarProps) {
                 value={formatLocalDateTime(String(detailEvent.meta.booked_till))}
               />
               <DetailRow label="Notes" value={String(detailEvent.meta.notes ?? "—")} />
+              <DetailRow
+                label="Materials"
+                value={
+                  Array.isArray(detailEvent.meta.material_details) &&
+                  detailEvent.meta.material_details.length > 0
+                    ? detailEvent.meta.material_details
+                        .map((m: { quantity?: unknown; unit_symbol?: string; item_name?: string }) => {
+                          const qty = m.quantity ?? "?";
+                          const unit = m.unit_symbol ?? "";
+                          const name = m.item_name ?? "";
+                          return unit ? `${qty} ${unit} ${name}` : `${qty} × ${name}`;
+                        })
+                        .join("; ")
+                    : "—"
+                }
+              />
             </dl>
           ) : null}
         </DialogContent>

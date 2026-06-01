@@ -76,6 +76,11 @@ import {
   validateCustomReservation,
   type LabBookingPolicy,
 } from "./booking-utils";
+import {
+  formatInventoryItemOption,
+  formatMaterialDetailsSummary,
+  formatOrderLinesSummary,
+} from "./inventory-booking";
 import { MachineDevicePanel } from "./machine-device-panel";
 import { BookingCalendar } from "./booking-calendar";
 import { InviteMemberDialog } from "./invite-member-dialog";
@@ -1056,8 +1061,18 @@ export function MachinesPage() {
               { name: "project", label: "Project", type: "select", required: true, options: toOptions(projects.rows) },
               { name: "booked_from", label: "Booked from", type: "datetime-local", required: true },
               { name: "booked_till", label: "Booked till", type: "datetime-local", required: true },
-              { name: "material_item_id", label: "Material item", type: "select", options: toOptions(inventoryItems.rows) },
-              { name: "material_quantity", label: "Material quantity", type: "number" },
+              {
+                name: "material_item_id",
+                label: "Material item",
+                type: "select",
+                options: inventoryItemOptions(inventoryItems.rows),
+              },
+              {
+                name: "material_quantity",
+                label: "Quantity (same unit as inventory)",
+                type: "number",
+                helper: "Enter amount in the item's stock unit (e.g. g or kg). Pending requests reduce availability.",
+              },
               { name: "notes", label: "Notes", type: "textarea" },
             ]}
             orgId={orgId}
@@ -1083,10 +1098,21 @@ export function MachinesPage() {
                 notes: values.notes,
               };
               if (values.material_item_id && values.material_quantity) {
+                const item = inventoryItems.rows.find(
+                  (row) => String(row.id) === String(values.material_item_id)
+                );
+                const qty = Number(values.material_quantity);
+                const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
+                if (qty > available) {
+                  const unit = item?.unit_symbol ? String(item.unit_symbol) : "units";
+                  throw new Error(
+                    `Only ${available} ${unit} available for ${displayName(item ?? {})}.`
+                  );
+                }
                 payload.materials = [
                   {
                     item_id: Number(values.material_item_id),
-                    quantity: Number(values.material_quantity),
+                    quantity: qty,
                   },
                 ];
               }
@@ -1342,7 +1368,7 @@ export function MachinesPage() {
                           <SelectContent>
                             {inventoryItems.rows.map((item) => (
                               <SelectItem key={String(item.id)} value={String(item.id)}>
-                                {displayName(item)}
+                                {formatInventoryItemOption(item)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1353,6 +1379,22 @@ export function MachinesPage() {
                     <div className="space-y-2">
                       <Label>Material quantity</Label>
                       <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
+                      {(() => {
+                        const selectedId =
+                          bookingMaterialItem === "custom"
+                            ? bookingCustomMaterialItem
+                            : bookingMaterialItem;
+                        const item = inventoryItems.rows.find((row) => String(row.id) === selectedId);
+                        if (!item) return null;
+                        const unit = item.unit_symbol ? String(item.unit_symbol) : "units";
+                        const available = item.available_quantity ?? item.quantity;
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            Enter quantity in {unit}. Available after pending requests: {String(available)}{" "}
+                            {unit}.
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-2">
                       <Label>Notes</Label>
@@ -1410,6 +1452,18 @@ export function MachinesPage() {
                       if (finalItemId && bookingMaterialQty && Number(bookingMaterialQty) <= 0) {
                         setBookingError("Material quantity must be greater than zero.");
                         return;
+                      }
+                      if (finalItemId && bookingMaterialQty) {
+                        const item = inventoryItems.rows.find((row) => String(row.id) === finalItemId);
+                        const qty = Number(bookingMaterialQty);
+                        const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
+                        if (qty > available) {
+                          const unit = item?.unit_symbol ? String(item.unit_symbol) : "units";
+                          setBookingError(
+                            `Only ${available} ${unit} available for ${displayName(item ?? {})}.`
+                          );
+                          return;
+                        }
                       }
                       setIsBooking(true);
                       setBookingError(null);
@@ -1787,7 +1841,21 @@ export function ApprovalsPage() {
             resource={projectOrders}
             fields={[]}
             orgId={orgId}
-            columns={[textColumn("number", "Order"), statusColumn(), textColumn("project", "Project"), dateColumn()]}
+            columns={[
+              textColumn("number", "Order"),
+              statusColumn(),
+              textColumn("project", "Project"),
+              {
+                key: "lines",
+                header: "Items (qty + unit)",
+                render: (row) => (
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {formatOrderLinesSummary(row.lines)}
+                  </span>
+                ),
+              },
+              dateColumn(),
+            ]}
             rowActions={[
               {
                 label: "Approve",
@@ -1809,8 +1877,40 @@ export function ApprovalsPage() {
             fields={[]}
             orgId={orgId}
             columns={[
-              textColumn("machine", "Machine"),
-              textColumn("project", "Project"),
+              {
+                key: "machine_name",
+                header: "Machine",
+                render: (row) => (
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {formatValue(row.machine_name ?? row.machine)}
+                  </span>
+                ),
+              },
+              {
+                key: "project_title",
+                header: "Project",
+                render: (row) => (
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {formatValue(row.project_title ?? row.project)}
+                  </span>
+                ),
+              },
+              {
+                key: "material_details",
+                header: "Materials (qty + unit)",
+                render: (row) => (
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {formatMaterialDetailsSummary(row.material_details)}
+                  </span>
+                ),
+              },
+              {
+                key: "requested_by_name",
+                header: "Requested by",
+                render: (row) => (
+                  <span className="text-slate-500">{formatValue(row.requested_by_name ?? "—")}</span>
+                ),
+              },
               statusColumn(),
               textColumn("booked_from", "From"),
               textColumn("booked_till", "Till"),
@@ -2649,6 +2749,13 @@ function useOrgRole(orgId?: string) {
 
 function toOptions(rows: ApiRow[]): FieldOption[] {
   return rows.map((row) => ({ value: String(row.id), label: displayName(row) }));
+}
+
+function inventoryItemOptions(rows: ApiRow[]): FieldOption[] {
+  return rows.map((row) => ({
+    value: String(row.id),
+    label: formatInventoryItemOption(row),
+  }));
 }
 
 function toOption(value: string): FieldOption {
