@@ -10,6 +10,7 @@ import {
   Sun,
 } from "lucide-react";
 
+import { TECHNOVENTOR_LOGO_CLASS, TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { cn } from "@mono/shared_ui/lib/utils";
 import { useThemeContext } from "@mono/shared_ui/provider/theme-provider";
 import { Button } from "@mono/shared_ui/components/ui/button";
@@ -56,7 +57,7 @@ export type ShellNotification = {
 export function PremiumShell({
   appName,
   appSubtitle,
-  logoSrc,
+  logoSrc = TECHNOVENTOR_LOGO_SRC,
   navItems,
   userName,
   userEmail,
@@ -159,7 +160,11 @@ export function PremiumShell({
         <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-slate-200/70 bg-white/80 px-4 py-5 backdrop-blur-xl lg:block dark:border-white/10 dark:bg-slate-950/70">
           <Link to="/" className="flex items-center gap-3 px-2">
             {logoSrc ? (
-              <img src={logoSrc} alt={`${appName} logo`} className="h-11 w-auto rounded-md bg-white px-1 py-1" />
+              <img
+                src={logoSrc}
+                alt="Technoventor Innovations"
+                className={cn(TECHNOVENTOR_LOGO_CLASS, "rounded-md bg-white px-2 py-1.5")}
+              />
             ) : (
               <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-500 text-xs font-bold text-white shadow-lg shadow-teal-600/25">
                 MIS
