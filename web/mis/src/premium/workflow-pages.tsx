@@ -69,7 +69,7 @@ import {
   validateCustomReservation,
   type LabBookingPolicy,
 } from "./booking-utils";
-import { MachineApiKeySection } from "./machine-api-key-section";
+import { MachineDevicePanel } from "./machine-device-panel";
 import { toast } from "sonner";
 import {
   ResourceCrudTable,
@@ -817,7 +817,7 @@ export function MachinesPage() {
                       </Button>
                       <Button size="sm" variant="secondary" asChild>
                         <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>
-                          IoT key
+                          Reader
                         </Link>
                       </Button>
                     </>
@@ -1858,10 +1858,17 @@ export function MachineSchedulePage() {
       description="View reservations and operating schedule for this machine."
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
+      {!isOrgAdmin && !isLabManager ? (
+        <PremiumSurface className="mb-4 border-teal-200 bg-teal-50/80 p-4 text-sm text-teal-950 dark:border-teal-900/40 dark:bg-teal-950/30 dark:text-teal-100">
+          After your booking is <strong>approved</strong>, tap your lab RFID card at the machine
+          reader during your slot. The system unlocks the machine and records attendance
+          automatically.
+        </PremiumSurface>
+      ) : null}
       <div className="mb-4 flex flex-wrap gap-2">
         {isOrgAdmin || isLabManager ? (
           <Button asChild variant="secondary">
-            <Link to={detailsPath}>Machine details &amp; IoT key</Link>
+            <Link to={detailsPath}>Machine details</Link>
           </Button>
         ) : null}
         <Button asChild variant="outline">
@@ -2033,17 +2040,19 @@ export function MachineDetailsPage() {
           </PremiumSurface>
 
           {isOrgAdmin || isLabManager ? (
-            <MachineApiKeySection orgId={orgId} labId={labId} machineId={machineId} />
+            <MachineDevicePanel
+              orgId={orgId}
+              labId={labId}
+              machineId={machineId}
+              isOrgAdmin={Boolean(isOrgAdmin)}
+            />
           ) : (
             <PremiumSurface className="p-6 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Machine IoT credential</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Using this machine</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                The machine API key for ESP32 / Wokwi is only visible to{" "}
-                <strong>lab managers</strong> and <strong>organisation admins</strong>. Log in as{" "}
-                <code className="text-teal-700 dark:text-teal-300">lab.manager@technoventor.com</code>{" "}
-                (demo) and open this same page via{" "}
-                <strong>Machines → IoT key</strong> or{" "}
-                <strong>Machine details &amp; IoT key</strong>.
+                Book a slot from <strong>Machines</strong>, wait for manager approval, then tap your
+                lab RFID card at the reader during your slot. No API keys or device setup needed on
+                your side.
               </p>
             </PremiumSurface>
           )}
@@ -2142,7 +2151,7 @@ export function MachineLogsPage() {
       <div className="mb-4 flex flex-wrap gap-2">
         {isOrgAdmin || isLabManager ? (
           <Button asChild variant="secondary">
-            <Link to={detailsPath}>Machine details &amp; IoT key</Link>
+            <Link to={detailsPath}>Machine details</Link>
           </Button>
         ) : null}
         <Button asChild variant="outline">

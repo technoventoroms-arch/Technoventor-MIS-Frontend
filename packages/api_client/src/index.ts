@@ -68,6 +68,21 @@ export type MachineIoTConfigResponse = {
   data: MachineFirmwareConfig;
 };
 
+export type MachineIoTDeviceResponse = {
+  machine_id: number;
+  machine_name: string;
+  linked: boolean;
+  last_iot_seen_at: string | null;
+  reader_ready: boolean;
+};
+
+export type MachineIoTInstallResponse = {
+  setup_code: string;
+  machine_name: string;
+  api_url: string;
+  instructions: string;
+};
+
 export type LoginPayload = {
   email: string;
   password: string;
@@ -403,6 +418,10 @@ export const endpoints = {
       `machines/labs/${labId}/${machineId}/api-key/`,
     iotConfig: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/iot-config/`,
+    iotDevice: (labId: string | number, machineId: string | number) =>
+      `machines/labs/${labId}/${machineId}/iot-device/`,
+    iotInstall: (labId: string | number, machineId: string | number) =>
+      `machines/labs/${labId}/${machineId}/iot-install/`,
     status: (labId: string | number, machineId: string | number) =>
       `machines/labs/${labId}/${machineId}/status/`,
     logs: (labId: string | number, machineId: string | number) =>

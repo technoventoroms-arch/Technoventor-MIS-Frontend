@@ -262,6 +262,9 @@ importers:
       '@mono/shared_ui':
         specifier: workspace:*
         version: link:../../packages/shared_ui
+      react-qr-code:
+        specifier: ^2.0.18
+        version: 2.0.18(react@19.1.1)
 
 packages:
 

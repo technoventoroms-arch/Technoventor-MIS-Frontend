@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@mono/api_client": "workspace:*",
-    "@mono/shared_ui": "workspace:*"
+    "@mono/shared_ui": "workspace:*",
+    "react-qr-code": "^2.0.18"
   }
 }
