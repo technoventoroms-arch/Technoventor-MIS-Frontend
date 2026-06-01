@@ -77,6 +77,11 @@ import {
   type LabBookingPolicy,
 } from "./booking-utils";
 import {
+  BookingMaterialsEditor,
+  materialsToApiPayload,
+  type BookingMaterialLine,
+} from "./booking-materials-editor";
+import {
   formatInventoryItemOption,
   formatMaterialDetailsSummary,
   formatOrderLinesSummary,
@@ -724,6 +729,10 @@ export function InventoryPage() {
   const items = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const categories = usePagedResource<ApiRow>(labId ? endpoints.inventory.categories(labId) : null, orgId);
   const units = usePagedResource<ApiRow>(labId ? endpoints.inventory.units(labId) : null, orgId);
+  const unitConversions = usePagedResource<ApiRow>(
+    labId ? endpoints.inventory.unitConversions(labId) : null,
+    orgId
+  );
   const movements = usePagedResource<ApiRow>(
     labId && movementItem ? endpoints.inventory.movements(labId, movementItem.id) : null,
     orgId
@@ -776,6 +785,7 @@ export function InventoryPage() {
             <>
               <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="units">Units</TabsTrigger>
+              <TabsTrigger value="conversions">Conversions</TabsTrigger>
             </>
           ) : null}
         </TabsList>
@@ -852,6 +862,55 @@ export function InventoryPage() {
             deletePath={canManageLabInventory ? (row) => `${endpoints.inventory.units(labId)}${row.id}/` : undefined}
             createLabel="Add unit"
             columns={[nameColumn(), textColumn("symbol", "Symbol"), dateColumn()]}
+          />
+        </TabsContent>
+        <TabsContent value="conversions">
+          <ResourceCrudTable
+            title="Unit conversions"
+            description="Define factors between units in this lab (e.g. g → kg factor 0.001 so 400 g = 0.4 kg)."
+            resource={unitConversions}
+            fields={[
+              {
+                name: "from_unit",
+                label: "From unit",
+                type: "select",
+                required: true,
+                options: toOptions(units.rows),
+              },
+              {
+                name: "to_unit",
+                label: "To unit",
+                type: "select",
+                required: true,
+                options: toOptions(units.rows),
+              },
+              {
+                name: "factor",
+                label: "Factor (to = from × factor)",
+                type: "number",
+                required: true,
+                helper: "Example: g→kg use 0.001",
+              },
+            ]}
+            orgId={orgId}
+            createPath={canManageLabInventory ? endpoints.inventory.unitConversions(labId) : undefined}
+            updatePath={
+              canManageLabInventory
+                ? (row) => endpoints.inventory.unitConversion(labId, row.id)
+                : undefined
+            }
+            deletePath={
+              canManageLabInventory
+                ? (row) => endpoints.inventory.unitConversion(labId, row.id)
+                : undefined
+            }
+            createLabel="Add conversion"
+            columns={[
+              textColumn("from_unit_symbol", "From"),
+              textColumn("to_unit_symbol", "To"),
+              textColumn("factor", "Factor"),
+              dateColumn(),
+            ]}
           />
         </TabsContent>
       </Tabs>
@@ -934,9 +993,7 @@ export function MachinesPage() {
   const [bookingSlotEnd, setBookingSlotEnd] = useState<string>("");
   const [bookingStep, setBookingStep] = useState(1);
   const [bookingProject, setBookingProject] = useState("");
-  const [bookingMaterialItem, setBookingMaterialItem] = useState("");
-  const [bookingCustomMaterialItem, setBookingCustomMaterialItem] = useState("");
-  const [bookingMaterialQty, setBookingMaterialQty] = useState("");
+  const [bookingMaterialLines, setBookingMaterialLines] = useState<BookingMaterialLine[]>([]);
   const [bookingNotes, setBookingNotes] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
@@ -945,6 +1002,7 @@ export function MachinesPage() {
   const machines = usePagedResource<ApiRow>(labId ? endpoints.machines.list(labId) : null, orgId);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventoryItems = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
+  const labUnits = usePagedResource<ApiRow>(labId ? endpoints.inventory.units(labId) : null, orgId);
   const reservations = usePagedResource<ApiRow>(
     labId && reservationMachine ? endpoints.machines.reservations(labId, reservationMachine.id) : null,
     orgId
@@ -972,6 +1030,37 @@ export function MachinesPage() {
       .then((policy) => setLabBookingPolicy({ ...defaultBookingPolicy, ...policy }))
       .catch(() => {});
   }, [orgId, labId]);
+
+  useEffect(() => {
+    if (bookingStep !== 4 || bookingMaterialLines.length > 0 || !bookingMachineData) {
+      return;
+    }
+    const defaultMaterialsAttr = (
+      bookingMachineData as { attributes?: { key: string; value: string }[] }
+    )?.attributes?.find((attr) => attr.key === "default_materials");
+    if (!defaultMaterialsAttr?.value) {
+      return;
+    }
+    try {
+      const defaultMaterialIds: number[] = JSON.parse(defaultMaterialsAttr.value);
+      const prefilled = defaultMaterialIds
+        .map((id) => {
+          const item = inventoryItems.rows.find((row) => Number(row.id) === id);
+          if (!item) return null;
+          return {
+            itemId: String(item.id),
+            quantity: "",
+            unitId: item.unit ? String(item.unit) : String(labUnits.rows[0]?.id ?? ""),
+          };
+        })
+        .filter(Boolean) as BookingMaterialLine[];
+      if (prefilled.length) {
+        setBookingMaterialLines(prefilled);
+      }
+    } catch {
+      /* ignore invalid default_materials JSON */
+    }
+  }, [bookingStep, bookingMachineData, bookingMaterialLines.length, inventoryItems.rows, labUnits.rows]);
 
   if (!labId) return null;
   return (
@@ -1098,21 +1187,14 @@ export function MachinesPage() {
                 notes: values.notes,
               };
               if (values.material_item_id && values.material_quantity) {
-                const item = inventoryItems.rows.find(
+                const unitId = values.material_unit_id || inventoryItems.rows.find(
                   (row) => String(row.id) === String(values.material_item_id)
-                );
-                const qty = Number(values.material_quantity);
-                const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
-                if (qty > available) {
-                  const unit = item?.unit_symbol ? String(item.unit_symbol) : "units";
-                  throw new Error(
-                    `Only ${available} ${unit} available for ${displayName(item ?? {})}.`
-                  );
-                }
+                )?.unit;
                 payload.materials = [
                   {
                     item_id: Number(values.material_item_id),
-                    quantity: qty,
+                    quantity: Number(values.material_quantity),
+                    unit_id: unitId ? Number(unitId) : undefined,
                   },
                 ];
               }
@@ -1153,6 +1235,7 @@ export function MachinesPage() {
           if (!open) {
             setBookingMachine(null);
             setBookingStep(1);
+            setBookingMaterialLines([]);
             setBookingError(null);
           }
         }}
@@ -1312,97 +1395,20 @@ export function MachinesPage() {
                   )}
                 </div>
               ) : null}
-              {bookingStep === 4 ? (() => {
-                const defaultMaterialsAttr = (bookingMachineData as any)?.attributes?.find(
-                  (attr: any) => attr.key === "default_materials"
-                );
-                const defaultMaterialIds: number[] = defaultMaterialsAttr
-                  ? JSON.parse(defaultMaterialsAttr.value)
-                  : [];
-
-                const prefilledItems = inventoryItems.rows.filter(item => defaultMaterialIds.includes(Number(item.id)));
-
-                return (
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label>Material item (optional)</Label>
-                      <Select value={bookingMaterialItem} onValueChange={(val) => {
-                        setBookingMaterialItem(val);
-                        if (val !== "custom") {
-                          setBookingCustomMaterialItem("");
-                        }
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select material item" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {prefilledItems.length > 0 ? (
-                            <>
-                              {prefilledItems.map((item) => (
-                                <SelectItem key={String(item.id)} value={String(item.id)}>
-                                  {displayName(item)} (Prefilled)
-                                </SelectItem>
-                              ))}
-                              <SelectItem value="custom" className="font-semibold text-teal-600 dark:text-teal-400">
-                                ➕ Custom request...
-                              </SelectItem>
-                            </>
-                          ) : (
-                            inventoryItems.rows.map((item) => (
-                              <SelectItem key={String(item.id)} value={String(item.id)}>
-                                {displayName(item)}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {bookingMaterialItem === "custom" ? (
-                      <div className="space-y-2 border-l-2 border-teal-500 pl-3">
-                        <Label>Select custom material item</Label>
-                        <Select value={bookingCustomMaterialItem} onValueChange={setBookingCustomMaterialItem}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select custom material item" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {inventoryItems.rows.map((item) => (
-                              <SelectItem key={String(item.id)} value={String(item.id)}>
-                                {formatInventoryItemOption(item)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : null}
-
-                    <div className="space-y-2">
-                      <Label>Material quantity</Label>
-                      <Input type="number" value={bookingMaterialQty} onChange={(event) => setBookingMaterialQty(event.target.value)} />
-                      {(() => {
-                        const selectedId =
-                          bookingMaterialItem === "custom"
-                            ? bookingCustomMaterialItem
-                            : bookingMaterialItem;
-                        const item = inventoryItems.rows.find((row) => String(row.id) === selectedId);
-                        if (!item) return null;
-                        const unit = item.unit_symbol ? String(item.unit_symbol) : "units";
-                        const available = item.available_quantity ?? item.quantity;
-                        return (
-                          <p className="text-xs text-muted-foreground">
-                            Enter quantity in {unit}. Available after pending requests: {String(available)}{" "}
-                            {unit}.
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Notes</Label>
-                      <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
-                    </div>
+              {bookingStep === 4 ? (
+                <div className="space-y-4">
+                  <BookingMaterialsEditor
+                    lines={bookingMaterialLines}
+                    onChange={setBookingMaterialLines}
+                    inventoryItems={inventoryItems.rows}
+                    labUnits={labUnits.rows}
+                  />
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={bookingNotes} onChange={(event) => setBookingNotes(event.target.value)} />
                   </div>
-                );
-              })() : null}
+                </div>
+              ) : null}
               {bookingError ? <div className="text-sm text-rose-600">{bookingError}</div> : null}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setBookingStep((current) => Math.max(1, current - 1))} disabled={bookingStep === 1}>
@@ -1441,30 +1447,9 @@ export function MachinesPage() {
                         setBookingError(validationError);
                         return;
                       }
-                      const finalItemId =
-                        bookingMaterialItem === "custom"
-                          ? bookingCustomMaterialItem
-                          : bookingMaterialItem;
-                      if (bookingMaterialQty && !finalItemId) {
-                        setBookingError("Select a material item or clear the quantity.");
-                        return;
-                      }
-                      if (finalItemId && bookingMaterialQty && Number(bookingMaterialQty) <= 0) {
-                        setBookingError("Material quantity must be greater than zero.");
-                        return;
-                      }
-                      if (finalItemId && bookingMaterialQty) {
-                        const item = inventoryItems.rows.find((row) => String(row.id) === finalItemId);
-                        const qty = Number(bookingMaterialQty);
-                        const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
-                        if (qty > available) {
-                          const unit = item?.unit_symbol ? String(item.unit_symbol) : "units";
-                          setBookingError(
-                            `Only ${available} ${unit} available for ${displayName(item ?? {})}.`
-                          );
-                          return;
-                        }
-                      }
+                      const materialPayload = materialsToApiPayload(
+                        bookingMaterialLines.length > 0 ? bookingMaterialLines : []
+                      );
                       setIsBooking(true);
                       setBookingError(null);
                       try {
@@ -1475,11 +1460,12 @@ export function MachinesPage() {
                           booked_till: localDateTimeToApiIso(bookingSlotEnd),
                           notes: bookingNotes,
                         };
-                        if (finalItemId && bookingMaterialQty) {
-                          payload.materials = [{ item_id: Number(finalItemId), quantity: Number(bookingMaterialQty) }];
+                        if (materialPayload.length > 0) {
+                          payload.materials = materialPayload;
                         }
                         await apiClient.create(endpoints.machines.reservations(labId, bookingMachineData.id), payload, { orgId });
                         setBookingMachine(null);
+                        setBookingMaterialLines([]);
                         await reservations.reload();
                         await bookingReservations.reload();
                       } catch (error) {

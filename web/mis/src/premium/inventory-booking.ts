@@ -6,6 +6,10 @@ export type MaterialDetail = {
   quantity?: number | string;
   unit_symbol?: string | null;
   unit_name?: string | null;
+  requested_quantity?: number | string;
+  requested_unit_symbol?: string | null;
+  stock_quantity?: number | string;
+  stock_unit_symbol?: string | null;
   on_hand_quantity?: number | string;
   available_quantity?: number | string;
 };
@@ -21,10 +25,16 @@ export function formatInventoryItemOption(item: Entity): string {
 }
 
 export function formatMaterialDetailsLine(detail: MaterialDetail): string {
-  const qty = detail.quantity ?? "?";
-  const unit = detail.unit_symbol ?? detail.unit_name ?? "";
   const name = detail.item_name ?? `Item ${detail.item_id ?? ""}`;
-  return unit ? `${qty} ${unit} ${name}` : `${qty} × ${name}`;
+  const reqQty = detail.requested_quantity ?? detail.quantity;
+  const reqUnit = detail.requested_unit_symbol ?? detail.unit_symbol ?? detail.unit_name ?? "";
+  const stockQty = detail.stock_quantity ?? detail.quantity;
+  const stockUnit = detail.stock_unit_symbol ?? detail.unit_symbol ?? "";
+  if (reqUnit && stockUnit && String(reqUnit) !== String(stockUnit) && stockQty !== undefined) {
+    return `${reqQty} ${reqUnit} ${name} (= ${stockQty} ${stockUnit} stock)`;
+  }
+  const unit = reqUnit || stockUnit;
+  return unit ? `${reqQty} ${unit} ${name}` : `${reqQty} × ${name}`;
 }
 
 export function formatMaterialDetailsSummary(

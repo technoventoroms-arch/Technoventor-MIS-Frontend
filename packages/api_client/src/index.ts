@@ -450,6 +450,9 @@ export const endpoints = {
   inventory: {
     categories: (labId: string | number) => `inventory/labs/${labId}/categories/`,
     units: (labId: string | number) => `inventory/labs/${labId}/units/`,
+    unitConversions: (labId: string | number) => `inventory/labs/${labId}/unit-conversions/`,
+    unitConversion: (labId: string | number, conversionId: string | number) =>
+      `inventory/labs/${labId}/unit-conversions/${conversionId}/`,
     items: (labId: string | number) => `inventory/labs/${labId}/items/`,
     item: (labId: string | number, itemId: string | number) =>
       `inventory/labs/${labId}/items/${itemId}/`,
