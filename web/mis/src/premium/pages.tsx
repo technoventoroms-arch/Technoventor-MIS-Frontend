@@ -6,7 +6,6 @@ import {
   BadgeCheck,
   Boxes,
   CalendarCheck,
-  CreditCard,
   FlaskConical,
   Gauge,
   ListChecks,
@@ -119,7 +118,7 @@ export function LoginPage() {
           </p>
         </div>
         <div className="relative grid max-w-3xl grid-cols-3 gap-4">
-          {["Organisations", "Labs & machines", "Billing ready"].map((item) => (
+          {["Organisations", "Labs & machines", "Projects & inventory"].map((item) => (
             <div
               key={item}
               className="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"
@@ -322,9 +321,11 @@ export function OrganisationSwitcherPage() {
         description={pageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/request_lab">Join a lab</Link>
-            </Button>
+            {showJoinLab ? (
+              <Button asChild variant="outline">
+                <Link to="/request_lab">Join a lab</Link>
+              </Button>
+            ) : null}
             {canCreateOrganisation ? (
               <Button asChild className="bg-teal-600 hover:bg-teal-700">
                 <Link to="/create-organization">
@@ -382,16 +383,11 @@ export function OrgDashboardPage() {
     orgId ? endpoints.organisations.members(orgId) : null,
     orgId
   );
-  const subscriptions = usePagedResource<Entity>(
-    orgId ? endpoints.billing.subscriptions(orgId) : null,
-    orgId
-  );
-
   return (
     <PageFrame
       eyebrow="Organisation"
       title="Operational command center"
-      description="Overview of labs, teams, subscriptions, and high-priority work for this organisation."
+      description="Overview of labs, teams, and high-priority work for this organisation."
       metrics={[
         {
           label: "Labs",
@@ -404,12 +400,6 @@ export function OrgDashboardPage() {
           value: String(members.rows.length),
           helper: "Organisation users",
           icon: <Users className="size-5" />,
-        },
-        {
-          label: "Subscriptions",
-          value: String(subscriptions.rows.length),
-          helper: "Billing records",
-          icon: <CreditCard className="size-5" />,
         },
       ]}
     >
@@ -451,25 +441,6 @@ export function OrgUsersPage() {
       icon={<Users className="size-5" />}
       resource={resource}
       actionLabel="Invite member"
-    />
-  );
-}
-
-export function BillingPage() {
-  const { orgId } = useParams();
-  const subscriptions = usePagedResource<Entity>(
-    orgId ? endpoints.billing.subscriptions(orgId) : null,
-    orgId
-  );
-  return (
-    <DomainPage
-      eyebrow="Commercial"
-      title="Billing and subscriptions"
-      description="Review SaaS plan status, invoices, and payment readiness."
-      icon={<CreditCard className="size-5" />}
-      resource={subscriptions}
-      actionLabel="View plans"
-      actionTo={orgId ? `/${orgId}/billing/plans` : undefined}
     />
   );
 }

@@ -5,7 +5,6 @@ import {
   Boxes,
   Building2,
   CalendarCheck,
-  CreditCard,
   DoorOpen,
   FileText,
   FlaskConical,
@@ -143,7 +142,7 @@ export function OrganisationSwitcherPage() {
     <PageFrame
       eyebrow="Workspace"
       title="My Organizations"
-      description="Choose the organisation that contains your labs, people, billing, and day-to-day operations."
+      description="Choose the organisation that contains your labs, people, and day-to-day operations."
       metrics={[
         metric("Organisations", resource.rows.length, "Your organisations", <Building2 />),
         metric("Access", "Secure", "Role-based access", <Gauge />),
@@ -299,20 +298,14 @@ export function OrgDashboardPage() {
     orgId ? endpoints.organisations.members(orgId) : null,
     orgId
   );
-  const subscriptions = usePagedResource<ApiRow>(
-    orgId ? endpoints.billing.subscriptions(orgId) : null,
-    orgId
-  );
-
   return (
     <PageFrame
       eyebrow="Organisation"
       title="Dashboard"
-      description="Overview of labs, teams, subscriptions, and high-priority work."
+      description="Overview of labs, teams, and high-priority work."
       metrics={[
         metric("Labs", labs.rows.length, "Facilities online", <FlaskConical />),
         metric("Members", members.rows.length, "Organisation users", <Users />),
-        metric("Subscriptions", subscriptions.rows.length, "Billing records", <CreditCard />),
       ]}
     >
       <div className="grid gap-6 xl:grid-cols-2">
@@ -550,90 +543,6 @@ export function LabMembersPage() {
           <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
         )}
       </div>
-    </PageFrame>
-  );
-}
-
-export function BillingPage() {
-  const { orgId } = useParams();
-  const [selectedSubscription, setSelectedSubscription] = useState<ApiRow | null>(null);
-  const subscriptions = usePagedResource<ApiRow>(
-    orgId ? endpoints.billing.subscriptions(orgId) : null,
-    orgId
-  );
-  const invoices = usePagedResource<ApiRow>(
-    selectedSubscription ? endpoints.billing.invoices(selectedSubscription.id) : null,
-    orgId
-  );
-  const plans = useUnpaginated<ApiRow>(endpoints.billing.plans);
-
-  return (
-    <PageFrame
-      eyebrow="Commercial"
-      title="Subscriptions"
-      description="Review active subscriptions, invoices, and public plan entitlements."
-      metrics={[
-        metric("Subscriptions", subscriptions.rows.length, "Org billing records", <CreditCard />),
-        metric("Plans", plans.rows.length, "Public catalog", <ListChecks />),
-      ]}
-    >
-      <div className="grid gap-6 xl:grid-cols-2">
-        <PremiumDataTable
-          title="Subscriptions"
-          description={subscriptions.error?.message ?? "Organisation subscription records."}
-          columns={[
-            planColumn(),
-            statusColumn(),
-            dateColumn(),
-            {
-              key: "invoices",
-              header: "Invoices",
-              render: (row) => (
-                <Button size="sm" variant="outline" onClick={() => setSelectedSubscription(row)}>
-                  View invoices
-                </Button>
-              ),
-            },
-          ]}
-          rows={subscriptions.rows}
-          getRowKey={(row) => String(row.id)}
-          next={subscriptions.next}
-          previous={subscriptions.previous}
-          onNext={subscriptions.loadNext}
-          onPrevious={subscriptions.loadPrevious}
-          emptyTitle="No subscriptions"
-          emptyDescription="Subscription records will appear after billing setup."
-        />
-        <PremiumDataTable
-          title="Plans"
-          description={plans.error ?? "Public billing plans available for onboarding."}
-          columns={[nameColumn(), textColumn("amount", "Amount"), textColumn("billing_period", "Period")]}
-          rows={plans.rows}
-          getRowKey={(row) => String(row.id)}
-        />
-      </div>
-      {selectedSubscription ? (
-        <PremiumDataTable
-          title="Invoices"
-          description={`Invoices for subscription #${selectedSubscription.id}.`}
-          columns={[
-            textColumn("provider_invoice_id", "Invoice"),
-            statusColumn(),
-            textColumn("amount", "Amount"),
-            textColumn("currency", "Currency"),
-            textColumn("issued_at", "Issued"),
-            textColumn("paid_at", "Paid"),
-          ]}
-          rows={invoices.rows}
-          getRowKey={(row) => String(row.id)}
-          next={invoices.next}
-          previous={invoices.previous}
-          onNext={invoices.loadNext}
-          onPrevious={invoices.loadPrevious}
-          emptyTitle="No invoices"
-          emptyDescription="Invoices will appear when the billing provider creates them."
-        />
-      ) : null}
     </PageFrame>
   );
 }
@@ -2399,28 +2308,6 @@ function CompactTable({
   );
 }
 
-function useUnpaginated<T extends Entity>(path: string) {
-  const [rows, setRows] = useState<T[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    apiClient
-      .listUnpaginated<T>(path)
-      .then((data) => {
-        if (isMounted) setRows(data);
-      })
-      .catch((requestError) => {
-        if (isMounted) setError(normalizeApiError(requestError).message);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [path]);
-
-  return { rows, error };
-}
-
 function metric(label: string, value: string | number, helper: string, icon: ReactNode): Metric {
   return { label, value: String(value), helper, icon };
 }
@@ -2453,14 +2340,6 @@ function roleColumn<T extends ApiRow>(): PremiumColumn<T> {
     key: "role",
     header: "Role",
     render: (row) => <span>{displayName(row.role ?? row)}</span>,
-  };
-}
-
-function planColumn<T extends ApiRow>(): PremiumColumn<T> {
-  return {
-    key: "plan",
-    header: "Plan",
-    render: (row) => <span>{displayName(row.plan ?? row)}</span>,
   };
 }
 

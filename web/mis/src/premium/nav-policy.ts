@@ -7,7 +7,6 @@ import {
   Boxes,
   Building2,
   CalendarCheck,
-  CreditCard,
   FileText,
   FlaskConical,
   Gauge,
@@ -83,11 +82,6 @@ export function buildMisNav(options: {
       ? [
           { label: "Users", to: `${orgBase}/users`, icon: Users },
           { label: "Organization", to: `${orgBase}/organization`, icon: Settings },
-          {
-            label: "Subscriptions",
-            to: `${orgBase}/organization/transactions`,
-            icon: CreditCard,
-          },
         ]
       : []),
     ...(isOrgAdmin || can(P.REPORTS_READ)

@@ -15,6 +15,14 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.10.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@tailwindcss/oxide",
+      "browser-tabs-lock",
+      "esbuild"
+    ]
+  },
   "dependencies": {
     "@casl/ability": "^6.7.3",
     "@casl/react": "^5.0.0",

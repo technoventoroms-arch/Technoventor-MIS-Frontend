@@ -69,7 +69,6 @@ const routes: RouteObject[] = [
           { path: ":orgId/dashboard", element: page("OrgDashboardPage") },
           { path: ":orgId/settings", element: accountPage("OrganisationSettingsPage") },
           { path: ":orgId/organization", element: accountPage("OrganisationSettingsPage") },
-          { path: ":orgId/organization/transactions", element: workflowPage("BillingPage") },
           { path: ":orgId/reports", element: accountPage("ReportsPage") },
           { path: ":orgId/labs", element: workflowPage("LabsPage") },
           {
@@ -77,10 +76,6 @@ const routes: RouteObject[] = [
             element: workflowPage("LabsPage"),
           },
           { path: ":orgId/users", element: workflowPage("OrgUsersPage") },
-          { path: ":orgId/billing", element: workflowPage("BillingPage") },
-          { path: ":orgId/billing/plans", element: workflowPage("BillingPage") },
-          { path: ":orgId/subscription", element: workflowPage("BillingPage") },
-          { path: ":orgId/transactions", element: workflowPage("BillingPage") },
           {
             path: ":orgId/lab/:labId",
             element: page("LabDashboardPage"),
