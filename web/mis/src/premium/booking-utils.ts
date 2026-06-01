@@ -54,12 +54,27 @@ export function toDatetimeLocalValue(isoOrLocal: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** Local calendar date (YYYY-MM-DD) for date inputs — no past dates. */
+export function minBookingDateLocal(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function isBookingStartInPast(bookedFrom: string): boolean {
+  const start = new Date(bookedFrom);
+  if (Number.isNaN(start.getTime())) return false;
+  return start.getTime() < Date.now();
+}
+
 export function buildSlotCandidates(
   bookingDate: string,
   policy: LabBookingPolicy,
   existingReservations: Array<{ booked_from?: unknown; booked_till?: unknown; status?: string }>
 ): { from: string; till: string; blocked: boolean }[] {
   if (!bookingDate) return [];
+  const today = minBookingDateLocal();
+  if (bookingDate < today) return [];
   const startMin = parseTimeToMinutes(policy.booking_window_start);
   const endMin = parseTimeToMinutes(policy.booking_window_end);
   const step = Math.max(1, policy.slot_duration_minutes || 60);
@@ -70,15 +85,17 @@ export function buildSlotCandidates(
     const till = `${bookingDate}T${formatMinutesAsTime(cursor + step)}`;
     const fromDate = new Date(from);
     const tillDate = new Date(till);
-    const blocked = existingReservations.some((reservation) => {
-      if (!reservation.booked_from || !reservation.booked_till) return false;
-      if (reservation.status === "CANCELLED" || reservation.status === "REJECTED") {
-        return false;
-      }
-      const rFrom = new Date(String(reservation.booked_from));
-      const rTill = new Date(String(reservation.booked_till));
-      return rFrom < tillDate && rTill > fromDate;
-    });
+    const blocked =
+      isBookingStartInPast(from) ||
+      existingReservations.some((reservation) => {
+        if (!reservation.booked_from || !reservation.booked_till) return false;
+        if (reservation.status === "CANCELLED" || reservation.status === "REJECTED") {
+          return false;
+        }
+        const rFrom = new Date(String(reservation.booked_from));
+        const rTill = new Date(String(reservation.booked_till));
+        return rFrom < tillDate && rTill > fromDate;
+      });
     slots.push({ from, till, blocked });
   }
   return slots;
@@ -102,6 +119,9 @@ export function validateCustomReservation(
   }
   if (start >= end) {
     return "End time must be after start time.";
+  }
+  if (isBookingStartInPast(bookedFrom)) {
+    return "Cannot book a slot in the past.";
   }
   if (start.toDateString() !== end.toDateString()) {
     return "Booking must start and end on the same day.";

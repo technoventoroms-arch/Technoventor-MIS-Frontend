@@ -375,7 +375,11 @@ export const endpoints = {
     list: "organisations/",
     detail: (orgId: string | number) => `organisations/${orgId}/`,
     members: (orgId: string | number) => `organisations/${orgId}/members/`,
+    member: (orgId: string | number, memberId: string | number) =>
+      `organisations/${orgId}/members/${memberId}/`,
     invites: (orgId: string | number) => `organisations/${orgId}/invites/`,
+    invite: (orgId: string | number, inviteId: string | number) =>
+      `organisations/${orgId}/invites/${inviteId}/`,
     joinRequests: (orgId: string | number) =>
       `organisations/${orgId}/join-requests/`,
     bulkUserImport: (orgId: string | number) =>

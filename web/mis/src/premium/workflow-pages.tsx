@@ -69,6 +69,7 @@ import {
   buildSlotCandidates,
   defaultBookingPolicy,
   formatMinutesAsTime,
+  minBookingDateLocal,
   parseTimeToMinutes,
   localDateTimeToApiIso,
   validateCustomReservation,
@@ -128,13 +129,6 @@ const machineFields: ResourceField[] = [
 
 const projectFields: ResourceField[] = [
   { name: "title", label: "Project title", required: true },
-  {
-    name: "priority",
-    label: "Priority",
-    type: "select",
-    defaultValue: "medium",
-    options: ["low", "medium", "high", "very high"].map(toOption),
-  },
   { name: "start_date", label: "Start date", type: "date" },
   { name: "end_date", label: "End date", type: "date" },
   { name: "description", label: "Description", type: "textarea" },
@@ -396,7 +390,26 @@ export function OrgUsersPage() {
           <TabsTrigger value="roles">Roles</TabsTrigger>
         </TabsList>
         <TabsContent value="members">
-          <CompactTable title="Members" resource={members} columns={[memberColumn(), dateColumn()]} />
+          {isOrgAdmin ? (
+            <ResourceCrudTable
+              title="Members"
+              resource={members}
+              fields={[]}
+              orgId={orgId}
+              deletePath={(row) => endpoints.organisations.member(orgId, row.id)}
+              columns={[
+                memberColumn(),
+                {
+                  key: "is_admin",
+                  header: "Admin",
+                  render: (row) => (row.is_admin ? "Yes" : "No"),
+                },
+                dateColumn(),
+              ]}
+            />
+          ) : (
+            <CompactTable title="Members" resource={members} columns={[memberColumn(), dateColumn()]} />
+          )}
           {isOrgAdmin ? (
             <div className="mt-4 flex justify-end">
               <Button variant="outline" onClick={() => setIsImportOpen(true)}>
@@ -411,13 +424,43 @@ export function OrgUsersPage() {
             resource={invites}
             fields={[
               { name: "email", label: "Email", type: "email", required: true },
-              { name: "lab", label: "Lab", type: "select", options: toOptions(labs.rows) },
-              { name: "role", label: "Role", type: "select", options: toOptions(roles.rows) },
+              {
+                name: "lab",
+                label: "Lab",
+                type: "select",
+                required: true,
+                options: toOptions(labs.rows),
+                helper: "Required — invitee is assigned to this lab.",
+              },
+              {
+                name: "role",
+                label: "Role",
+                type: "select",
+                required: true,
+                options: toOptions(roles.rows),
+              },
             ]}
             orgId={orgId}
             createPath={isOrgAdmin ? endpoints.organisations.invites(orgId) : undefined}
+            updatePath={
+              isOrgAdmin ? (row) => endpoints.organisations.invite(orgId, row.id) : undefined
+            }
+            deletePath={
+              isOrgAdmin ? (row) => endpoints.organisations.invite(orgId, row.id) : undefined
+            }
             createLabel="Invite member"
-            columns={[textColumn("email", "Email"), textColumn("status", "Status"), dateColumn()]}
+            transformPayload={(values) => ({
+              email: values.email,
+              lab: values.lab ? Number(values.lab) : undefined,
+              role: values.role ? Number(values.role) : undefined,
+            })}
+            columns={[
+              textColumn("email", "Email"),
+              textColumn("status", "Status"),
+              textColumn("lab", "Lab"),
+              textColumn("role", "Role"),
+              dateColumn(),
+            ]}
           />
         </TabsContent>
         <TabsContent value="roles">
@@ -552,7 +595,6 @@ export function LabMembersPage() {
             deletePath={isOrgAdmin || isLabManager ? (row) => `${endpoints.labs.rfids(labId, selectedMember.id)}${row.id}/` : undefined}
             createLabel="Add card"
             columns={[textColumn("rfid_uid", "Full card ID"), dateColumn()]}
-            description="The same physical card may be registered for other labs and other members. Add one entry per person in this lab."
           />
         ) : (
           <EmptyState title="Select a lab member" description="Choose Manage card to add or remove access cards." />
@@ -761,6 +803,7 @@ export function BookingCalendarPage() {
 
 export function MachinesPage() {
   const { orgId, labId } = useParams();
+  const navigate = useNavigate();
   const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
   const [statusMachine, setStatusMachine] = useState<ApiRow | null>(null);
   const [reservationMachine, setReservationMachine] = useState<ApiRow | null>(null);
@@ -987,11 +1030,27 @@ export function MachinesPage() {
               {bookingStep === 1 ? (
                 <div className="space-y-2">
                   <Label>Choose project</Label>
-                  <Select value={bookingProject} onValueChange={setBookingProject}>
+                  <Select
+                    value={bookingProject}
+                    onValueChange={(value) => {
+                      if (value === "__create_new__") {
+                        setBookingMachine(null);
+                        navigate(`/${orgId}/lab/${labId}/projects`);
+                        return;
+                      }
+                      setBookingProject(value);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem
+                        value="__create_new__"
+                        className="font-semibold text-teal-600 dark:text-teal-400"
+                      >
+                        + Create new project
+                      </SelectItem>
                       {projects.rows.map((project) => (
                         <SelectItem key={String(project.id)} value={String(project.id)}>
                           {displayName(project)}
@@ -1053,6 +1112,7 @@ export function MachinesPage() {
                         <Label>Calendar date</Label>
                         <Input
                           type="date"
+                          min={minBookingDateLocal()}
                           value={bookingDate}
                           onChange={(event) => setBookingDate(event.target.value)}
                         />
@@ -1095,6 +1155,7 @@ export function MachinesPage() {
                         <Label>Start</Label>
                         <Input
                           type="datetime-local"
+                          min={minBookingDateLocal() + "T00:00"}
                           value={bookingSlotStart}
                           onChange={(event) => setBookingSlotStart(event.target.value)}
                         />
@@ -1103,6 +1164,7 @@ export function MachinesPage() {
                         <Label>End</Label>
                         <Input
                           type="datetime-local"
+                          min={bookingSlotStart || minBookingDateLocal() + "T00:00"}
                           value={bookingSlotEnd}
                           onChange={(event) => setBookingSlotEnd(event.target.value)}
                         />
@@ -1312,7 +1374,7 @@ export function ProjectsPage() {
     <PageFrame
       eyebrow="Research"
       title="Projects"
-      description="Manage projects, owners, priorities, and inventory order requests."
+      description="Manage projects, owners, and inventory order requests."
       metrics={[metric("Projects", projects.rows.length, "Current page", <ListChecks />)]}
     >
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -1328,7 +1390,6 @@ export function ProjectsPage() {
           columns={[
             nameColumn(),
             statusColumn(),
-            textColumn("priority", "Priority"),
             {
               key: "orders",
               header: "Orders",
