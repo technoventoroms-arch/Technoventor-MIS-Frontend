@@ -64,26 +64,26 @@ function buildSuggestedLines(
     .filter(Boolean) as BookingMaterialLine[];
 }
 
-function unitsForItem(
-  itemId: string,
-  inventoryItems: Entity[],
-  labUnits: Entity[],
+function conversionPartnersForStock(
+  stockUnitId: string,
   conversions: UnitConversionRow[]
-): Entity[] {
-  const item = inventoryItems.find((row) => String(row.id) === itemId);
-  if (!item?.unit) return labUnits;
-
-  const stockUnitId = String(item.unit);
-  const allowed = new Set<string>([stockUnitId]);
-
+): Set<string> {
+  const partners = new Set<string>([stockUnitId]);
   for (const row of conversions) {
     const fromId = String(row.from_unit);
     const toId = String(row.to_unit);
-    if (fromId === stockUnitId) allowed.add(toId);
-    if (toId === stockUnitId) allowed.add(fromId);
+    if (fromId === stockUnitId) partners.add(toId);
+    if (toId === stockUnitId) partners.add(fromId);
   }
+  return partners;
+}
 
-  return labUnits.filter((unit) => allowed.has(String(unit.id)));
+function unitLabel(unit: Entity, stockUnitId: string, partners: Set<string>): string {
+  const symbol = String(unit.symbol ?? unit.name ?? unit.id);
+  const id = String(unit.id);
+  if (id === stockUnitId) return `${symbol} (stock unit)`;
+  if (partners.has(id)) return `${symbol} (conversion available)`;
+  return `${symbol} (no conversion — cannot use)`;
 }
 
 /** Convert entered qty to stock unit using lab conversion factors (client preview). */
@@ -169,9 +169,19 @@ export function BookingMaterialsEditor({
 
       {lines.map((line, index) => {
         const item = inventoryItems.find((row) => String(row.id) === line.itemId);
-        const unitOptions = unitsForItem(line.itemId, inventoryItems, labUnits, unitConversions);
         const stockUnitId = item?.unit ? String(item.unit) : "";
+        const conversionPartners = stockUnitId
+          ? conversionPartnersForStock(stockUnitId, unitConversions)
+          : new Set<string>();
         const stockSymbol = item?.unit_symbol ? String(item.unit_symbol) : "units";
+        const hasGramUnit = labUnits.some((u) => String(u.symbol ?? "").toLowerCase() === "g");
+        const hasGramConversion =
+          hasGramUnit &&
+          stockUnitId &&
+          labUnits.some((u) => {
+            if (String(u.symbol ?? "").toLowerCase() !== "g") return false;
+            return conversionPartners.has(String(u.id));
+          });
         const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
         const enteredQty = Number(line.quantity);
         const stockEquivalent =
@@ -229,11 +239,15 @@ export function BookingMaterialsEditor({
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {unitOptions.map((unit) => (
-                      <SelectItem key={String(unit.id)} value={String(unit.id)}>
-                        {String(unit.symbol ?? unit.name)}
-                      </SelectItem>
-                    ))}
+                    {labUnits.map((unit) => {
+                      const id = String(unit.id);
+                      const canConvert = !stockUnitId || conversionPartners.has(id);
+                      return (
+                        <SelectItem key={id} value={id} disabled={!canConvert}>
+                          {unitLabel(unit, stockUnitId, conversionPartners)}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -269,6 +283,29 @@ export function BookingMaterialsEditor({
                   <p className="text-amber-700 dark:text-amber-400">
                     No conversion from {selectedSymbol} to {stockSymbol}. Ask your lab manager to add
                     it under Inventory → Conversions (e.g. g→kg factor 0.001).
+                  </p>
+                ) : null}
+                {stockSymbol.toLowerCase() === "kg" && !hasGramUnit ? (
+                  <p className="text-amber-700 dark:text-amber-400">
+                    To book in <strong>grams</strong>, your lab needs a unit <strong>g</strong> under
+                    Inventory → Units, then a conversion <strong>g → kg</strong> with factor{" "}
+                    <strong>0.001</strong> under Inventory → Conversions.
+                  </p>
+                ) : null}
+                {stockSymbol.toLowerCase() === "kg" && hasGramUnit && !hasGramConversion ? (
+                  <p className="text-amber-700 dark:text-amber-400">
+                    Unit <strong>g</strong> exists but is not linked to <strong>kg</strong>. Add
+                    conversion <strong>g → kg</strong>, factor <strong>0.001</strong> (400 g = 0.4
+                    kg).
+                  </p>
+                ) : null}
+                {conversionPartners.size > 1 ? (
+                  <p>
+                    Conversions configured for {stockSymbol}:{" "}
+                    {labUnits
+                      .filter((u) => conversionPartners.has(String(u.id)) && String(u.id) !== stockUnitId)
+                      .map((u) => String(u.symbol ?? u.name))
+                      .join(", ") || "none besides stock unit"}
                   </p>
                 ) : null}
               </div>
