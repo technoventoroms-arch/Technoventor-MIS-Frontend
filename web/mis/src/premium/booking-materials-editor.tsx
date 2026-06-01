@@ -78,12 +78,9 @@ function conversionPartnersForStock(
   return partners;
 }
 
-function unitLabel(unit: Entity, stockUnitId: string, partners: Set<string>): string {
+function unitLabel(unit: Entity, stockUnitId: string): string {
   const symbol = String(unit.symbol ?? unit.name ?? unit.id);
-  const id = String(unit.id);
-  if (id === stockUnitId) return `${symbol} (stock unit)`;
-  if (partners.has(id)) return `${symbol} (conversion available)`;
-  return `${symbol} (no conversion — cannot use)`;
+  return String(unit.id) === stockUnitId ? `${symbol} (stock)` : symbol;
 }
 
 /** Convert entered qty to stock unit using lab conversion factors (client preview). */
@@ -174,14 +171,9 @@ export function BookingMaterialsEditor({
           ? conversionPartnersForStock(stockUnitId, unitConversions)
           : new Set<string>();
         const stockSymbol = item?.unit_symbol ? String(item.unit_symbol) : "units";
-        const hasGramUnit = labUnits.some((u) => String(u.symbol ?? "").toLowerCase() === "g");
-        const hasGramConversion =
-          hasGramUnit &&
-          stockUnitId &&
-          labUnits.some((u) => {
-            if (String(u.symbol ?? "").toLowerCase() !== "g") return false;
-            return conversionPartners.has(String(u.id));
-          });
+        const bookableUnits = labUnits.filter(
+          (u) => !stockUnitId || conversionPartners.has(String(u.id))
+        );
         const available = Number(item?.available_quantity ?? item?.quantity ?? 0);
         const enteredQty = Number(line.quantity);
         const stockEquivalent =
@@ -203,10 +195,22 @@ export function BookingMaterialsEditor({
                   value={line.itemId}
                   onValueChange={(itemId) => {
                     const selected = inventoryItems.find((row) => String(row.id) === itemId);
-                    updateLine(index, {
-                      itemId,
-                      unitId: selected?.unit ? String(selected.unit) : line.unitId,
-                    });
+                    const nextStockUnitId = selected?.unit ? String(selected.unit) : "";
+                    const partners = nextStockUnitId
+                      ? conversionPartnersForStock(nextStockUnitId, unitConversions)
+                      : new Set<string>();
+                    const gramUnit = labUnits.find(
+                      (u) => String(u.symbol ?? "").toLowerCase() === "g"
+                    );
+                    const defaultUnitId =
+                      gramUnit &&
+                      partners.has(String(gramUnit.id)) &&
+                      String(selected?.unit_symbol ?? "").toLowerCase() === "kg"
+                        ? String(gramUnit.id)
+                        : selected?.unit
+                          ? String(selected.unit)
+                          : line.unitId;
+                    updateLine(index, { itemId, unitId: defaultUnitId });
                   }}
                 >
                   <SelectTrigger>
@@ -239,15 +243,11 @@ export function BookingMaterialsEditor({
                     <SelectValue placeholder="Unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {labUnits.map((unit) => {
-                      const id = String(unit.id);
-                      const canConvert = !stockUnitId || conversionPartners.has(id);
-                      return (
-                        <SelectItem key={id} value={id} disabled={!canConvert}>
-                          {unitLabel(unit, stockUnitId, conversionPartners)}
-                        </SelectItem>
-                      );
-                    })}
+                    {bookableUnits.map((unit) => (
+                      <SelectItem key={String(unit.id)} value={String(unit.id)}>
+                        {unitLabel(unit, stockUnitId)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -280,33 +280,7 @@ export function BookingMaterialsEditor({
                     ) : null}
                   </p>
                 ) : line.quantity && selectedSymbol !== stockSymbol ? (
-                  <p className="text-amber-700 dark:text-amber-400">
-                    No conversion from {selectedSymbol} to {stockSymbol}. Ask your lab manager to add
-                    it under Inventory → Conversions (e.g. g→kg factor 0.001).
-                  </p>
-                ) : null}
-                {stockSymbol.toLowerCase() === "kg" && !hasGramUnit ? (
-                  <p className="text-amber-700 dark:text-amber-400">
-                    To book in <strong>grams</strong>, your lab needs a unit <strong>g</strong> under
-                    Inventory → Units, then a conversion <strong>g → kg</strong> with factor{" "}
-                    <strong>0.001</strong> under Inventory → Conversions.
-                  </p>
-                ) : null}
-                {stockSymbol.toLowerCase() === "kg" && hasGramUnit && !hasGramConversion ? (
-                  <p className="text-amber-700 dark:text-amber-400">
-                    Unit <strong>g</strong> exists but is not linked to <strong>kg</strong>. Add
-                    conversion <strong>g → kg</strong>, factor <strong>0.001</strong> (400 g = 0.4
-                    kg).
-                  </p>
-                ) : null}
-                {conversionPartners.size > 1 ? (
-                  <p>
-                    Conversions configured for {stockSymbol}:{" "}
-                    {labUnits
-                      .filter((u) => conversionPartners.has(String(u.id)) && String(u.id) !== stockUnitId)
-                      .map((u) => String(u.symbol ?? u.name))
-                      .join(", ") || "none besides stock unit"}
-                  </p>
+                  <p className="text-rose-600">Cannot convert {selectedSymbol} to {stockSymbol}.</p>
                 ) : null}
               </div>
             ) : null}
