@@ -892,8 +892,8 @@ export function MachinesPage() {
               }
               const payload: Record<string, unknown> = {
                 project: Number(values.project),
-                booked_from: values.booked_from,
-                booked_till: values.booked_till,
+                booked_from: localDateTimeToApiIso(String(values.booked_from ?? "")),
+                booked_till: localDateTimeToApiIso(String(values.booked_till ?? "")),
                 notes: values.notes,
               };
               if (values.material_item_id && values.material_quantity) {
