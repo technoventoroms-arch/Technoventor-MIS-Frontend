@@ -293,12 +293,13 @@ export function OrganisationSettingsPage() {
 
   if (!orgId) return null;
 
-  const orgName = organisation?.name ?? `Organisation ${orgId}`;
+  const activeOrgId = orgId;
+  const orgName = organisation?.name ?? `Organisation ${activeOrgId}`;
 
   async function deleteOrganisation() {
     setIsDeleting(true);
     try {
-      await apiClient.remove(endpoints.organisations.detail(orgId), { orgId });
+      await apiClient.remove(endpoints.organisations.detail(activeOrgId), { orgId: activeOrgId });
       toast.success("Organisation deleted.");
       navigate("/");
     } catch (error) {
