@@ -23,6 +23,26 @@ type MachineDevicePanelProps = {
   enabled?: boolean;
 };
 
+export type PanelAccessState = {
+  isForbidden: boolean;
+  message: string;
+};
+
+export function toAccessState(error: unknown): PanelAccessState {
+  const normalized = normalizeApiError(error);
+  const statusCode = typeof normalized.status === "number" ? normalized.status : undefined;
+  if (statusCode === 403) {
+    return {
+      isForbidden: true,
+      message: "You can access machine status, but installer setup code is organisation-admin only.",
+    };
+  }
+  return {
+    isForbidden: false,
+    message: normalized.message,
+  };
+}
+
 function formatLastSeen(iso: string | null | undefined): string {
   if (!iso) return "Never";
   const date = new Date(iso);
@@ -46,12 +66,14 @@ export function MachineDevicePanel({
   const [install, setInstall] = useState<MachineIoTInstallResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isForbiddenState, setIsForbiddenState] = useState(false);
 
   useEffect(() => {
     if (!enabled) {
       setDevice(null);
       setInstall(null);
       setLoadError(null);
+      setIsForbiddenState(false);
       setIsLoading(false);
       return;
     }
@@ -59,6 +81,7 @@ export function MachineDevicePanel({
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
+    setIsForbiddenState(false);
 
     const requests: Promise<unknown>[] = [
       apiClient.get<{ error?: boolean; data?: MachineIoTDeviceResponse }>(
@@ -90,7 +113,9 @@ export function MachineDevicePanel({
       })
       .catch((error) => {
         if (!cancelled) {
-          setLoadError(normalizeApiError(error).message);
+          const accessState = toAccessState(error);
+          setLoadError(accessState.message);
+          setIsForbiddenState(accessState.isForbidden);
           setDevice(null);
           setInstall(null);
           setIsLoading(false);
@@ -138,7 +163,11 @@ export function MachineDevicePanel({
           Checking reader…
         </div>
       ) : loadError ? (
-        <p className="text-sm text-amber-700 dark:text-amber-300 rounded-xl p-3 border border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20">
+        <p className={`text-sm rounded-xl p-3 border ${
+          isForbiddenState
+            ? "text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40"
+            : "text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-950/20"
+        }`}>
           {loadError}
         </p>
       ) : (

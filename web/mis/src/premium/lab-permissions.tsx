@@ -93,9 +93,17 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (!cancelled) {
-          setPermissions(new Set());
-          setRoleName("");
-          setCanManageInventory(false);
+          const activeLabRole = labRoles.find((row) => String(row.lab_id) === String(labId));
+          const fallbackRole = String(activeLabRole?.role_name ?? "");
+          const fallbackInventory =
+            Boolean(activeLabRole?.can_manage_inventory) ||
+            Boolean(uiContext.capabilities.can_manage_inventory_any_lab);
+          const fallbackList = mergeRolePermissions([], fallbackRole, {
+            canManageInventory: fallbackInventory,
+          });
+          setPermissions(new Set(fallbackList));
+          setRoleName(fallbackRole);
+          setCanManageInventory(fallbackInventory);
           setIsOrgAdminFromLab(false);
         }
       })
