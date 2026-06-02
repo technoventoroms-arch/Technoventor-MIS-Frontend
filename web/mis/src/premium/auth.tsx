@@ -14,9 +14,11 @@ import {
   tokenStorage,
   type AuthUser,
 } from "@mono/api_client";
+import type { CurrentUserProfile } from "./profile-to-ui-context";
 
 type AuthState = {
   user: AuthUser | null;
+  profile: CurrentUserProfile | null;
   isAuthenticated: boolean;
   isBootstrapping: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -28,17 +30,22 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => tokenStorage.read()?.user ?? null);
+  const [profile, setProfile] = useState<CurrentUserProfile | null>(
+    () => (tokenStorage.read()?.user as CurrentUserProfile | undefined) ?? null
+  );
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   const refreshUser = useCallback(async () => {
     const session = tokenStorage.read();
     if (!session?.access) {
       setUser(null);
+      setProfile(null);
       return;
     }
 
-    const currentUser = await apiClient.currentUser();
+    const currentUser = (await apiClient.currentUser()) as CurrentUserProfile;
     setUser(currentUser);
+    setProfile(currentUser);
   }, []);
 
   useEffect(() => {
@@ -46,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         tokenStorage.clear();
         setUser(null);
+        setProfile(null);
       })
       .finally(() => setIsBootstrapping(false));
   }, [refreshUser]);
@@ -53,7 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     try {
       const session = await apiClient.login({ email, password });
-      setUser(session.user ?? (await apiClient.currentUser()));
+      const profileResponse = (await apiClient.currentUser()) as CurrentUserProfile;
+      setUser((session.user as AuthUser | undefined) ?? profileResponse);
+      setProfile(profileResponse);
     } catch (error) {
       throw normalizeApiError(error);
     }
@@ -62,18 +72,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     apiClient.logout();
     setUser(null);
+    setProfile(null);
   }, []);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
+      profile,
       isAuthenticated: Boolean(user || tokenStorage.read()?.access),
       isBootstrapping,
       login,
       logout,
       refreshUser,
     }),
-    [isBootstrapping, login, logout, refreshUser, user]
+    [isBootstrapping, login, logout, profile, refreshUser, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,24 +1,17 @@
 import { useMemo } from "react";
-
-import { endpoints, type Entity } from "@mono/api_client";
-
-import { useAuth } from "./auth";
-import { usePagedResource } from "./api-hooks";
-
-type OrgMember = Entity & {
-  user?: { id?: number | string };
-  is_admin?: boolean;
-};
+import { useCurrentUserProfile } from "./use-current-user-profile";
 
 export function useIsOrgAdmin(orgId?: string): boolean {
-  const { user } = useAuth();
-  const members = usePagedResource<OrgMember>(
-    orgId ? endpoints.organisations.members(orgId) : null,
-    orgId
-  );
+  const { accountType, labRoles } = useCurrentUserProfile();
 
   return useMemo(() => {
-    const member = members.rows.find((row) => Number(row.user?.id ?? row.id) === user?.id);
-    return Boolean(member?.is_admin);
-  }, [members.rows, user?.id]);
+    if (accountType === "organisation_owner" && !orgId) {
+      return true;
+    }
+    if (!orgId) return false;
+    return (
+      accountType === "organisation_owner" &&
+      labRoles.some((role) => String(role.organisation_id) === String(orgId))
+    );
+  }, [accountType, labRoles, orgId]);
 }

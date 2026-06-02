@@ -10,7 +10,7 @@ type OrganisationRow = Entity & {
 
 /**
  * Organisation list for the signed-in user.
- * Create organisation: new SaaS accounts (no org yet) or organisation admins adding another tenant.
+ * Create organisation: only users who are already organisation admins.
  */
 export function useOrganisationAccess(enabled = true) {
   const resource = usePagedResource<OrganisationRow>(
@@ -20,8 +20,7 @@ export function useOrganisationAccess(enabled = true) {
   return useMemo(() => {
     const count = resource.rows.length;
     const isOrgAdminSomewhere = resource.rows.some((row) => Boolean(row.is_admin));
-    const canCreateOrganisation =
-      enabled && !resource.isLoading && (count === 0 || isOrgAdminSomewhere);
+    const canCreateOrganisation = enabled && !resource.isLoading && isOrgAdminSomewhere;
     return {
       organisations: resource.rows,
       organisationCount: count,

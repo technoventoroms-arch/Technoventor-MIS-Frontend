@@ -36,7 +36,7 @@ const accountPage = (exportName: keyof typeof import("@/premium/account-pages"))
   lazyElement(() => import("@/premium/account-pages"), exportName);
 
 const workspaceShellChildren: RouteObject[] = [
-  { index: true, element: page("OrganisationSwitcherPage") },
+  { index: true, element: page("DashboardHomePage") },
   { path: "profile", element: accountPage("ProfilePage") },
   { path: "request_lab", element: workflowPage("RequestLabPage") },
   {
