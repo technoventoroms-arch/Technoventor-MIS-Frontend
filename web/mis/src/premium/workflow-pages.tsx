@@ -717,7 +717,18 @@ export function LabDashboardPage() {
     >
       <div className="grid gap-6 xl:grid-cols-3">
         <CompactTable title="Machines" resource={machines} columns={[nameColumn(), statusColumn()]} />
-        <CompactTable title="Inventory" resource={inventory} columns={[nameColumn(), textColumn("quantity", "Qty")]} />
+        <CompactTable
+          title="Inventory"
+          resource={inventory}
+          columns={[
+            nameColumn(),
+            {
+              key: "qty_with_unit",
+              header: "Qty",
+              render: (row) => `${row.quantity ?? "—"} ${row.unit_symbol ?? ""}`.trim(),
+            },
+          ]}
+        />
         <CompactTable title="Projects" resource={projects} columns={[nameColumn(), statusColumn()]} />
       </div>
     </PageFrame>

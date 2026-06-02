@@ -455,7 +455,7 @@ export function LandingPage() {
                 <div className="inv-row">
                   <div className="inv-color" style={{ background: "#3b82f6" }}></div>
                   <span className="inv-name">Acrylic Sheet 3mm</span>
-                  <span className="inv-qty">18 pcs</span>
+                  <span className="inv-qty">18 Nos</span>
                   <div className="inv-bar">
                     <div
                       className="inv-bar-fill"
@@ -479,7 +479,7 @@ export function LandingPage() {
                 <div className="inv-row">
                   <div className="inv-color" style={{ background: "#8b5cf6" }}></div>
                   <span className="inv-name">MDF Board 6mm</span>
-                  <span className="inv-qty">52 pcs</span>
+                  <span className="inv-qty">52 Nos</span>
                   <div className="inv-bar">
                     <div
                       className="inv-bar-fill"
@@ -503,7 +503,7 @@ export function LandingPage() {
                 <div className="inv-row">
                   <div className="inv-color" style={{ background: "#22c55e" }}></div>
                   <span className="inv-name">Copper PCB Blank</span>
-                  <span className="inv-qty">34 pcs</span>
+                  <span className="inv-qty">34 Nos</span>
                   <div className="inv-bar">
                     <div
                       className="inv-bar-fill"
