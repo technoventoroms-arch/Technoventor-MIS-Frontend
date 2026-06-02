@@ -79,7 +79,6 @@ const workspaceShellChildren: RouteObject[] = [
   { path: ":orgId/lab/:labId/approvals", element: workflowPage("ApprovalsPage") },
   { path: ":orgId/lab/:labId/approval", element: workflowPage("ApprovalsPage") },
   { path: ":orgId/lab/:labId/cart", element: workflowPage("CartPage") },
-  { path: ":orgId/lab/:labId/orders", element: workflowPage("MyOrdersPage") },
   { path: ":orgId/lab/:labId/notifications", element: workflowPage("NotificationsPage") },
   { path: ":orgId/lab/:labId/scan-machine", element: workflowPage("ScanMachinePage") },
   { path: ":orgId/lab/:labId/settings", element: accountPage("LabSettingsPage") },

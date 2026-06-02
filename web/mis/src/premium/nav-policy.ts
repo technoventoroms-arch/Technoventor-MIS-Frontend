@@ -175,7 +175,6 @@ function buildLabNav({
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
       { label: "Lab members", to: `${labBase}/users`, icon: Users },
       { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
-      { label: "My orders", to: `${labBase}/orders`, icon: FileText },
       { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
       { label: "Lab settings", to: `${labBase}/edit-lab`, icon: QrCode },
       { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
@@ -210,7 +209,6 @@ function buildLabNav({
       { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
       { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
-      { label: "My orders", to: `${labBase}/orders`, icon: FileText },
       ...accountBasics,
     ];
   }
@@ -233,7 +231,6 @@ function buildLabNav({
   }
   if (can(P.PROJECTS_ORDER)) {
     items.push({ label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart });
-    items.push({ label: "My orders", to: `${labBase}/orders`, icon: FileText });
   }
   if (can(P.ATTENDANCE_READ)) {
     items.push({ label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck });
