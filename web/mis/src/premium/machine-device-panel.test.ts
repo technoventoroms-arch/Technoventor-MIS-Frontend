@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AxiosError } from "axios";
+import { AxiosError, AxiosHeaders } from "axios";
 
 import { toAccessState } from "./machine-device-panel";
 
@@ -14,7 +14,7 @@ describe("toAccessState", () => {
         status: 403,
         statusText: "Forbidden",
         headers: {},
-        config: { headers: {} as Record<string, string> },
+        config: { headers: new AxiosHeaders() },
         data: { message: "Only organisation admins can view installer setup codes." },
       }
     );
