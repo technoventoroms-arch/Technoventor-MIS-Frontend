@@ -40,7 +40,6 @@ import { buildMisNav } from "./nav-policy";
 import { useIsOrgAdmin } from "./use-org-admin";
 import { useOrganisationAccess } from "./use-organisation-access";
 import { useJoinLabVisibility } from "./use-join-lab-visibility";
-import { useNotificationWebSocket } from "./use-notification-websocket";
 import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { entityNameCell } from "./entity-display";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
@@ -204,7 +203,6 @@ function MisShellInner() {
   const [orgLabel, setOrgLabel] = useState<string | null>(null);
   const [labLabel, setLabLabel] = useState<string | null>(null);
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
-  useNotificationWebSocket(notifications, Boolean(orgId));
   const isOrgAdmin = useIsOrgAdmin(orgId);
   const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
     useLabPermissions();
