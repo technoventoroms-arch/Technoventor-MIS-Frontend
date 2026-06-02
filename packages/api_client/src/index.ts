@@ -454,6 +454,7 @@ export const endpoints = {
     unitConversion: (labId: string | number, conversionId: string | number) =>
       `inventory/labs/${labId}/unit-conversions/${conversionId}/`,
     items: (labId: string | number) => `inventory/labs/${labId}/items/`,
+    itemsBulk: (labId: string | number) => `inventory/labs/${labId}/items/bulk/`,
     item: (labId: string | number, itemId: string | number) =>
       `inventory/labs/${labId}/items/${itemId}/`,
     adjust: (labId: string | number, itemId: string | number) =>

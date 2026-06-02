@@ -45,8 +45,9 @@ const LabPermissionsContext = createContext<LabPermissionsContextValue>({
 export function LabPermissionsProvider({ children }: { children: ReactNode }) {
   const { orgId, labId } = useParams();
   const { labRoles, uiContext } = useCurrentUserProfile();
-  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const isOrgAdminFromMembership = useIsOrgAdmin(orgId);
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
+  const [isOrgAdminFromLab, setIsOrgAdminFromLab] = useState(false);
   const [roleName, setRoleName] = useState("");
   const [canManageInventory, setCanManageInventory] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +57,7 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
       setPermissions(new Set());
       setRoleName("");
       setCanManageInventory(false);
+      setIsOrgAdminFromLab(false);
       return;
     }
 
@@ -87,12 +89,14 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
         setPermissions(new Set(list));
         setRoleName(role);
         setCanManageInventory(inventoryGranted);
+        setIsOrgAdminFromLab(Boolean(payload?.is_org_admin));
       })
       .catch(() => {
         if (!cancelled) {
           setPermissions(new Set());
           setRoleName("");
           setCanManageInventory(false);
+          setIsOrgAdminFromLab(false);
         }
       })
       .finally(() => {
@@ -103,6 +107,8 @@ export function LabPermissionsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [labId, labRoles, orgId, uiContext.capabilities.can_manage_inventory_any_lab]);
+
+  const isOrgAdmin = isOrgAdminFromMembership || isOrgAdminFromLab;
 
   const can = useCallback(
     (codename: string) => isOrgAdmin || permissions.has(codename),

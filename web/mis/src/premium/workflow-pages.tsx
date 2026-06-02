@@ -87,6 +87,8 @@ import {
   formatMaterialDetailsSummary,
   formatOrderLinesSummary,
 } from "./inventory-booking";
+import { sortUnitsWithNosFirst } from "./inventory-units";
+import { InventoryBulkTools } from "./inventory-bulk-editor";
 import { MachineDevicePanel } from "./machine-device-panel";
 import { BookingCalendar } from "./booking-calendar";
 import { InviteMemberDialog } from "./invite-member-dialog";
@@ -727,6 +729,7 @@ export function InventoryPage() {
   const { isOrgAdmin, isLabManager, canManageInventory, can } = useLabAccessRole(orgId, labId);
   const [adjusting, setAdjusting] = useState<ApiRow | null>(null);
   const [movementItem, setMovementItem] = useState<ApiRow | null>(null);
+  const [selectedInventoryItemIds, setSelectedInventoryItemIds] = useState<number[]>([]);
   const items = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
   const categories = usePagedResource<ApiRow>(labId ? endpoints.inventory.categories(labId) : null, orgId);
   const units = usePagedResource<ApiRow>(labId ? endpoints.inventory.units(labId) : null, orgId);
@@ -791,14 +794,41 @@ export function InventoryPage() {
           ) : null}
         </TabsList>
         <TabsContent value="items">
+          {canManageLabInventory ? (
+            <InventoryBulkTools
+              labId={String(labId)}
+              orgId={orgId}
+              selectedItems={items.rows.filter((row) => selectedInventoryItemIds.includes(Number(row.id)))}
+              onComplete={async () => {
+                setSelectedInventoryItemIds([]);
+                await items.reload();
+              }}
+            />
+          ) : null}
           <ResourceCrudTable
             title="Inventory items"
             resource={items}
             fields={[
               { name: "name", label: "Name", required: true },
               { name: "sku", label: "SKU", required: true },
-              { name: "type", label: "Type", type: "select", required: true, options: ["REUSABLE", "CONSUMABLE"].map(toOption) },
-              { name: "unit", label: "Unit", type: "select", required: true, options: toOptions(units.rows) },
+              {
+                name: "type",
+                label: "Type",
+                type: "select",
+                required: true,
+                options: ["REUSABLE", "CONSUMABLE"].map(toOption),
+              },
+              {
+                name: "unit",
+                label: "Unit",
+                type: "select",
+                required: true,
+                options: sortUnitsWithNosFirst(units.rows).map((u) => ({
+                  value: String(u.id),
+                  label: `${String(u.name ?? u.title ?? "")} (${String(u.symbol ?? "")})`,
+                })),
+                defaultValue: String(units.rows.find((u) => String(u.symbol ?? "").toLowerCase() === "nos")?.id ?? ""),
+              },
               { name: "category", label: "Category", type: "select", options: toOptions(categories.rows) },
               { name: "threshold", label: "Threshold", type: "number" },
               { name: "image_url", label: "Image URL" },
@@ -810,9 +840,29 @@ export function InventoryPage() {
             deletePath={canManageLabInventory ? (row) => endpoints.inventory.item(labId, row.id) : undefined}
             createLabel="Add item"
             columns={[
+              {
+                key: "select",
+                header: "",
+                render: (row) => (
+                  <input
+                    type="checkbox"
+                    checked={selectedInventoryItemIds.includes(Number(row.id))}
+                    onChange={(e) => {
+                      const id = Number(row.id);
+                      setSelectedInventoryItemIds((prev) =>
+                        e.target.checked ? Array.from(new Set([...prev, id])) : prev.filter((x) => x !== id)
+                      );
+                    }}
+                  />
+                ),
+              },
               nameColumn(),
               textColumn("sku", "SKU"),
-              textColumn("quantity", "Qty"),
+              {
+                key: "quantity_unit",
+                header: "Qty",
+                render: (row) => `${row.quantity ?? "—"} ${row.unit_symbol ?? ""}`.trim(),
+              },
               textColumn("type", "Type"),
               {
                 key: "adjust",
@@ -1547,6 +1597,7 @@ export function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<ApiRow | null>(null);
   const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
   const inventory = usePagedResource<ApiRow>(labId ? endpoints.inventory.items(labId) : null, orgId);
+  const labUnits = usePagedResource<ApiRow>(labId ? endpoints.inventory.units(labId) : null, orgId);
   const orders = usePagedResource<ApiRow>(
     labId && selectedProject ? endpoints.projects.orders(labId, selectedProject.id) : null,
     orgId
@@ -1609,6 +1660,17 @@ export function ProjectsPage() {
               fields={[
                 { name: "inventory_item", label: "Inventory item", type: "select", required: true, options: toOptions(inventory.rows) },
                 { name: "quantity", label: "Quantity", type: "number", required: true },
+                {
+                  name: "unit_id",
+                  label: "Unit",
+                  type: "select",
+                  required: true,
+                  options: sortUnitsWithNosFirst(labUnits.rows).map((u) => ({
+                    value: String(u.id),
+                    label: `${String(u.name ?? u.title ?? "")} (${String(u.symbol ?? "")})`,
+                  })),
+                  defaultValue: String(labUnits.rows.find((u) => String(u.symbol ?? "").toLowerCase() === "nos")?.id ?? ""),
+                },
                 { name: "unit_price", label: "Unit price", type: "number" },
                 { name: "notes", label: "Notes", type: "textarea" },
               ]}
@@ -1624,6 +1686,7 @@ export function ProjectsPage() {
                     inventory_item: values.inventory_item,
                     quantity: values.quantity,
                     unit_price: values.unit_price || "0",
+                    unit_id: values.unit_id,
                   },
                 ],
               })}
@@ -1960,7 +2023,11 @@ export function CartPage() {
         columns={[
           nameColumn(),
           textColumn("sku", "SKU"),
-          textColumn("cart_quantity", "Quantity"),
+          {
+            key: "quantity_display",
+            header: "Quantity",
+            render: (row) => String(row.display_quantity ?? `${row.cart_quantity ?? ""} ${row.stock_unit_symbol ?? row.unit_symbol ?? ""}`),
+          },
           textColumn("return_date", "Return date"),
         ]}
         deletePath={(row) => endpoints.inventory.cartItem(String(labId), row.id)}

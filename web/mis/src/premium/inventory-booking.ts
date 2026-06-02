@@ -53,10 +53,24 @@ export function formatOrderLinesSummary(lines: unknown): string {
   return lines
     .map((line) => {
       const row = line as Record<string, unknown>;
-      const qty = row.quantity ?? "?";
-      const unit = row.unit_symbol ? String(row.unit_symbol) : "";
+      if (row.display_quantity) {
+        const name = row.item_name ? String(row.item_name) : `Item ${row.inventory_item ?? ""}`;
+        return `${row.display_quantity} ${name}`;
+      }
+      const reqQty = row.requested_quantity ?? row.quantity ?? "?";
+      const reqUnit = row.requested_unit_symbol
+        ? String(row.requested_unit_symbol)
+        : row.unit_symbol
+          ? String(row.unit_symbol)
+          : "";
+      const stockQty = row.quantity;
+      const stockUnit = row.stock_unit_symbol ?? row.unit_symbol;
       const name = row.item_name ? String(row.item_name) : `Item ${row.inventory_item ?? ""}`;
-      return unit ? `${qty} ${unit} ${name}` : `${qty} × ${name}`;
+      if (reqUnit && stockUnit && String(reqUnit) !== String(stockUnit) && stockQty !== undefined) {
+        return `${reqQty} ${reqUnit} ${name} (= ${stockQty} ${stockUnit})`;
+      }
+      const unit = reqUnit || (stockUnit ? String(stockUnit) : "");
+      return unit ? `${reqQty} ${unit} ${name}` : `${reqQty} × ${name}`;
     })
     .join("; ");
 }

@@ -24,7 +24,7 @@ import {
 
 import { resolveLabNavPersona } from "./lab-role";
 import { P } from "./permission-codes";
-import { NAV_SECTION_TO_LABEL } from "./profile-to-ui-context";
+import { NAV_SECTION_EXTRA_LABELS, NAV_SECTION_TO_LABEL } from "./profile-to-ui-context";
 
 export function buildMisNav(options: {
   orgId?: string;
@@ -89,9 +89,7 @@ export function buildMisNav(options: {
   }
 
   const orgItems: ShellNavItem[] = [
-    ...(isOrgAdmin
-      ? [{ label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard }]
-      : []),
+    { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
     { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
     ...(isOrgAdmin
       ? [
@@ -112,17 +110,24 @@ export function buildMisNav(options: {
   return applyNavigationSectionFilter(orgItems, navigationSections);
 }
 
+function sectionKeysToAllowedLabels(section: string): string[] {
+  const key = section.trim().toLowerCase();
+  if (!key) return [];
+  const primary = NAV_SECTION_TO_LABEL[key] ?? "";
+  const extras = NAV_SECTION_EXTRA_LABELS[key] ?? [];
+  return [key, primary, ...extras].map((label) => label.trim().toLowerCase()).filter(Boolean);
+}
+
 function applyNavigationSectionFilter(items: ShellNavItem[], navigationSections: string[]): ShellNavItem[] {
   if (!navigationSections.length) return items;
   const allowed = new Set<string>(
-    navigationSections
-      .map((section) => section.trim().toLowerCase())
-      .filter(Boolean)
-      .flatMap((section) => [section, (NAV_SECTION_TO_LABEL[section] ?? "").toLowerCase()])
-      .filter(Boolean)
+    navigationSections.flatMap((section) => sectionKeysToAllowedLabels(section))
   );
+  // Product requirement: org-level sidebar essentials should never disappear by RBAC section misconfiguration.
+  const alwaysVisible = new Set(["dashboard", "labs", "profile"]);
   return items.filter((item) => {
     const normalizedLabel = item.label.trim().toLowerCase();
+    if (alwaysVisible.has(normalizedLabel)) return true;
     const normalizedWords = normalizedLabel.split(" ");
     return (
       allowed.has(normalizedLabel) ||
@@ -182,6 +187,7 @@ function buildLabNav({
     const managerItems: ShellNavItem[] = [
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
+      { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
       { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
       { label: "Booking calendar", to: `${labBase}/bookings`, icon: CalendarDays },
       { label: "Lab settings", to: `${labBase}/edit-lab`, icon: QrCode },
