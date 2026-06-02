@@ -40,6 +40,7 @@ export type ResourceField = {
   helper?: string;
   defaultValue?: string;
   options?: FieldOption[];
+  onValueChange?: (value: string, values: Record<string, string>) => Record<string, string>;
 };
 
 export type ResourceAction<T extends Entity> = {
@@ -311,7 +312,12 @@ export function ResourceForm({
             key={field.name}
             field={field}
             value={values[field.name] ?? ""}
-            onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))}
+            onChange={(value) =>
+              setValues((current) => {
+                const nextValues = { ...current, [field.name]: value };
+                return { ...nextValues, ...(field.onValueChange?.(value, nextValues) ?? {}) };
+              })
+            }
           />
         ))}
       </div>

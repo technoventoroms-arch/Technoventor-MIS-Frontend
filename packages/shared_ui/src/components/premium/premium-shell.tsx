@@ -8,7 +8,7 @@ import {
   Search,
 } from "lucide-react";
 
-import { TECHNOVENTOR_LOGO_CLASS, TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
+import { MAKERSPACE_OPS_LOGO_CLASS, MAKERSPACE_OPS_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { cn } from "@mono/shared_ui/lib/utils";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Badge } from "@mono/shared_ui/components/ui/badge";
@@ -54,7 +54,7 @@ export type ShellNotification = {
 export function PremiumShell({
   appName,
   appSubtitle,
-  logoSrc = TECHNOVENTOR_LOGO_SRC,
+  logoSrc = MAKERSPACE_OPS_LOGO_SRC,
   navItems,
   userName,
   userEmail,
@@ -158,8 +158,8 @@ export function PremiumShell({
             {logoSrc ? (
               <img
                 src={logoSrc}
-                alt="Technoventor Innovations"
-                className={cn(TECHNOVENTOR_LOGO_CLASS, "rounded-md bg-white px-2 py-1.5")}
+                alt="MakerSpace Ops"
+                className={cn(MAKERSPACE_OPS_LOGO_CLASS, "rounded-md bg-white px-2 py-1.5")}
               />
             ) : (
               <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-500 text-xs font-bold text-white shadow-lg shadow-teal-600/25">

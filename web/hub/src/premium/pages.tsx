@@ -24,9 +24,9 @@ import {
   StatusBadge,
   type PremiumColumn,
   type ShellNavItem,
-  TechnoventorLogo,
+  MakerSpaceOpsLogo,
 } from "@mono/shared_ui/components/premium";
-import { TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
+import { MAKERSPACE_OPS_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
@@ -123,7 +123,7 @@ export function HubLoginPage() {
             Operator sign in
           </h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Access the platform control plane with your Technoventor account.
+            Access the platform control plane with your MakerSpace Ops account.
           </p>
           <div className="mt-8 space-y-5">
             <div className="space-y-2">
@@ -163,7 +163,7 @@ export function HubLoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_10%_90%,rgba(13,148,136,0.2),transparent_30%)]" />
         <div className="relative">
           <div className="mb-8 inline-block rounded-2xl bg-white px-5 py-4 shadow-lg shadow-black/20">
-            <TechnoventorLogo variant="hero" />
+            <MakerSpaceOpsLogo variant="hero" />
           </div>
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-teal-200">
             Platform operations console
@@ -205,9 +205,9 @@ export function HubShell() {
 
   return (
     <PremiumShell
-      appName="Technoventor Hub"
+      appName="MakerSpace Ops Hub"
       appSubtitle="Admin Hub"
-      logoSrc={TECHNOVENTOR_LOGO_SRC}
+      logoSrc={MAKERSPACE_OPS_LOGO_SRC}
       navItems={navItems}
       contexts={contexts}
       userName={fullName(user)}

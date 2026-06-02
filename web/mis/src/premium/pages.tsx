@@ -25,9 +25,9 @@ import {
   StatusBadge,
   type PremiumColumn,
   type ShellNavItem,
-  TechnoventorLogo,
+  MakerSpaceOpsLogo,
 } from "@mono/shared_ui/components/premium";
-import { TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
+import { MAKERSPACE_OPS_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
@@ -115,10 +115,10 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(13,148,136,0.24),transparent_30%)]" />
         <div className="relative">
           <div className="mb-8 inline-block rounded-2xl bg-white px-5 py-4 shadow-lg shadow-black/20">
-            <TechnoventorLogo variant="hero" />
+            <MakerSpaceOpsLogo variant="hero" />
           </div>
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-teal-200">
-            Technoventor MIS
+            MakerSpace Ops MIS
           </p>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
             Run every lab, machine, inventory item, and project from one cockpit.
@@ -152,7 +152,7 @@ export function LoginPage() {
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Sign in with your Technoventor MIS account.
+            Sign in with your MakerSpace Ops MIS account.
           </p>
           <div className="mt-8 space-y-5">
             <div className="space-y-2">
@@ -298,9 +298,9 @@ function MisShellInner() {
 
   return (
     <PremiumShell
-      appName="Technoventor MIS"
+      appName="MakerSpace Ops MIS"
       appSubtitle={permissionsLoading && labId ? "Loading access…" : "Laboratory operations"}
-      logoSrc={TECHNOVENTOR_LOGO_SRC}
+      logoSrc={MAKERSPACE_OPS_LOGO_SRC}
       navItems={navItems}
       contexts={contexts}
       notifications={notifications.rows.slice(0, 20).map((row) => ({
@@ -830,7 +830,7 @@ export function NotFoundPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
       <EmptyState
         title="Page not found"
-        description="The route you requested does not exist in Technoventor MIS."
+        description="The route you requested does not exist in MakerSpace Ops MIS."
       />
     </div>
   );
@@ -1105,6 +1105,48 @@ export function RegisterPage() {
     consumeApiError,
   } = useSignupForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [organisationStep, setOrganisationStep] = useState(1);
+
+  const isOrganisationSignup = values.signupType === "organisation";
+  const currentStep = isOrganisationSignup ? organisationStep : 1;
+  const totalSteps = isOrganisationSignup ? 3 : 1;
+
+  useEffect(() => {
+    if (!isOrganisationSignup) {
+      setOrganisationStep(1);
+    }
+  }, [isOrganisationSignup]);
+
+  function validateCurrentStep(): string | null {
+    if (currentStep === 1) {
+      if (!values.firstName || !values.lastName || !values.email || !values.password) {
+        return "Please complete your account details before continuing.";
+      }
+      return null;
+    }
+    if (currentStep === 2) {
+      if (!values.organisationName || !values.organisationSlug) {
+        return "Organisation name and slug are required.";
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function handleStepNext() {
+    const stepError = validateCurrentStep();
+    if (stepError) {
+      setError(stepError);
+      return;
+    }
+    setError(null);
+    setOrganisationStep((previous) => Math.min(previous + 1, 3));
+  }
+
+  function handleStepBack() {
+    setError(null);
+    setOrganisationStep((previous) => Math.max(previous - 1, 1));
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1132,10 +1174,10 @@ export function RegisterPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(20,184,166,0.35),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(13,148,136,0.24),transparent_30%)]" />
         <div className="relative">
           <div className="mb-8 inline-block rounded-2xl bg-white px-5 py-4 shadow-lg shadow-black/20">
-            <TechnoventorLogo variant="hero" />
+            <MakerSpaceOpsLogo variant="hero" />
           </div>
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-teal-200">
-            Technoventor MIS
+            MakerSpace Ops MIS
           </p>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
             Create your multi-tenant laboratory workspace today.
@@ -1170,18 +1212,47 @@ export function RegisterPage() {
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Create an account, then start a new organisation or join an existing lab.
           </p>
+          {isOrganisationSignup ? (
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
+              <span>Step {currentStep} of {totalSteps}</span>
+              <span>
+                {currentStep === 1
+                  ? "Account details"
+                  : currentStep === 2
+                    ? "Organisation profile"
+                    : "Address details"}
+              </span>
+            </div>
+          ) : null}
           <div className="mt-6 space-y-4">
             <SignupTypeSelector value={values.signupType} onChange={setSignupType} />
-            <MemberSignupFields
-              firstName={values.firstName}
-              lastName={values.lastName}
-              email={values.email}
-              phoneNumber={values.phoneNumber}
-              password={values.password}
-              onChange={setField}
-            />
-            {values.signupType === "organisation" ? (
+            {currentStep === 1 ? (
+              <MemberSignupFields
+                firstName={values.firstName}
+                lastName={values.lastName}
+                email={values.email}
+                phoneNumber={values.phoneNumber}
+                password={values.password}
+                onChange={setField}
+              />
+            ) : null}
+            {isOrganisationSignup && currentStep === 2 ? (
               <OrganisationSignupFields
+                mode="profile"
+                organisationName={values.organisationName}
+                organisationSlug={values.organisationSlug}
+                organisationDescription={values.organisationDescription}
+                organisationPhone={values.organisationPhone}
+                organisationWebsite={values.organisationWebsite}
+                organisationLogoUrl={values.organisationLogoUrl}
+                address={values.organisationAddress}
+                onFieldChange={setField}
+                onAddressFieldChange={setAddressField}
+              />
+            ) : null}
+            {isOrganisationSignup && currentStep === 3 ? (
+              <OrganisationSignupFields
+                mode="address"
                 organisationName={values.organisationName}
                 organisationSlug={values.organisationSlug}
                 organisationDescription={values.organisationDescription}
@@ -1199,9 +1270,32 @@ export function RegisterPage() {
               {error}
             </div>
           ) : null}
-          <Button className="mt-7 w-full" size="lg" disabled={isSubmitting}>
-            {isSubmitting ? "Creating account..." : "Register & Continue"}
-          </Button>
+          {isOrganisationSignup ? (
+            <div className="mt-7 flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={handleStepBack}
+                disabled={currentStep === 1 || isSubmitting}
+              >
+                Back
+              </Button>
+              {currentStep < totalSteps ? (
+                <Button type="button" className="flex-1" onClick={handleStepNext}>
+                  Continue
+                </Button>
+              ) : (
+                <Button className="flex-1" size="lg" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating account..." : "Register & Continue"}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Button className="mt-7 w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? "Creating account..." : "Register & Continue"}
+            </Button>
+          )}
           <div className="text-center mt-5">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Already have an account?{" "}

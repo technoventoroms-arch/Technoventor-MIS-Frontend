@@ -1,4 +1,4 @@
-export * from "./technoventor-logo";
+export * from "./makerspaceops-logo";
 export * from "./premium-shell";
 export * from "./premium-card";
 export * from "./premium-data-table";

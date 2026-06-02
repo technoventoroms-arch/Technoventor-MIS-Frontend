@@ -56,7 +56,7 @@ export function LandingPage() {
               <path d="M12 7v10M2 7l10 5 10-5" />
             </svg>
           </div>
-          Technoventor
+          MakerSpace Ops
         </Link>
         <div className="nav-links">
           <a href="#features" className="nav-link">
@@ -541,7 +541,7 @@ export function LandingPage() {
                   <div className="step-body">
                     <div className="step-title">Get proactive alerts</div>
                     <div className="step-desc">
-                      Set a minimum threshold per item. Technoventor flags
+                      Set a minimum threshold per item. MakerSpace Ops flags
                       low-stock before it becomes a problem for your
                       students.
                     </div>
@@ -602,7 +602,7 @@ export function LandingPage() {
                     <div className="step-title">Start & stop your session</div>
                     <div className="step-desc">
                       Tap Start to unlock the machine. Tap Stop when done —
-                      Technoventor logs time and can trigger hardware relay
+                      MakerSpace Ops logs time and can trigger hardware relay
                       control.
                     </div>
                   </div>
@@ -888,7 +888,7 @@ export function LandingPage() {
             <div className="testi-card">
               <div className="testi-quote-mark">"</div>
               <p className="testi-text">
-                Technoventor completely replaced our spreadsheets and WhatsApp
+                MakerSpace Ops completely replaced our spreadsheets and WhatsApp
                 group. Booking conflicts dropped to zero in the first week.
               </p>
               <div className="testi-person">
@@ -974,7 +974,7 @@ export function LandingPage() {
             <p className="api-desc">
               All platform data and functionality is available via our open REST
               API. Import existing data, integrate your favourite tools, or
-              build custom extensions on top of Technoventor.
+              build custom extensions on top of MakerSpace Ops.
             </p>
             <a
               href="#"
@@ -1107,7 +1107,7 @@ export function LandingPage() {
                     <path d="M12 7v10M2 7l10 5 10-5" />
                   </svg>
                 </div>
-                Technoventor
+                MakerSpace Ops
               </Link>
               <p className="footer-tagline">
                 A modern multi-tenant SaaS platform for managing makerspaces,
@@ -1174,7 +1174,7 @@ export function LandingPage() {
           </div>
           <div className="footer-bottom">
             <p className="footer-copy">
-              © 2026 Technoventor Innovations — A Makerspace Company
+              © 2026 MakerSpace Ops
             </p>
             <div className="footer-social">
               <a href="#">Twitter</a>

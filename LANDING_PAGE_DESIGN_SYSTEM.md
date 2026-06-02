@@ -1,10 +1,10 @@
-# Technoventor Innovations — Premium Frontend Design System & Aesthetics
-This document serves as the absolute aesthetic reference for the **Technoventor Innovations** landing page and related marketing web applications. It details the color schemes, typography, layout container properties, borders, form inputs, status badges, hover transitions, and animations extracted directly from the MIS and Admin Hub application surfaces.
+# MakerSpace Ops — Premium Frontend Design System & Aesthetics
+This document serves as the absolute aesthetic reference for the **MakerSpace Ops** landing page and related marketing web applications. It details the color schemes, typography, layout container properties, borders, form inputs, status badges, hover transitions, and animations extracted directly from the MIS and Admin Hub application surfaces.
 
 ---
 
 ## 🎨 Color Palette & Themes
-The Technoventor web application is built with complete Light Mode and Dark Mode support. Colors are defined in **OKLCH** format (for modern high-definition CSS rendering) with **HEX equivalents** provided for convenience.
+The MakerSpace Ops web application is built with complete Light Mode and Dark Mode support. Colors are defined in **OKLCH** format (for modern high-definition CSS rendering) with **HEX equivalents** provided for convenience.
 
 ### 🌟 Core Colors
 | Token | OKLCH Value | HEX (Light Mode) | HEX (Dark Mode) | Purpose / Usage |
@@ -207,17 +207,17 @@ Both scrollbars inside the application are custom-styled to remain subtle and th
 ---
 
 ## 🏢 Brand Logos
-*   **Logo Source:** `/technoventor-logo.png`
-*   **Logo Text Alt:** `Technoventor Innovations — A Makerspace Company`
+*   **Logo Source:** `/makerspaceops-logo.jpeg`
+*   **Logo Text Alt:** `MakerSpace Ops`
 *   **Hero variant class:** `h-20 w-auto max-w-[280px] object-contain object-left` (for auth/hero pages)
 *   **Default Shell variant class:** `h-14 w-auto max-w-[200px] object-contain object-left` (for sidebars/headers)
 
 ---
 
 ## 🚀 Product Overview (What the Website is About)
-**Technoventor Innovations** is a modern, premium multi-tenant Software-as-a-Service (SaaS) platform built for managing **Makerspaces, FabLabs, and institutional/academic laboratories**. 
+**MakerSpace Ops** is a modern, premium multi-tenant Software-as-a-Service (SaaS) platform built for managing **Makerspaces, FabLabs, and institutional/academic laboratories**. 
 
-Running a collaborative physical space (e.g., rapid prototyping facilities, woodshops, electronics labs, 3D printing hubs) involves coordination between members, expensive machinery, raw inventory, and safety compliance. Technoventor MIS acts as the digital nervous system for these spaces, offering separate workflows for:
+Running a collaborative physical space (e.g., rapid prototyping facilities, woodshops, electronics labs, 3D printing hubs) involves coordination between members, expensive machinery, raw inventory, and safety compliance. MakerSpace Ops MIS acts as the digital nervous system for these spaces, offering separate workflows for:
 1.  **Students:** Standard members who book machines, track active projects, request inventory materials, check in/out, and check their orders.
 2.  **Lab Managers:** Facilitators responsible for review approvals (reservations, materials orders, regularization), checking equipment status, and monitoring stock levels.
 3.  **Organisation Admins:** Platform tenants who manage subscriptions/billing, configure default laboratory settings, and control roles/permissions.

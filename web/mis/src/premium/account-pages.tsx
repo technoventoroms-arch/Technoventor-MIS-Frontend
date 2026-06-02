@@ -163,7 +163,7 @@ export function ProfilePage() {
     <PageFrame
       eyebrow="Account"
       title="Profile"
-      description="Manage your profile details used across Technoventor MIS."
+      description="Manage your profile details used across MakerSpace Ops MIS."
       metrics={[
         metric("Account", user?.email ?? "Signed in", "Profile details", <UserCircle />),
       ]}

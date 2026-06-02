@@ -87,7 +87,7 @@ import {
   formatMaterialDetailsSummary,
   formatOrderLinesSummary,
 } from "./inventory-booking";
-import { sortUnitsWithNosFirst } from "./inventory-units";
+import { defaultUnitIdForItem, sortUnitsWithNosFirst } from "./inventory-units";
 import { InventoryBulkTools } from "./inventory-bulk-editor";
 import { MachineDevicePanel } from "./machine-device-panel";
 import { BookingCalendar } from "./booking-calendar";
@@ -1669,7 +1669,19 @@ export function ProjectsPage() {
               title="Inventory orders"
               resource={orders}
               fields={[
-                { name: "inventory_item", label: "Inventory item", type: "select", required: true, options: toOptions(inventory.rows) },
+                {
+                  name: "inventory_item",
+                  label: "Inventory item",
+                  type: "select",
+                  required: true,
+                  options: toOptions(inventory.rows),
+                  onValueChange: (itemId) => {
+                    const selectedItem = inventory.rows.find((row) => String(row.id) === String(itemId));
+                    return {
+                      unit_id: selectedItem ? defaultUnitIdForItem(selectedItem, labUnits.rows) : "",
+                    };
+                  },
+                },
                 { name: "quantity", label: "Quantity", type: "number", required: true },
                 {
                   name: "unit_id",
@@ -1682,7 +1694,6 @@ export function ProjectsPage() {
                   })),
                   defaultValue: String(labUnits.rows.find((u) => String(u.symbol ?? "").toLowerCase() === "nos")?.id ?? ""),
                 },
-                { name: "unit_price", label: "Unit price", type: "number" },
                 { name: "notes", label: "Notes", type: "textarea" },
               ]}
               orgId={orgId}
@@ -1696,7 +1707,6 @@ export function ProjectsPage() {
                   {
                     inventory_item: values.inventory_item,
                     quantity: values.quantity,
-                    unit_price: values.unit_price || "0",
                     unit_id: values.unit_id,
                   },
                 ],
