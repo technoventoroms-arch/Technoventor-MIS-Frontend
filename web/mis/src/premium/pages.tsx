@@ -31,9 +31,10 @@ import { TECHNOVENTOR_LOGO_SRC } from "@mono/shared_ui/lib/brand";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
-import { apiClient, endpoints, normalizeApiError, type Entity } from "@mono/api_client";
+import { apiClient, endpoints, type Entity } from "@mono/api_client";
 
 import { useAuth } from "./auth";
+import { useCurrentUserProfile } from "./use-current-user-profile";
 import { usePagedResource } from "./api-hooks";
 import { LabPermissionsProvider, useLabPermissions } from "./lab-permissions";
 import { buildMisNav } from "./nav-policy";
@@ -44,6 +45,10 @@ import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { entityNameCell } from "./entity-display";
 import { ManagerLabDashboard } from "./manager-lab-dashboard";
 import { resolveLabNavPersona } from "./lab-role";
+import { SignupTypeSelector } from "./signup/signup-type-selector";
+import { MemberSignupFields } from "./signup/member-signup-fields";
+import { OrganisationSignupFields } from "./signup/organisation-signup-fields";
+import { useSignupForm } from "./signup/use-signup-form";
 
 type Metric = {
   label: string;
@@ -197,17 +202,19 @@ export function LoginPage() {
 
 function MisShellInner() {
   const { user, logout } = useAuth();
+  const { uiContext } = useCurrentUserProfile();
   const params = useParams();
   const orgId = params.orgId;
   const labId = params.labId;
   const [orgLabel, setOrgLabel] = useState<string | null>(null);
   const [labLabel, setLabLabel] = useState<string | null>(null);
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
-  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const isOrgAdmin = useIsOrgAdmin(orgId) || uiContext.primary_experience === "organisation_owner";
   const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
     useLabPermissions();
   const { canCreateOrganisation } = useOrganisationAccess(!orgId);
   const { showJoinLab } = useJoinLabVisibility();
+  const canCreateFromContext = uiContext.capabilities.can_create_organisation || canCreateOrganisation;
 
   useEffect(() => {
     if (!orgId) {
@@ -260,17 +267,21 @@ function MisShellInner() {
         labId,
         isOrgAdmin,
         roleName,
-        canCreateOrganisation,
+        canCreateOrganisation: canCreateFromContext,
         showJoinLab,
         can,
         canAny,
         canManageInventory,
+        navigationSections: uiContext.navigation_sections,
+        capabilities: uiContext.capabilities,
       }),
     [
       can,
       canAny,
-      canCreateOrganisation,
+      canCreateFromContext,
       canManageInventory,
+      uiContext.capabilities,
+      uiContext.navigation_sections,
       isOrgAdmin,
       labId,
       orgId,
@@ -282,6 +293,7 @@ function MisShellInner() {
     orgId ? { label: "Organisation", value: orgLabel ?? "Loading…" } : null,
     labId ? { label: "Lab", value: labLabel ?? "Loading…" } : null,
     labId && roleName ? { label: "Role", value: roleName } : null,
+    uiContext.badges.length ? { label: "Badges", value: uiContext.badges.join(", ") } : null,
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
@@ -319,8 +331,10 @@ export function MisShell() {
 
 export function OrganisationSwitcherPage() {
   const { user } = useAuth();
+  const { uiContext } = useCurrentUserProfile();
   const { resource, organisationCount, canCreateOrganisation } = useOrganisationAccess(true);
   const { showJoinLab } = useJoinLabVisibility();
+  const canCreate = uiContext.capabilities.can_create_organisation || canCreateOrganisation;
   const displayName = fullName(user);
   const firstName = displayName.split(" ")[0] || "there";
 
@@ -328,16 +342,28 @@ export function OrganisationSwitcherPage() {
     resource.error?.message ??
     (organisationCount > 0
       ? "Open an organisation to reach your labs. Tools in the sidebar depend on your role in each lab."
-      : canCreateOrganisation
+      : canCreate
         ? "Create your organisation, or join a lab if you were invited to an existing team."
         : "Request access to a lab or accept an invite from your administrator.");
+  const onboardingMessage =
+    uiContext.dashboard_variant === "owner_dashboard"
+      ? `Organisation created: ${
+          Boolean((uiContext.onboarding_state as { organisation_created?: boolean }).organisation_created)
+            ? "yes"
+            : "no"
+        } • Labs: ${(uiContext.onboarding_state as { labs_count?: number }).labs_count ?? 0}`
+      : `Joined organisations: ${
+          (uiContext.onboarding_state as { joined_organisations_count?: number }).joined_organisations_count ?? 0
+        } • Pending invites: ${
+          (uiContext.onboarding_state as { pending_invites_count?: number }).pending_invites_count ?? 0
+        }`;
 
   return (
     <div className="space-y-8">
       <SectionHeader
         eyebrow="Workspace"
         title={organisationCount > 0 ? `Welcome back, ${firstName}` : "Your organisations"}
-        description={pageDescription}
+        description={`${pageDescription} ${onboardingMessage}`}
         actions={
           <div className="flex flex-wrap gap-2">
             {showJoinLab ? (
@@ -345,7 +371,7 @@ export function OrganisationSwitcherPage() {
                 <Link to="/request_lab">Join a lab</Link>
               </Button>
             ) : null}
-            {canCreateOrganisation ? (
+            {canCreate ? (
               <Button asChild className="bg-teal-600 hover:bg-teal-700">
                 <Link to="/create-organization">
                   <Plus className="size-4" />
@@ -386,13 +412,47 @@ export function OrganisationSwitcherPage() {
         onPrevious={resource.loadPrevious}
         emptyTitle="No organisations yet"
         emptyDescription={
-          canCreateOrganisation
+          canCreate
             ? "Create your first organisation, or join a lab if you were invited to an existing team."
             : "Ask your administrator for an invite, or browse labs to request membership."
         }
       />
     </div>
   );
+}
+
+export function DashboardHomePage() {
+  const { uiContext, labRoles } = useCurrentUserProfile();
+
+  if (uiContext.default_context.default_organisation_id && uiContext.default_context.default_lab_id) {
+    return (
+      <Navigate
+        to={`/${uiContext.default_context.default_organisation_id}/lab/${uiContext.default_context.default_lab_id}/dashboard`}
+        replace
+      />
+    );
+  }
+
+  if (uiContext.default_context.default_organisation_id) {
+    const orgId = uiContext.default_context.default_organisation_id;
+    return (
+      <Navigate
+        to={
+          uiContext.dashboard_variant === "owner_dashboard"
+            ? `/${orgId}/dashboard`
+            : `/${orgId}/labs`
+        }
+        replace
+      />
+    );
+  }
+
+  const roleDefault = labRoles[0];
+  if (roleDefault) {
+    return <Navigate to={`/${roleDefault.organisation_id}/lab/${roleDefault.lab_id}/dashboard`} replace />;
+  }
+
+  return <OrganisationSwitcherPage />;
 }
 
 export function OrgDashboardPage() {
@@ -507,10 +567,10 @@ export function LabDashboardPage() {
     return <AdminLabDashboard labName={labName} />;
   }
 
-  return <ResearcherLabDashboard labName={labName} />;
+  return <StudentLabDashboard labName={labName} />;
 }
 
-function ResearcherLabDashboard({ labName }: { labName?: string }) {
+function StudentLabDashboard({ labName }: { labName?: string }) {
   const { orgId, labId } = useParams();
   const { can, canAny, roleName, canManageInventory, isLoading: permissionsLoading } =
     useLabPermissions();
@@ -1024,7 +1084,8 @@ function fullName(user: { first_name?: string; last_name?: string; email?: strin
 
 export function RedirectToOrgDashboard() {
   const { orgId } = useParams();
-  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { uiContext } = useCurrentUserProfile();
+  const isOrgAdmin = useIsOrgAdmin(orgId) || uiContext.dashboard_variant === "owner_dashboard";
   if (!orgId) return <Navigate to="/" replace />;
   return <Navigate to={isOrgAdmin ? `/${orgId}/dashboard` : `/${orgId}/labs`} replace />;
 }
@@ -1032,35 +1093,34 @@ export function RedirectToOrgDashboard() {
 export function RegisterPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const {
+    values,
+    payload,
+    error,
+    setError,
+    setSignupType,
+    setField,
+    setAddressField,
+    validate,
+    consumeApiError,
+  } = useSignupForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
     try {
-      await apiClient.create("users/register/", {
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber,
-        password,
-      });
-
-      await login(email, password);
+      await apiClient.create("users/register/", payload);
+      await login(values.email, values.password);
       navigate("/", { replace: true });
     } catch (regError) {
-      setError(
-        regError instanceof Error
-          ? regError.message
-          : normalizeApiError(regError).message || "Unable to register account"
-      );
+      consumeApiError(regError);
     } finally {
       setIsSubmitting(false);
     }
@@ -1111,59 +1171,28 @@ export function RegisterPage() {
             Create an account, then start a new organisation or join an existing lab.
           </p>
           <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last name</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
+            <SignupTypeSelector value={values.signupType} onChange={setSignupType} />
+            <MemberSignupFields
+              firstName={values.firstName}
+              lastName={values.lastName}
+              email={values.email}
+              phoneNumber={values.phoneNumber}
+              password={values.password}
+              onChange={setField}
+            />
+            {values.signupType === "organisation" ? (
+              <OrganisationSignupFields
+                organisationName={values.organisationName}
+                organisationSlug={values.organisationSlug}
+                organisationDescription={values.organisationDescription}
+                organisationPhone={values.organisationPhone}
+                organisationWebsite={values.organisationWebsite}
+                organisationLogoUrl={values.organisationLogoUrl}
+                address={values.organisationAddress}
+                onFieldChange={setField}
+                onAddressFieldChange={setAddressField}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </div>
+            ) : null}
           </div>
           {error ? (
             <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

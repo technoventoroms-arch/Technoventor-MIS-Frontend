@@ -381,7 +381,7 @@ export function LandingPage() {
               </div>
               <h3 className="feat-title">Material checkout cart</h3>
               <p className="feat-desc">
-                Researchers add materials to a cart, attach them to a project,
+                Students add materials to a cart, attach them to a project,
                 and request checkout — all in a clean, streamlined workflow with
                 manager approval.
               </p>
@@ -543,7 +543,7 @@ export function LandingPage() {
                     <div className="step-desc">
                       Set a minimum threshold per item. Technoventor flags
                       low-stock before it becomes a problem for your
-                      researchers.
+                      students.
                     </div>
                   </div>
                 </div>
@@ -771,7 +771,7 @@ export function LandingPage() {
             <div className="role-card">
               <div className="role-card-accent"></div>
               <div className="role-num">01</div>
-              <h3 className="role-title">Researcher / Student</h3>
+              <h3 className="role-title">Student</h3>
               <p className="role-desc">
                 Standard members who interact with the space daily.
               </p>
@@ -924,7 +924,7 @@ export function LandingPage() {
               <div className="testi-quote-mark">"</div>
               <p className="testi-text">
                 Finally a platform that understands multi-role workflows. Our
-                researchers, managers, and admins all see exactly what they need
+                students, managers, and admins all see exactly what they need
                 — nothing more.
               </p>
               <div className="testi-person">
@@ -948,7 +948,7 @@ export function LandingPage() {
         <div className="stats-bar-inner">
           <div className="stat-item">
             <div className="stat-num">200+</div>
-            <div className="stat-label">Active researchers onboarded</div>
+            <div className="stat-label">Active students onboarded</div>
           </div>
           <div className="stat-item">
             <div className="stat-num">12+</div>

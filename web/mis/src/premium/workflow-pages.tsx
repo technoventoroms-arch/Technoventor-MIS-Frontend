@@ -963,7 +963,7 @@ export function BookingCalendarPage() {
 
   if (!orgId || !labId) return null;
 
-  const mode = isOrgAdmin || isLabManager ? "manager" : "researcher";
+  const mode = isOrgAdmin || isLabManager ? "manager" : "student";
 
   return (
     <PageFrame

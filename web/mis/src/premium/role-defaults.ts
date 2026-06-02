@@ -2,7 +2,7 @@ import { P, type PermissionCode } from "./permission-codes";
 
 /**
  * Fallback IAM codenames when a lab role exists in the DB but has no RolePermission rows yet.
- * "Lab Member" is legacy; it is treated as Researcher everywhere in the app.
+ * "Lab Member" and legacy "Researcher" labels both map to student.
  */
 export const RESEARCHER_PERMISSIONS: PermissionCode[] = [
   P.LABS_READ,
@@ -16,7 +16,7 @@ export const RESEARCHER_PERMISSIONS: PermissionCode[] = [
 ];
 
 export const ROLE_DEFAULT_PERMISSIONS: Record<string, PermissionCode[]> = {
-  researcher: RESEARCHER_PERMISSIONS,
+  student: RESEARCHER_PERMISSIONS,
   "lab manager": [
     P.LABS_READ,
     P.LABS_WRITE,
@@ -39,7 +39,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, PermissionCode[]> = {
 
 export function normalizeRoleKey(roleName: string): string {
   const key = roleName.trim().toLowerCase();
-  if (key === "lab member") return "researcher";
+  if (key === "lab member" || key === "researcher") return "student";
   return key;
 }
 
@@ -62,7 +62,7 @@ export function mergeRolePermissions(
   const key = normalizeRoleKey(roleName);
   const base =
     apiPermissions.length > 0 ? apiPermissions : defaultPermissionsForRole(roleName);
-  if (key === "researcher") {
+  if (key === "student") {
     const allowed = new Set<string>(RESEARCHER_PERMISSIONS);
     return [...new Set([...base, ...RESEARCHER_PERMISSIONS])].filter((codename) =>
       allowed.has(codename)

@@ -24,6 +24,7 @@ import {
 
 import { resolveLabNavPersona } from "./lab-role";
 import { P } from "./permission-codes";
+import { NAV_SECTION_TO_LABEL } from "./profile-to-ui-context";
 
 export function buildMisNav(options: {
   orgId?: string;
@@ -35,6 +36,13 @@ export function buildMisNav(options: {
   can: (codename: string) => boolean;
   canAny: (...codenames: string[]) => boolean;
   canManageInventory?: boolean;
+  navigationSections?: string[];
+  capabilities?: {
+    can_create_organisation?: boolean;
+    can_manage_org_settings?: boolean;
+    can_invite_members?: boolean;
+    can_view_billing?: boolean;
+  };
 }): ShellNavItem[] {
   const {
     orgId,
@@ -46,11 +54,13 @@ export function buildMisNav(options: {
     can,
     canAny,
     canManageInventory = false,
+    navigationSections = [],
+    capabilities = {},
   } = options;
   const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
 
   if (!orgId) {
-    return [
+    const rootItems: ShellNavItem[] = [
       { label: "My organisations", to: "/", icon: Building2, end: true },
       ...(canCreateOrganisation
         ? [{ label: "Create organisation", to: "/create-organization", icon: Plus }]
@@ -60,6 +70,7 @@ export function buildMisNav(options: {
         : []),
       profileItem,
     ];
+    return applyNavigationSectionFilter(rootItems, navigationSections);
   }
 
   const orgBase = `/${orgId}`;
@@ -77,7 +88,7 @@ export function buildMisNav(options: {
     });
   }
 
-  return [
+  const orgItems: ShellNavItem[] = [
     ...(isOrgAdmin
       ? [{ label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard }]
       : []),
@@ -85,7 +96,12 @@ export function buildMisNav(options: {
     ...(isOrgAdmin
       ? [
           { label: "Users", to: `${orgBase}/users`, icon: Users },
-          { label: "Organization", to: `${orgBase}/organization`, icon: Settings },
+          ...(capabilities.can_manage_org_settings
+            ? [{ label: "Organization", to: `${orgBase}/organization`, icon: Settings }]
+            : []),
+          ...(capabilities.can_view_billing
+            ? [{ label: "Billing", to: `${orgBase}/settings`, icon: FileText }]
+            : []),
         ]
       : []),
     ...(isOrgAdmin || can(P.REPORTS_READ)
@@ -93,6 +109,27 @@ export function buildMisNav(options: {
       : []),
     profileItem,
   ];
+  return applyNavigationSectionFilter(orgItems, navigationSections);
+}
+
+function applyNavigationSectionFilter(items: ShellNavItem[], navigationSections: string[]): ShellNavItem[] {
+  if (!navigationSections.length) return items;
+  const allowed = new Set<string>(
+    navigationSections
+      .map((section) => section.trim().toLowerCase())
+      .filter(Boolean)
+      .flatMap((section) => [section, (NAV_SECTION_TO_LABEL[section] ?? "").toLowerCase()])
+      .filter(Boolean)
+  );
+  return items.filter((item) => {
+    const normalizedLabel = item.label.trim().toLowerCase();
+    const normalizedWords = normalizedLabel.split(" ");
+    return (
+      allowed.has(normalizedLabel) ||
+      normalizedWords.some((word) => allowed.has(word)) ||
+      (normalizedLabel === "my organisations" && allowed.has("organisations"))
+    );
+  });
 }
 
 function buildLabNav({
@@ -157,7 +194,7 @@ function buildLabNav({
     return managerItems;
   }
 
-  if (persona === "researcher") {
+  if (persona === "student") {
     return [
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },

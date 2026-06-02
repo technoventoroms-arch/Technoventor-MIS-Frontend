@@ -32,7 +32,7 @@ import {
   type BookingCalendarRow,
 } from "./booking-calendar-events";
 
-export type BookingCalendarMode = "researcher" | "manager";
+export type BookingCalendarMode = "student" | "manager";
 
 type BookingCalendarProps = {
   orgId: string;
@@ -77,7 +77,7 @@ export function BookingCalendar({ orgId, labId, mode }: BookingCalendarProps) {
       setLoading(true);
       try {
         const params: Record<string, string> = { from, to };
-        if (mode === "researcher") {
+        if (mode === "student") {
           params.lab_id = labId;
         }
         const rows = await fetchAllBookings(listPath, orgId, params);
@@ -145,7 +145,7 @@ export function BookingCalendar({ orgId, labId, mode }: BookingCalendarProps) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {mode === "researcher" ? (
+          {mode === "student" ? (
             <Button asChild>
               <Link to={machinesPath}>Book a slot</Link>
             </Button>
@@ -220,7 +220,7 @@ export function BookingCalendar({ orgId, labId, mode }: BookingCalendarProps) {
               </button>
             ))}
           </div>
-          {mode === "researcher" && selectedDay ? (
+          {mode === "student" && selectedDay ? (
             <Button asChild className="w-full">
               <Link to={machinesPath}>Book another slot</Link>
             </Button>

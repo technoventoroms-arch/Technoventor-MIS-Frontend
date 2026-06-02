@@ -573,7 +573,7 @@ export function ReportsPage() {
     ? "org_admin"
     : roleName.toLowerCase().includes("manager")
       ? "lab_manager"
-      : "researcher";
+      : "student";
   const reportingBaseUrl = getReportingBaseUrl(persona);
   const reportUrl = reportingBaseUrl
     ? buildReportUrl(reportingBaseUrl, { orgId, labId, persona })
@@ -663,7 +663,7 @@ function getReportingBaseUrl(persona: string): string | null {
   const byPersona: Record<string, string | undefined> = {
     org_admin: env.VITE_METABASE_ORG_ADMIN_URL,
     lab_manager: env.VITE_METABASE_LAB_MANAGER_URL,
-    researcher: env.VITE_METABASE_RESEARCHER_URL,
+    student: env.VITE_METABASE_STUDENT_URL ?? env.VITE_METABASE_RESEARCHER_URL,
   };
   return byPersona[persona] ?? env.VITE_PUBLIC_METABASE_ENDPOINT ?? null;
 }

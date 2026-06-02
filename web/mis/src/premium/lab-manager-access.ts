@@ -15,7 +15,7 @@ export function entityLabel(row: Partial<Entity> | undefined): string {
 
 export function normalizeRoleKey(roleName: string): string {
   const key = roleName.trim().toLowerCase();
-  if (key === "lab member") return "researcher";
+  if (key === "lab member" || key === "researcher") return "student";
   return key;
 }
 

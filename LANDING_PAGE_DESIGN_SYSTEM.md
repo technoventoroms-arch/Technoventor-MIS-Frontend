@@ -218,7 +218,7 @@ Both scrollbars inside the application are custom-styled to remain subtle and th
 **Technoventor Innovations** is a modern, premium multi-tenant Software-as-a-Service (SaaS) platform built for managing **Makerspaces, FabLabs, and institutional/academic laboratories**. 
 
 Running a collaborative physical space (e.g., rapid prototyping facilities, woodshops, electronics labs, 3D printing hubs) involves coordination between members, expensive machinery, raw inventory, and safety compliance. Technoventor MIS acts as the digital nervous system for these spaces, offering separate workflows for:
-1.  **Researchers / Students:** Standard members who book machines, track active projects, request inventory materials, check in/out, and check their orders.
+1.  **Students:** Standard members who book machines, track active projects, request inventory materials, check in/out, and check their orders.
 2.  **Lab Managers:** Facilitators responsible for review approvals (reservations, materials orders, regularization), checking equipment status, and monitoring stock levels.
 3.  **Organisation Admins:** Platform tenants who manage subscriptions/billing, configure default laboratory settings, and control roles/permissions.
 4.  **Operator Admins (Admin Hub):** Platform operators managing all global organizations, plan catalogues, and overall system health.
@@ -235,7 +235,7 @@ When building the landing page sections, the copy and illustrations should highl
 ### 2. Smart IoT Machine Booking & QR Access
 *   **Interactive Calendaring:** Dynamic calendar view displaying machine availability schedules, preventing double-bookings.
 *   **Custom Lab Policies:** Lab managers can configure operating reservation windows, maximum slot lengths, and no-show grace periods.
-*   **Instant QR Scan & Unlock:** Standard browser camera QR scanning workflow. Researchers scan a physical machine's QR code, look up active bookings, and start/stop consuming machine time immediately, which triggers hardware relay unlocking conceptually.
+*   **Instant QR Scan & Unlock:** Standard browser camera QR scanning workflow. Students scan a physical machine's QR code, look up active bookings, and start/stop consuming machine time immediately, which triggers hardware relay unlocking conceptually.
 
 ### 3. Inventory & Low-Stock Tracking
 *   **Material Catalogue:** Streamlined listing of raw materials, parts, and consumables divided by categories and custom measurement units.
@@ -243,7 +243,7 @@ When building the landing page sections, the copy and illustrations should highl
 *   **Restocking Alerts:** Displays proactive low-stock indicators and notifications to prevent operational downtime.
 
 ### 4. Makerspace Cart & Material Orders
-*   **Material Checkout Cart:** Seamless cart workflow where researchers add materials, associate them with a active research project, and request checkout.
+*   **Material Checkout Cart:** Seamless cart workflow where students add materials, associate them with a active research project, and request checkout.
 *   **Resource Forms:** Dynamic CRUD table controls to request materials or report scrap.
 
 ### 5. Project Collaboration & Progress Logs
@@ -251,6 +251,6 @@ When building the landing page sections, the copy and illustrations should highl
 *   **Inventory Association:** Links all consumed inventory items and booked machine time directly back to the project for accurate cost tracking and reporting.
 
 ### 6. Automated Attendance & Approval Queues
-*   **Check-In/Out Tracking:** Seamless logs of student or researcher presence inside the physical facility.
+*   **Check-In/Out Tracking:** Seamless logs of student presence inside the physical facility.
 *   **Approval Room Control:** A unified, real-time inbox for lab managers to approve or reject pending requests (laboratory join requests, attendance regularization, project material orders, and machine bookings).
 

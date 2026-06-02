@@ -86,14 +86,14 @@ Provides:
 Lab sidebar items are filtered from the user’s **lab role permissions** (`module:action` codenames from IAM, e.g. `machines:read`, `attendance:write`).
 
 - API: `GET /api/v1/labs/organisations/{orgId}/labs/{labId}/my-permissions/`
-- **Researcher** (standard lab participant; legacy “Lab Member” maps here): Dashboard, Projects, Machines, Inventory, Attendance, Cart, My orders + Notifications, Profile.
+- **Student** (standard lab participant; legacy “Lab Member” maps to the student role): Dashboard, Projects, Machines, Inventory, Attendance, Cart, My orders + Notifications, Profile.
 - **Lab Manager**: Manager dashboard (approvals pulse, team, settings, reports links); sidebar — Dashboard, Approvals, Lab settings, Lab members, Reports + account basics.
-- **Organisation admin** (in lab): Full sidebar — researcher modules plus approvals, settings, members, reports. Scan machine removed.
+- **Organisation admin** (in lab): Full sidebar — student modules plus approvals, settings, members, reports. Scan machine removed.
 - **Create organisation**: shown for users with **no org yet** or **org admin** on any organisation (founders can create multiple tenants).
 - **Organisation home (`/`)**: uses the same `SectionHeader` + `PremiumDataTable` pattern as other premium pages (no separate marketing hero).
 - Backfill existing orgs: `python manage.py sync_default_role_permissions`
 - Frontend: `LabPermissionsProvider` + `buildMisNav()` in `web/mis/src/premium/nav-policy.ts`
-- Organisation admins see org users/settings; researchers and managers only see items their role allows.
+- Organisation admins see org users/settings; students and managers only see items their role allows.
 
 ## SaaS signup paths
 

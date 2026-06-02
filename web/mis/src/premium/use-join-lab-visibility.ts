@@ -14,7 +14,7 @@ type PermissionsPayload = {
 };
 
 /**
- * "Join a lab" is for researchers onboarding themselves.
+ * "Join a lab" is for students onboarding themselves.
  * Organisation admins and lab managers are invited or assigned — hide the flow.
  */
 export function useJoinLabVisibility() {
