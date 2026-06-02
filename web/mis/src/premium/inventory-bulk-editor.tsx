@@ -54,7 +54,7 @@ export function InventoryBulkTools({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
 
-  async function runBulk(action: "create" | "update" | "delete", body: Record<string, unknown>) {
+  async function runBulk(body: Record<string, unknown>) {
     setIsSubmitting(true);
     try {
       const response = await apiClient.create<BulkResponse>(
@@ -94,7 +94,7 @@ export function InventoryBulkTools({
       toast.error("No data rows found in CSV.");
       return;
     }
-    await runBulk("create", {
+    await runBulk({
       action: "create",
       items: rows.map((row) => ({
         name: row.name,
@@ -119,7 +119,7 @@ export function InventoryBulkTools({
       return;
     }
     if (!window.confirm(`Delete ${selectedItems.length} inventory item(s)?`)) return;
-    await runBulk("delete", {
+    await runBulk({
       action: "delete",
       ids: selectedItems.map((item) => Number(item.id)),
     });

@@ -128,7 +128,7 @@ export function bulkItemsToCsv(items: Array<Record<string, unknown>>): string {
       if (header === "category_id") {
         return escapeCsv(String(item.category ?? ""));
       }
-      const value = item[header === "category_id" ? "category" : header];
+      const value = item[header];
       return escapeCsv(value === null || value === undefined ? "" : String(value));
     });
     lines.push(cells.join(","));
