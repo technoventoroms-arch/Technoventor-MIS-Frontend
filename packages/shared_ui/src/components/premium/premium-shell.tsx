@@ -58,6 +58,7 @@ export function PremiumShell({
   navItems,
   userName,
   userEmail,
+  userAvatar,
   contexts = [],
   notifications = [],
   onSignOut,
@@ -69,6 +70,7 @@ export function PremiumShell({
   navItems: ShellNavItem[];
   userName?: string;
   userEmail?: string;
+  userAvatar?: string;
   contexts?: ShellContext[];
   notifications?: ShellNotification[];
   onSignOut?: () => void;
@@ -231,10 +233,25 @@ export function PremiumShell({
                   ) : null}
                 </Button>
                 <div className="hidden border-l border-slate-200 pl-3 md:block dark:border-white/10">
-                  <p className="text-sm font-semibold">{userName ?? "MIS User"}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {userEmail ?? "Signed in"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt={userName ?? "User avatar"}
+                        className="size-8 rounded-full border border-slate-200 object-cover dark:border-white/20"
+                      />
+                    ) : (
+                      <div className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold dark:border-white/20 dark:bg-white/10">
+                        {(userName ?? "U").slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-semibold">{userName ?? "MIS User"}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {userEmail ?? "Signed in"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 {onSignOut ? (
                   <Button variant="outline" size="sm" onClick={onSignOut}>

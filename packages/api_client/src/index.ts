@@ -29,6 +29,7 @@ export type AuthUser = {
   first_name?: string;
   last_name?: string;
   full_name?: string;
+  image_url?: string | null;
   is_active?: boolean;
   last_login_at?: string | null;
 };
@@ -81,6 +82,14 @@ export type MachineIoTInstallResponse = {
   machine_name: string;
   api_url: string;
   instructions: string;
+};
+
+export type ImageKitAuthPayload = {
+  token: string;
+  expire: number;
+  signature: string;
+  publicKey: string;
+  urlEndpoint: string;
 };
 
 export type LoginPayload = {
@@ -303,6 +312,11 @@ export class MisApiClient {
     return data;
   }
 
+  async getImageKitAuth(): Promise<ImageKitAuthPayload> {
+    const { data } = await this.http.get<ImageKitAuthPayload>(endpoints.uploads.imagekitAuth);
+    return data;
+  }
+
   async list<T = Entity>(path: string, options: RequestOptions = {}): Promise<ApiPage<T>> {
     if (options.pageUrl) {
       const { data } = await axios.get<ApiPage<T> | T[]>(options.pageUrl, {
@@ -371,6 +385,9 @@ function normalizePage<T>(data: ApiPage<T> | T[]): ApiPage<T> {
 }
 
 export const endpoints = {
+  uploads: {
+    imagekitAuth: "uploads/imagekit-auth/",
+  },
   organisations: {
     list: "organisations/",
     detail: (orgId: string | number) => `organisations/${orgId}/`,

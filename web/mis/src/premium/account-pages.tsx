@@ -53,6 +53,7 @@ const profileFields: ResourceField[] = [
   { name: "first_name", label: "First name" },
   { name: "last_name", label: "Last name" },
   { name: "email", label: "Email", type: "email", required: true },
+  { name: "image_url", label: "Profile image", type: "image", uploadFolder: "/avatars" },
 ];
 
 const organisationFields: ResourceField[] = [
@@ -60,7 +61,7 @@ const organisationFields: ResourceField[] = [
   { name: "slug", label: "Unique slug", required: true },
   { name: "phone", label: "Phone" },
   { name: "website", label: "Website" },
-  { name: "logo_url", label: "Logo URL" },
+  { name: "logo_url", label: "Logo", type: "image", uploadFolder: "/org-logos" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -68,7 +69,7 @@ const organisationFields: ResourceField[] = [
 const labFields: ResourceField[] = [
   { name: "name", label: "Lab name", required: true },
   { name: "phone", label: "Phone" },
-  { name: "image_url", label: "Image URL" },
+  { name: "image_url", label: "Lab image", type: "image", uploadFolder: "/lab-images" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];

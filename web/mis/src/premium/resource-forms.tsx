@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { apiClient, normalizeApiError, type ApiError, type Entity } from "@mono/api_client";
+import { ImageUploadField } from "@mono/shared_ui/components/shared/image-upload-field";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import {
   Dialog,
@@ -34,12 +35,13 @@ export type FieldOption = {
 export type ResourceField = {
   name: string;
   label: string;
-  type?: "text" | "email" | "number" | "date" | "datetime-local" | "textarea" | "select";
+  type?: "text" | "email" | "number" | "date" | "datetime-local" | "textarea" | "select" | "image";
   required?: boolean;
   placeholder?: string;
   helper?: string;
   defaultValue?: string;
   options?: FieldOption[];
+  uploadFolder?: string;
   onValueChange?: (value: string, values: Record<string, string>) => Record<string, string>;
 };
 
@@ -358,6 +360,18 @@ function FormField({
       <Label htmlFor={id}>{field.label}</Label>
       {field.type === "textarea" ? (
         <Textarea {...sharedProps} value={value} onChange={(event) => onChange(event.target.value)} />
+      ) : field.type === "image" ? (
+        <ImageUploadField
+          id={id}
+          name={field.name}
+          value={value}
+          required={field.required}
+          placeholder={field.placeholder}
+          helper={field.helper}
+          folder={field.uploadFolder ?? inferImageFolder(field.name)}
+          authenticator={() => apiClient.getImageKitAuth()}
+          onChange={onChange}
+        />
       ) : field.type === "select" ? (
         <Select value={value} onValueChange={onChange} required={field.required}>
           <SelectTrigger id={id} className="w-full">
@@ -382,6 +396,16 @@ function FormField({
       {field.helper ? <p className="text-xs text-slate-500">{field.helper}</p> : null}
     </div>
   );
+}
+
+function inferImageFolder(fieldName: string): string {
+  if (fieldName === "logo_url") {
+    return "/org-logos";
+  }
+  if (fieldName === "image_url") {
+    return "/images";
+  }
+  return "/uploads";
 }
 
 function defaultTransformPayload(values: Record<string, string>): Record<string, unknown> {

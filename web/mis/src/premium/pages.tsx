@@ -207,6 +207,7 @@ function MisShellInner() {
   const orgId = params.orgId;
   const labId = params.labId;
   const [orgLabel, setOrgLabel] = useState<string | null>(null);
+  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
   const [labLabel, setLabLabel] = useState<string | null>(null);
   const notifications = usePagedResource<Entity>(orgId ? endpoints.users.notifications : null, orgId);
   const isOrgAdmin = useIsOrgAdmin(orgId) || uiContext.primary_experience === "organisation_owner";
@@ -219,15 +220,18 @@ function MisShellInner() {
   useEffect(() => {
     if (!orgId) {
       setOrgLabel(null);
+      setOrgLogoUrl(null);
       return;
     }
     let cancelled = false;
     setOrgLabel(null);
+    setOrgLogoUrl(null);
     void apiClient
       .get<Entity>(endpoints.organisations.detail(orgId), { orgId })
       .then((org) => {
         if (!cancelled) {
           setOrgLabel(String(org.name ?? `Organisation ${orgId}`));
+          setOrgLogoUrl(typeof org.logo_url === "string" ? org.logo_url : null);
         }
       })
       .catch(() => {
@@ -300,7 +304,7 @@ function MisShellInner() {
     <PremiumShell
       appName="MakerSpace Ops MIS"
       appSubtitle={permissionsLoading && labId ? "Loading access…" : "Laboratory operations"}
-      logoSrc={MAKERSPACE_OPS_LOGO_SRC}
+      logoSrc={orgLogoUrl ?? MAKERSPACE_OPS_LOGO_SRC}
       navItems={navItems}
       contexts={contexts}
       notifications={notifications.rows.slice(0, 20).map((row) => ({
@@ -314,6 +318,7 @@ function MisShellInner() {
       }))}
       userName={fullName(user)}
       userEmail={user?.email}
+      userAvatar={typeof user?.image_url === "string" ? user.image_url : undefined}
       onSignOut={logout}
     >
       <Outlet />

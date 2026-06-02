@@ -123,7 +123,7 @@ const orgFields: ResourceField[] = [
   { name: "slug", label: "Unique slug", required: true, placeholder: "fab-lab-india" },
   { name: "phone", label: "Phone", placeholder: "+91..." },
   { name: "website", label: "Website", placeholder: "https://example.com" },
-  { name: "logo_url", label: "Logo URL" },
+  { name: "logo_url", label: "Logo", type: "image", uploadFolder: "/org-logos" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -131,7 +131,7 @@ const orgFields: ResourceField[] = [
 const labFields: ResourceField[] = [
   { name: "name", label: "Lab name", required: true },
   { name: "phone", label: "Phone" },
-  { name: "image_url", label: "Image URL" },
+  { name: "image_url", label: "Lab image", type: "image", uploadFolder: "/lab-images" },
   { name: "address", label: "Address", type: "textarea" },
   { name: "description", label: "Description", type: "textarea" },
 ];
@@ -140,7 +140,7 @@ const machineFields: ResourceField[] = [
   { name: "name", label: "Machine name", required: true },
   { name: "model_number", label: "Model number" },
   { name: "purchased_at", label: "Purchased at", type: "date" },
-  { name: "image_url", label: "Image URL" },
+  { name: "image_url", label: "Machine image", type: "image", uploadFolder: "/machine-images" },
   { name: "description", label: "Description", type: "textarea" },
 ];
 
@@ -366,6 +366,7 @@ export function LabsPage() {
         createLabel="Create lab"
         columns={[
           nameColumn(),
+          imageThumbColumn("image_url", "Image"),
           textColumn("phone", "Phone"),
           {
             key: "workspace",
@@ -842,7 +843,7 @@ export function InventoryPage() {
               },
               { name: "category", label: "Category", type: "select", options: toOptions(categories.rows) },
               { name: "threshold", label: "Threshold", type: "number" },
-              { name: "image_url", label: "Image URL" },
+              { name: "image_url", label: "Item image", type: "image", uploadFolder: "/item-images" },
               { name: "description", label: "Description", type: "textarea" },
             ]}
             orgId={orgId}
@@ -868,6 +869,7 @@ export function InventoryPage() {
                 ),
               },
               nameColumn(),
+              imageThumbColumn("image_url", "Image"),
               textColumn("sku", "SKU"),
               {
                 key: "quantity_unit",
@@ -1138,6 +1140,7 @@ export function MachinesPage() {
           createLabel="Register machine"
           columns={[
             nameColumn(),
+            imageThumbColumn("image_url", "Image"),
             statusColumn(),
             textColumn("serial_number", "Serial"),
             {
@@ -1346,7 +1349,15 @@ export function MachinesPage() {
                       >
                         <div className="font-medium">{displayName(machine)}</div>
                         <div className="text-xs text-slate-500">Model: {formatValue(machine.model_number)}</div>
-                        <div className="text-xs text-slate-500">Photo: {machine.image_url ? "Available" : "Not set"}</div>
+                        {typeof machine.image_url === "string" && machine.image_url ? (
+                          <img
+                            src={machine.image_url}
+                            alt={`${displayName(machine)} preview`}
+                            className="mt-2 h-20 w-full rounded-md border object-cover"
+                          />
+                        ) : (
+                          <div className="text-xs text-slate-500">Photo: Not set</div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -2739,6 +2750,26 @@ function textColumn<T extends ApiRow>(key: string, header: string): PremiumColum
     key,
     header,
     render: (row) => <span className="text-slate-600 dark:text-slate-300">{formatValue(row[key])}</span>,
+  };
+}
+
+function imageThumbColumn<T extends ApiRow>(key: string, header: string): PremiumColumn<T> {
+  return {
+    key: `${key}_thumbnail`,
+    header,
+    render: (row) => {
+      const imageUrl = row[key];
+      if (typeof imageUrl !== "string" || !imageUrl) {
+        return <span className="text-slate-500">-</span>;
+      }
+      return (
+        <img
+          src={imageUrl}
+          alt={`${displayName(row)} image`}
+          className="h-10 w-10 rounded-md border object-cover"
+        />
+      );
+    },
   };
 }
 

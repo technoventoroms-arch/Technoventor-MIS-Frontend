@@ -1,3 +1,5 @@
+import { apiClient } from "@mono/api_client";
+import { ImageUploadField } from "@mono/shared_ui/components/shared/image-upload-field";
 import { Input } from "@mono/shared_ui/components/ui/input";
 import { Label } from "@mono/shared_ui/components/ui/label";
 
@@ -97,10 +99,12 @@ export function OrganisationSignupFields({
           </div>
           <div className="space-y-2">
             <Label htmlFor="organisationLogoUrl">Logo URL</Label>
-            <Input
+            <ImageUploadField
               id="organisationLogoUrl"
               value={organisationLogoUrl}
-              onChange={(event) => onFieldChange("organisationLogoUrl", event.target.value)}
+              onChange={(nextValue) => onFieldChange("organisationLogoUrl", nextValue)}
+              folder="/org-logos"
+              authenticator={() => apiClient.getImageKitAuth()}
             />
           </div>
         </>
