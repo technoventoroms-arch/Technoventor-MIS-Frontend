@@ -2146,7 +2146,7 @@ export function ApprovalsPage() {
   );
 }
 
-export function ApprovalsPage() {
+export function NotificationsPage() {
   const { orgId } = useParams();
   const [tab, setTab] = useState<"unread" | "all" | "grouped">("unread");
   const notifications = usePagedResource<ApiRow>(endpoints.users.notifications, orgId);
