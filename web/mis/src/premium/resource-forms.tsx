@@ -292,8 +292,12 @@ export function ResourceForm({
     const nextValues: Record<string, string> = {};
     for (const field of fields) {
       const source = initialValues?.[field.name];
-      nextValues[field.name] =
-        source === null || source === undefined ? field.defaultValue ?? "" : String(source);
+      if (source !== null && typeof source === "object") {
+        nextValues[field.name] = JSON.stringify(source, null, 2);
+      } else {
+        nextValues[field.name] =
+          source === null || source === undefined ? field.defaultValue ?? "" : String(source);
+      }
     }
     setValues(nextValues);
   }, [fields, initialValues]);
@@ -418,11 +422,22 @@ export function buildResourcePayload(
   fields: ResourceField[]
 ): Record<string, unknown> {
   const imageFields = new Set(fields.filter((field) => field.type === "image").map((field) => field.name));
+  const jsonObjectFields = new Set(
+    fields.filter((field) => field.type === "textarea" && field.name === "address").map((field) => field.name)
+  );
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(values)) {
     if (value === "") {
       if (imageFields.has(key)) {
         result[key] = null;
+      }
+      continue;
+    }
+    if (jsonObjectFields.has(key)) {
+      try {
+        result[key] = JSON.parse(value);
+      } catch {
+        result[key] = value;
       }
       continue;
     }

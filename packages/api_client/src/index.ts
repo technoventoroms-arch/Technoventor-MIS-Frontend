@@ -4,6 +4,10 @@ import axios, {
   type AxiosRequestConfig,
 } from "axios";
 
+import { formatFieldErrors, humanizeErrorMessage, humanizeFieldErrors } from "./humanize-api-error";
+
+export { formatFieldErrors, humanizeErrorMessage, humanizeFieldErrors } from "./humanize-api-error";
+
 export type ApiPage<T> = {
   next: string | null;
   previous: string | null;
@@ -163,46 +167,68 @@ export function normalizeApiError(error: unknown): ApiError {
     }
 
     if (data && typeof data === "object") {
-      const fields: Record<string, string[]> = {};
-      for (const [key, value] of Object.entries(data)) {
-        if (Array.isArray(value)) {
-          fields[key] = value.map(String);
-        }
-      }
+      const fields = extractApiFieldErrors(data);
+      const humanizedFields = humanizeFieldErrors(fields);
+      const fieldMessage = formatFieldErrors(fields);
 
-      const fieldMessages = Object.entries(fields).flatMap(([key, messages]) =>
-        messages.map((msg) => (key === "non_field_errors" ? msg : `${key}: ${msg}`))
-      );
-
-      const message =
-        stringValue(data.message) ??
-        stringValue(data.detail) ??
+      const envelopeMessage = stringValue(data.message);
+      const detailMessage =
+        typeof data.detail === "string" ? stringValue(data.detail) : undefined;
+      const rawMessage =
+        fieldMessage ??
+        (envelopeMessage && envelopeMessage !== "Validation error"
+          ? envelopeMessage
+          : undefined) ??
+        detailMessage ??
+        envelopeMessage ??
         stringValue(data.error) ??
         stringValue(data.data) ??
-        (fieldMessages.length ? fieldMessages.join(" ") : undefined) ??
         axiosError.message ??
         "Request failed";
+      const message = humanizeErrorMessage(rawMessage);
 
       return {
         status: axiosError.response?.status,
         message,
-        fields: Object.keys(fields).length ? fields : undefined,
+        fields: Object.keys(humanizedFields).length ? humanizedFields : undefined,
         raw: data,
       };
     }
 
     return {
       status: axiosError.response?.status,
-      message: axiosError.message || "Request failed",
+      message: humanizeErrorMessage(axiosError.message || "Request failed"),
       raw: axiosError,
     };
   }
 
   if (error instanceof Error) {
-    return { message: error.message, raw: error };
+    return { message: humanizeErrorMessage(error.message), raw: error };
   }
 
-  return { message: "An unknown API error occurred", raw: error };
+  return { message: humanizeErrorMessage("An unknown API error occurred"), raw: error };
+}
+
+function extractApiFieldErrors(data: Record<string, unknown>): Record<string, string[]> {
+  const fields: Record<string, string[]> = {};
+  const sources: Record<string, unknown>[] = [data];
+
+  if (data.detail && typeof data.detail === "object" && !Array.isArray(data.detail)) {
+    sources.push(data.detail as Record<string, unknown>);
+  }
+
+  for (const source of sources) {
+    for (const [key, value] of Object.entries(source)) {
+      if (key === "error" || key === "message" || key === "code" || key === "detail") {
+        continue;
+      }
+      if (Array.isArray(value)) {
+        fields[key] = value.map(String);
+      }
+    }
+  }
+
+  return fields;
 }
 
 function stringValue(value: unknown): string | undefined {
