@@ -6,7 +6,7 @@ describe("buildMisNav", () => {
   const can = () => true;
   const canAny = () => true;
 
-  it("gates nav using ui_context navigation_sections", () => {
+  it("keeps org essentials visible even when navigation_sections omit them", () => {
     const nav = buildMisNav({
       orgId: "12",
       isOrgAdmin: true,
@@ -20,7 +20,13 @@ describe("buildMisNav", () => {
       },
     });
 
-    expect(nav.map((item) => item.label)).toEqual(["Dashboard", "Labs", "Profile"]);
+    expect(nav.map((item) => item.label)).toEqual([
+      "My Organizations",
+      "Dashboard",
+      "Labs",
+      "Organization Settings",
+      "Profile",
+    ]);
   });
 
   it("hides billing and org settings when capabilities are disabled", () => {
@@ -37,7 +43,7 @@ describe("buildMisNav", () => {
     });
 
     const labels = nav.map((item) => item.label);
-    expect(labels).not.toContain("Organization");
+    expect(labels).not.toContain("Organization Settings");
     expect(labels).not.toContain("Billing");
   });
 
@@ -77,7 +83,7 @@ describe("buildMisNav", () => {
     expect(labels).toContain("Profile");
   });
 
-  it("shows My organisations at root when my_labs is allowed", () => {
+  it("shows My Organizations at root when my_labs is allowed", () => {
     const nav = buildMisNav({
       isOrgAdmin: false,
       roleName: "",
@@ -87,8 +93,37 @@ describe("buildMisNav", () => {
     });
 
     const labels = nav.map((item) => item.label);
-    expect(labels).toContain("My organisations");
+    expect(labels).toContain("My Organizations");
     expect(labels).toContain("Profile");
+  });
+
+  it("shows My Organizations and Organization Settings for org owners", () => {
+    const nav = buildMisNav({
+      orgId: "12",
+      isOrgAdmin: true,
+      roleName: "",
+      can,
+      canAny,
+      navigationSections: [
+        "organisations",
+        "overview",
+        "labs",
+        "members",
+        "organisation_settings",
+        "billing",
+        "profile",
+      ],
+      capabilities: {
+        can_manage_org_settings: true,
+        can_view_billing: true,
+      },
+    });
+
+    const labels = nav.map((item) => item.label);
+    expect(labels).toContain("My Organizations");
+    expect(labels).toContain("Dashboard");
+    expect(labels).toContain("Organization Settings");
+    expect(labels).toContain("Billing");
   });
 
   it("includes Machines in lab-manager lab sidebar", () => {

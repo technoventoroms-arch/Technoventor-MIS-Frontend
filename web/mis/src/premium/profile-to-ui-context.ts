@@ -63,9 +63,9 @@ export type CurrentUserProfile = {
 export const NAV_SECTION_TO_LABEL: Record<string, string> = {
   dashboard: "Dashboard",
   overview: "Dashboard",
-  organisations: "My organisations",
+  organisations: "My Organizations",
   my_labs: "Labs",
-  organisation_settings: "Organization",
+  organisation_settings: "Organization Settings",
   members: "Users",
   labs: "Labs",
   billing: "Billing",
@@ -84,8 +84,8 @@ export const NAV_SECTION_TO_LABEL: Record<string, string> = {
 
 /** Extra nav labels matched when filtering by backend section keys. */
 export const NAV_SECTION_EXTRA_LABELS: Record<string, string[]> = {
-  my_labs: ["My organisations"],
-  overview: ["My organisations"],
+  my_labs: ["My Organizations"],
+  overview: ["My Organizations"],
 };
 
 const DEFAULT_CAPABILITIES: UiContextCapabilities = {

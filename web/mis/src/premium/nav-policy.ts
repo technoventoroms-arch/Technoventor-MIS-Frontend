@@ -61,7 +61,7 @@ export function buildMisNav(options: {
 
   if (!orgId) {
     const rootItems: ShellNavItem[] = [
-      { label: "My organisations", to: "/", icon: Building2, end: true },
+      { label: "My Organizations", to: "/", icon: Building2, end: true },
       ...(canCreateOrganisation
         ? [{ label: "Create organisation", to: "/create-organization", icon: Plus }]
         : []),
@@ -89,13 +89,14 @@ export function buildMisNav(options: {
   }
 
   const orgItems: ShellNavItem[] = [
+    { label: "My Organizations", to: "/", icon: Building2 },
     { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
     { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
     ...(isOrgAdmin
       ? [
           { label: "Users", to: `${orgBase}/users`, icon: Users },
           ...(capabilities.can_manage_org_settings
-            ? [{ label: "Organization", to: `${orgBase}/organization`, icon: Settings }]
+            ? [{ label: "Organization Settings", to: `${orgBase}/organization`, icon: Settings }]
             : []),
           ...(capabilities.can_view_billing
             ? [{ label: "Billing", to: `${orgBase}/settings`, icon: FileText }]
@@ -124,7 +125,14 @@ function applyNavigationSectionFilter(items: ShellNavItem[], navigationSections:
     navigationSections.flatMap((section) => sectionKeysToAllowedLabels(section))
   );
   // Product requirement: org-level sidebar essentials should never disappear by RBAC section misconfiguration.
-  const alwaysVisible = new Set(["dashboard", "labs", "profile"]);
+  const alwaysVisible = new Set([
+    "dashboard",
+    "labs",
+    "profile",
+    "my organizations",
+    "my organisations",
+    "organization settings",
+  ]);
   return items.filter((item) => {
     const normalizedLabel = item.label.trim().toLowerCase();
     if (alwaysVisible.has(normalizedLabel)) return true;
@@ -132,7 +140,8 @@ function applyNavigationSectionFilter(items: ShellNavItem[], navigationSections:
     return (
       allowed.has(normalizedLabel) ||
       normalizedWords.some((word) => allowed.has(word)) ||
-      (normalizedLabel === "my organisations" && allowed.has("organisations"))
+      ((normalizedLabel === "my organisations" || normalizedLabel === "my organizations") &&
+        allowed.has("organisations"))
     );
   });
 }

@@ -1068,7 +1068,7 @@
 /* ── ROLES ───────────────────────────────── */
 .landing-page-wrapper .roles-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
 
@@ -1101,7 +1101,7 @@
     font-size: 46px;
     font-weight: 900;
     line-height: 1;
-    color: rgba(62, 207, 203, 0.12);
+    color: rgba(13, 148, 136, 0.28);
     margin-bottom: 12px;
     letter-spacing: -0.04em;
 }

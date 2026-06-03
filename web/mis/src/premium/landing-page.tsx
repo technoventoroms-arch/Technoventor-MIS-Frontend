@@ -844,31 +844,6 @@ export function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="role-card">
-              <div className="role-card-accent"></div>
-              <div className="role-num">04</div>
-              <h3 className="role-title">Operator Admin</h3>
-              <p className="role-desc">
-                Platform operators with global system oversight.
-              </p>
-              <div className="role-caps">
-                <div className="role-cap">
-                  <span className="rc-dot"></span>Manage all organisations &
-                  tenants
-                </div>
-                <div className="role-cap">
-                  <span className="rc-dot"></span>Configure plan catalogues &
-                  pricing
-                </div>
-                <div className="role-cap">
-                  <span className="rc-dot"></span>Monitor system health & uptime
-                </div>
-                <div className="role-cap">
-                  <span className="rc-dot"></span>Global admin controls & audit
-                  logs
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
