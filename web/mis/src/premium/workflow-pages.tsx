@@ -90,6 +90,12 @@ import {
 import { defaultUnitIdForItem, sortUnitsWithNosFirst } from "./inventory-units";
 import { InventoryBulkTools } from "./inventory-bulk-editor";
 import { MachineDevicePanel } from "./machine-device-panel";
+import {
+  formatMachineModeLabel,
+  isAttendanceMachine,
+  machineModeFieldOptions,
+  MACHINE_MODE_MACHINE,
+} from "./machine-mode";
 import { BookingCalendar } from "./booking-calendar";
 import { InviteMemberDialog } from "./invite-member-dialog";
 import { LabMemberAssignDialog } from "./lab-member-assign-dialog";
@@ -114,6 +120,7 @@ type ApiRow = Entity & {
   user?: Entity & { full_name?: string; email?: string };
   role?: Entity;
   plan?: Entity;
+  mode?: string;
   is_active?: boolean;
   is_below_threshold?: boolean;
 };
@@ -138,6 +145,15 @@ const labFields: ResourceField[] = [
 
 const machineFields: ResourceField[] = [
   { name: "name", label: "Machine name", required: true },
+  {
+    name: "mode",
+    label: "Reader type",
+    type: "select",
+    options: machineModeFieldOptions,
+    defaultValue: MACHINE_MODE_MACHINE,
+    helper:
+      "Equipment readers require approved bookings before unlock. Attendance kiosks only record lab check-in when a card is tapped.",
+  },
   { name: "model_number", label: "Model number" },
   { name: "purchased_at", label: "Purchased at", type: "date" },
   { name: "image_url", label: "Machine image", type: "image", uploadFolder: "/machine-images" },
@@ -1141,12 +1157,15 @@ export function MachinesPage() {
           columns={[
             nameColumn(),
             imageThumbColumn("image_url", "Image"),
+            machineModeColumn(),
             statusColumn(),
             textColumn("serial_number", "Serial"),
             {
               key: "ops",
               header: "Operations",
-              render: (row) => (
+              render: (row) => {
+                const attendanceOnly = isAttendanceMachine(row);
+                return (
                 <div className="flex flex-wrap gap-2">
                   {isLabManager || isOrgAdmin ? (
                     <>
@@ -1165,9 +1184,11 @@ export function MachinesPage() {
                       Status
                     </Button>
                   ) : null}
-                  <Button size="sm" variant="outline" onClick={() => setReservationMachine(row)}>
-                    Reservations
-                  </Button>
+                  {!attendanceOnly ? (
+                    <Button size="sm" variant="outline" onClick={() => setReservationMachine(row)}>
+                      Reservations
+                    </Button>
+                  ) : null}
                   <Button size="sm" variant="outline" onClick={() => {
                     setBookingMachine(row);
                     setBookingStep(1);
@@ -1178,7 +1199,8 @@ export function MachinesPage() {
                     setBookingTimeMode("slots");
                     setBookingError(null);
                   }}
-                  disabled={!labBookingPolicy.booking_enabled}
+                  disabled={!labBookingPolicy.booking_enabled || attendanceOnly}
+                  title={attendanceOnly ? "Attendance kiosks do not use slot booking" : undefined}
                   >
                     Book slot
                   </Button>
@@ -1186,7 +1208,8 @@ export function MachinesPage() {
                     Logs
                   </Button>
                 </div>
-              ),
+                );
+              },
             },
           ]}
         />
@@ -1336,7 +1359,7 @@ export function MachinesPage() {
                 <div className="space-y-2">
                   <Label>Machine matrix</Label>
                     <div className="grid grid-cols-2 gap-3">
-                    {machines.rows.map((machine) => (
+                    {machines.rows.filter((machine) => !isAttendanceMachine(machine)).map((machine) => (
                       <button
                         key={String(machine.id)}
                         type="button"
@@ -1348,7 +1371,9 @@ export function MachinesPage() {
                         onClick={() => setBookingMachineId(String(machine.id))}
                       >
                         <div className="font-medium">{displayName(machine)}</div>
-                        <div className="text-xs text-slate-500">Model: {formatValue(machine.model_number)}</div>
+                        <div className="text-xs text-slate-500">
+                          {formatMachineModeLabel(machine.mode)} · Model: {formatValue(machine.model_number)}
+                        </div>
                         {typeof machine.image_url === "string" && machine.image_url ? (
                           <img
                             src={machine.image_url}
@@ -2219,24 +2244,54 @@ export function ScanMachinePage() {
 export function MachineSchedulePage() {
   const { orgId, labId, machineId } = useParams();
   const { isOrgAdmin, isLabManager } = useLabAccessRole(orgId, labId);
+  const [machine, setMachine] = useState<ApiRow | null>(null);
   const reservations = usePagedResource<ApiRow>(
     labId && machineId ? endpoints.machines.reservations(labId, machineId) : null,
     orgId
   );
 
+  useEffect(() => {
+    if (!orgId || !labId || !machineId) {
+      setMachine(null);
+      return;
+    }
+    let cancelled = false;
+    void apiClient
+      .get<ApiRow>(endpoints.machines.detail(labId, machineId), { orgId })
+      .then((data) => {
+        if (!cancelled) setMachine(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMachine(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, labId, machineId]);
+
   if (!orgId || !labId || !machineId) return null;
 
+  const attendanceKiosk = isAttendanceMachine(machine);
   const detailsPath = `/${orgId}/lab/${labId}/machine/${machineId}/details`;
   const logsPath = `/${orgId}/lab/${labId}/machine/${machineId}/logs`;
 
   return (
     <PageFrame
       eyebrow="Machine"
-      title="Machine Schedule"
-      description="View reservations and operating schedule for this machine."
+      title={attendanceKiosk ? "Attendance reader" : "Machine Schedule"}
+      description={
+        attendanceKiosk
+          ? "This reader records lab check-in when students tap their RFID card. Slot booking does not apply."
+          : "View reservations and operating schedule for this machine."
+      }
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
-      {!isOrgAdmin && !isLabManager ? (
+      {attendanceKiosk ? (
+        <PremiumSurface className="mb-4 border-teal-200 bg-teal-50/80 p-4 text-sm text-teal-950 dark:border-teal-900/40 dark:bg-teal-950/30 dark:text-teal-100">
+          <strong>Attendance kiosk</strong> — students tap their lab card at the reader to check in.
+          No reservations or unlock flow.
+        </PremiumSurface>
+      ) : !isOrgAdmin && !isLabManager ? (
         <PremiumSurface className="mb-4 border-teal-200 bg-teal-50/80 p-4 text-sm text-teal-950 dark:border-teal-900/40 dark:bg-teal-950/30 dark:text-teal-100">
           After your booking is <strong>approved</strong>, tap your lab RFID card at the machine
           reader during your slot. The system unlocks the machine and records attendance
@@ -2256,25 +2311,38 @@ export function MachineSchedulePage() {
           <Link to={`/${orgId}/lab/${labId}/machine`}>All machines</Link>
         </Button>
       </div>
-      <PremiumDataTable
-        title="Reservations"
-        description={reservations.error?.message ?? "Machine booking schedule."}
-        columns={[
-          textColumn("project", "Project"),
-          statusColumn(),
-          textColumn("booked_from", "From"),
-          textColumn("booked_till", "Till"),
-          textColumn("notes", "Notes"),
-        ]}
-        rows={reservations.rows}
-        getRowKey={(row) => String(row.id)}
-        next={reservations.next}
-        previous={reservations.previous}
-        onNext={reservations.loadNext}
-        onPrevious={reservations.loadPrevious}
-        emptyTitle="No reservations"
-        emptyDescription="Reservations created from the Machines page will appear here."
-      />
+      {attendanceKiosk ? (
+        <EmptyState
+          title="No bookings for attendance readers"
+          description="Install the reader from Machine details and have students tap their lab RFID card at the kiosk."
+          icon={<Radio className="size-7" />}
+          action={
+            <Button asChild>
+              <Link to={detailsPath}>Reader setup</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <PremiumDataTable
+          title="Reservations"
+          description={reservations.error?.message ?? "Machine booking schedule."}
+          columns={[
+            textColumn("project", "Project"),
+            statusColumn(),
+            textColumn("booked_from", "From"),
+            textColumn("booked_till", "Till"),
+            textColumn("notes", "Notes"),
+          ]}
+          rows={reservations.rows}
+          getRowKey={(row) => String(row.id)}
+          next={reservations.next}
+          previous={reservations.previous}
+          onNext={reservations.loadNext}
+          onPrevious={reservations.loadPrevious}
+          emptyTitle="No reservations"
+          emptyDescription="Reservations created from the Machines page will appear here."
+        />
+      )}
     </PageFrame>
   );
 }
@@ -2377,6 +2445,7 @@ export function MachineDetailsPage() {
 
   if (!orgId || !labId || !machineId) return null;
 
+  const attendanceKiosk = isAttendanceMachine(machine);
   const schedulePath = `/${orgId}/lab/${labId}/machine/${machineId}`;
   const logsPath = `/${orgId}/lab/${labId}/machine/${machineId}/logs`;
 
@@ -2386,6 +2455,12 @@ export function MachineDetailsPage() {
       title="Machine details"
       description="Specifications, identifiers, and quick links for this machine."
       metrics={[
+        metric(
+          "Type",
+          machine ? formatMachineModeLabel(machine.mode) : "—",
+          "Reader behaviour",
+          <Radio />
+        ),
         metric("Status", machine?.status ? String(machine.status) : "—", "Current state", <Wrench />),
         metric("Model", machine?.model_number ? String(machine.model_number) : "—", "Manufacturer model", <Wrench />),
       ]}
@@ -2411,6 +2486,7 @@ export function MachineDetailsPage() {
           <PremiumSurface className="p-6">
             <div className="grid gap-6 md:grid-cols-2">
               {machineDetailField("Name", displayName(machine))}
+              {machineDetailField("Reader type", formatMachineModeLabel(machine.mode))}
               {machineDetailField("Serial number", machine.serial_number)}
               {machineDetailField("Purchased", machine.purchased_at)}
               {machineDetailField("Description", machine.description)}
@@ -2422,20 +2498,32 @@ export function MachineDetailsPage() {
               orgId={orgId}
               labId={labId}
               machineId={machineId}
+              machineMode={machine.mode}
               canViewInstallSetup={Boolean(isOrgAdmin || isLabManager)}
             />
           ) : (
             <PremiumSurface className="p-6 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Using this machine</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                {attendanceKiosk ? "Checking in" : "Using this machine"}
+              </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Book a slot from <strong>Machines</strong>, wait for manager approval, then tap your
-                lab RFID card at the reader during your slot. No API keys or device setup needed on
-                your side.
+                {attendanceKiosk ? (
+                  <>
+                    Tap your registered lab RFID card at this reader to record attendance. No slot
+                    booking is required.
+                  </>
+                ) : (
+                  <>
+                    Book a slot from <strong>Machines</strong>, wait for manager approval, then tap your
+                    lab RFID card at the reader during your slot. No API keys or device setup needed on
+                    your side.
+                  </>
+                )}
               </p>
             </PremiumSurface>
           )}
 
-          {isOrgAdmin || isLabManager ? (
+          {!attendanceKiosk && (isOrgAdmin || isLabManager) ? (
             <PremiumSurface className="p-6 space-y-4">
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Boxes className="size-5 text-teal-600 dark:text-teal-400" />
@@ -2488,9 +2576,11 @@ export function MachineDetailsPage() {
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to={schedulePath}>Schedule & bookings</Link>
-            </Button>
+            {!attendanceKiosk ? (
+              <Button asChild variant="outline">
+                <Link to={schedulePath}>Schedule & bookings</Link>
+              </Button>
+            ) : null}
             <Button asChild variant="outline">
               <Link to={logsPath}>Activity log</Link>
             </Button>
@@ -2742,6 +2832,18 @@ function statusColumn<T extends ApiRow>(): PremiumColumn<T> {
       ) : (
         <StatusBadge tone="success">active</StatusBadge>
       ),
+  };
+}
+
+function machineModeColumn<T extends ApiRow>(): PremiumColumn<T> {
+  return {
+    key: "mode",
+    header: "Type",
+    render: (row) => (
+      <StatusBadge tone={isAttendanceMachine(row) ? "info" : "neutral"}>
+        {formatMachineModeLabel(row.mode)}
+      </StatusBadge>
+    ),
   };
 }
 

@@ -15,12 +15,16 @@ import { formatLocalDateTime } from "@mono/shared_ui/lib/format-datetime";
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { StatusBadge } from "@mono/shared_ui/components/premium/status-badge";
 
+import { isAttendanceMachine } from "./machine-mode";
+
 type MachineDevicePanelProps = {
   orgId: string;
   labId: string;
   machineId: string;
   /** Lab managers and organisation admins can fetch the one-time install setup code. */
   canViewInstallSetup: boolean;
+  /** Backend machine.mode — attendance kiosks skip booking and only record check-in. */
+  machineMode?: unknown;
   enabled?: boolean;
 };
 
@@ -61,8 +65,10 @@ export function MachineDevicePanel({
   labId,
   machineId,
   canViewInstallSetup,
+  machineMode,
   enabled = true,
 }: MachineDevicePanelProps) {
+  const attendanceKiosk = isAttendanceMachine({ mode: machineMode });
   const [device, setDevice] = useState<MachineIoTDeviceResponse | null>(null);
   const [install, setInstall] = useState<MachineIoTInstallResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,11 +155,13 @@ export function MachineDevicePanel({
       <div className="flex items-start gap-3">
         <Radio className="size-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100">RFID reader</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+            {attendanceKiosk ? "Attendance reader" : "RFID reader"}
+          </h3>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Lab managers register machines, approve bookings, and install readers. Students tap
-            their registered lab card during an approved slot — unlock, attendance, and release are
-            automatic.
+            {attendanceKiosk
+              ? "Install this reader as an attendance kiosk. Students tap their lab RFID card to check in — no slot booking or machine unlock."
+              : "Lab managers register equipment, approve bookings, and install readers. Students tap their lab card during an approved slot — unlock, attendance, and release are automatic."}
           </p>
         </div>
       </div>
