@@ -126,6 +126,19 @@ describe("buildMisNav", () => {
     expect(labels).toContain("Billing");
   });
 
+  it("links My Organizations to the organisation switcher route", () => {
+    const nav = buildMisNav({
+      orgId: "12",
+      isOrgAdmin: true,
+      roleName: "",
+      can,
+      canAny,
+    });
+
+    const item = nav.find((entry) => entry.label === "My Organizations");
+    expect(item?.to).toBe("/organisations");
+  });
+
   it("includes Machines in lab-manager lab sidebar", () => {
     const nav = buildMisNav({
       orgId: "12",
@@ -139,6 +152,7 @@ describe("buildMisNav", () => {
 
     const labels = nav.map((item) => item.label);
     expect(labels).toContain("Machines");
+    expect(labels).toContain("My Organizations");
     expect(labels).toContain("Dashboard");
     expect(labels).toContain("Approvals");
   });

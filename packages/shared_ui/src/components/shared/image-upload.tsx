@@ -1,6 +1,9 @@
 import { cn } from "@mono/shared_ui/lib/utils";
 import React, { useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { X } from "lucide-react";
+
+import { Button } from "@mono/shared_ui/components/ui/button";
 
 // Define props interface
 interface ImageUploadProps {
@@ -18,7 +21,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   name,
   defaultValue,
 }) => {
-  const { formState, setError, clearErrors } = useFormContext();
+  const { formState, setError, clearErrors, setValue } = useFormContext();
   const [preview, setPreview] = useState<string>(defaultValue || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -87,15 +90,24 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setIsUploading(false);
   };
 
+  function handleRemoveImage() {
+    setPreview("");
+    setValue(name, "", { shouldDirty: true, shouldValidate: true });
+    clearErrors(name);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-center w-full">
         <label
           htmlFor="dropzone-file"
-          className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+          className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
         >
           {preview ? (
-            <div className="w-full h-full rounded-md overflow-hidden p-2">
+            <div className="relative w-full h-full rounded-md overflow-hidden p-2">
               <img
                 src={preview}
                 alt="Preview"
@@ -106,6 +118,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     : ""
                 )}
               />
+              {!isUploading ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="absolute right-4 top-4"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleRemoveImage();
+                  }}
+                >
+                  <X className="size-3.5" />
+                  Remove
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center pt-5 pb-6">

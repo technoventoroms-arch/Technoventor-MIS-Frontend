@@ -25,6 +25,7 @@ import {
 import { resolveLabNavPersona } from "./lab-role";
 import { P } from "./permission-codes";
 import { NAV_SECTION_EXTRA_LABELS, NAV_SECTION_TO_LABEL } from "./profile-to-ui-context";
+import { MY_ORGANISATIONS_PATH } from "./routes";
 
 export function buildMisNav(options: {
   orgId?: string;
@@ -61,7 +62,7 @@ export function buildMisNav(options: {
 
   if (!orgId) {
     const rootItems: ShellNavItem[] = [
-      { label: "My Organizations", to: "/", icon: Building2, end: true },
+      { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2, end: true },
       ...(canCreateOrganisation
         ? [{ label: "Create organisation", to: "/create-organization", icon: Plus }]
         : []),
@@ -89,7 +90,7 @@ export function buildMisNav(options: {
   }
 
   const orgItems: ShellNavItem[] = [
-    { label: "My Organizations", to: "/", icon: Building2 },
+    { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2 },
     { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
     { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
     ...(isOrgAdmin
@@ -166,6 +167,11 @@ function buildLabNav({
   profileItem: ShellNavItem;
 }): ShellNavItem[] {
   const back: ShellNavItem = { label: "Back to labs", to: `${orgBase}/labs`, icon: ArrowLeft };
+  const myOrganisations: ShellNavItem = {
+    label: "My Organizations",
+    to: MY_ORGANISATIONS_PATH,
+    icon: Building2,
+  };
   const accountBasics: ShellNavItem[] = [
     { label: "Notifications", to: `${labBase}/notifications`, icon: Bell },
     profileItem,
@@ -175,6 +181,7 @@ function buildLabNav({
 
   if (persona === "org-admin") {
     return [
+      myOrganisations,
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
       { label: "Projects", to: `${labBase}/projects`, icon: ListChecks },
@@ -193,6 +200,7 @@ function buildLabNav({
 
   if (persona === "lab-manager") {
     const managerItems: ShellNavItem[] = [
+      myOrganisations,
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
       { label: "Machines", to: `${labBase}/machine`, icon: Wrench },
@@ -210,6 +218,7 @@ function buildLabNav({
 
   if (persona === "student") {
     return [
+      myOrganisations,
       back,
       { label: "Dashboard", to: labBase, icon: Gauge, end: true },
       { label: "Projects", to: `${labBase}/projects`, icon: ListChecks },
@@ -222,7 +231,7 @@ function buildLabNav({
     ];
   }
 
-  const items: ShellNavItem[] = [back];
+  const items: ShellNavItem[] = [myOrganisations, back];
   if (can(P.LABS_READ)) {
     items.push({ label: "Dashboard", to: labBase, icon: Gauge, end: true });
   }

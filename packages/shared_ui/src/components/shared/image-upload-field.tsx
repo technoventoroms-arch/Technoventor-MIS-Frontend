@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ChangeEvent } from "react";
 import { upload } from "@imagekit/javascript";
+import { X } from "lucide-react";
 
 import { Button } from "@mono/shared_ui/components/ui/button";
 import { Input } from "@mono/shared_ui/components/ui/input";
@@ -106,6 +107,22 @@ export function ImageUploadField({
       {value ? (
         <div className="overflow-hidden rounded-md border bg-muted">
           <img src={value} alt="Uploaded preview" className="h-36 w-full object-cover" />
+          <div className="flex justify-end border-t bg-background p-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isUploading}
+              onClick={() => {
+                setUploadError(null);
+                setProgress(0);
+                onChange("");
+              }}
+            >
+              <X className="size-3.5" />
+              Remove image
+            </Button>
+          </div>
         </div>
       ) : null}
 

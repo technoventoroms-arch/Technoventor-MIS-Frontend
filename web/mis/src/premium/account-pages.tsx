@@ -41,13 +41,14 @@ import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
 import { P } from "./permission-codes";
 import { useIsOrgAdmin } from "./use-org-admin";
+import { MY_ORGANISATIONS_PATH } from "./routes";
 import {
   defaultBookingPolicy,
   formatMinutesAsTime,
   parseTimeToMinutes,
   type LabBookingPolicy,
 } from "./booking-utils";
-import { ResourceForm, type ResourceField } from "./resource-forms";
+import { ResourceForm, buildResourcePayload, type ResourceField } from "./resource-forms";
 
 const profileFields: ResourceField[] = [
   { name: "first_name", label: "First name" },
@@ -79,7 +80,7 @@ function workspacePathFromInvite(invite: UserInvitation): string {
   const labId = invite.lab_id;
   if (orgId && labId) return `/${orgId}/lab/${labId}`;
   if (orgId) return `/${orgId}/labs`;
-  return "/";
+  return MY_ORGANISATIONS_PATH;
 }
 
 export function ProfilePage() {
@@ -147,7 +148,7 @@ export function ProfilePage() {
         } else if (orgId) {
           navigate(`/${orgId}/labs`);
         } else {
-          navigate("/");
+          navigate(MY_ORGANISATIONS_PATH);
         }
       } else {
         setTokenFeedback({ type: "error", message: res.message || "Failed to accept invitation." });
@@ -175,7 +176,7 @@ export function ProfilePage() {
           initialValues={user as Entity | null}
           submitLabel="Update profile"
           onSubmit={async (values) => {
-            await apiClient.update("users/me/", values);
+            await apiClient.update("users/me/", buildResourcePayload(values, profileFields));
             await refreshUser();
           }}
         />
@@ -302,7 +303,7 @@ export function OrganisationSettingsPage() {
     try {
       await apiClient.remove(endpoints.organisations.detail(activeOrgId), { orgId: activeOrgId });
       toast.success("Organisation deleted.");
-      navigate("/");
+      navigate(MY_ORGANISATIONS_PATH);
     } catch (error) {
       const message =
         error && typeof error === "object" && "message" in error
@@ -332,7 +333,7 @@ export function OrganisationSettingsPage() {
             onSubmit={async (values) => {
               const updated = await apiClient.update<Entity>(
                 endpoints.organisations.detail(orgId),
-                values,
+                buildResourcePayload(values, organisationFields),
                 { orgId }
               );
               setOrganisation(updated);
@@ -433,7 +434,7 @@ export function LabSettingsPage() {
               onSubmit={async (values) => {
                 const updated = await apiClient.update<Entity>(
                   endpoints.labs.detail(orgId, labId),
-                  values,
+                  buildResourcePayload(values, labFields),
                   { orgId }
                 );
                 setLab(updated);

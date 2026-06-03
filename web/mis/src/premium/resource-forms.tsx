@@ -63,7 +63,7 @@ export function ResourceCrudTable<T extends Entity>({
   createLabel = "Create record",
   columns,
   rowActions = [],
-  transformPayload = defaultTransformPayload,
+  transformPayload,
 }: {
   title: string;
   description?: string;
@@ -92,6 +92,11 @@ export function ResourceCrudTable<T extends Entity>({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [runningAction, setRunningAction] = useState<string | null>(null);
+
+  const resolvePayload = useMemo(
+    () => transformPayload ?? ((values: Record<string, string>) => buildResourcePayload(values, fields)),
+    [fields, transformPayload]
+  );
 
   async function runRowAction(action: ResourceAction<T>, row: T) {
     setActionError(null);
@@ -194,7 +199,7 @@ export function ResourceCrudTable<T extends Entity>({
           open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
           onSubmit={async (values) => {
-            await apiClient.create(createPath, transformPayload(values), { orgId });
+            await apiClient.create(createPath, resolvePayload(values), { orgId });
             await resource.reload();
           }}
         />
@@ -210,7 +215,7 @@ export function ResourceCrudTable<T extends Entity>({
             if (!open) setEditingRow(null);
           }}
           onSubmit={async (values) => {
-            await apiClient.update(updatePath(editingRow), transformPayload(values), { orgId });
+            await apiClient.update(updatePath(editingRow), resolvePayload(values), { orgId });
             setEditingRow(null);
             await resource.reload();
           }}
@@ -408,6 +413,25 @@ function inferImageFolder(fieldName: string): string {
   return "/uploads";
 }
 
+export function buildResourcePayload(
+  values: Record<string, string>,
+  fields: ResourceField[]
+): Record<string, unknown> {
+  const imageFields = new Set(fields.filter((field) => field.type === "image").map((field) => field.name));
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (value === "") {
+      if (imageFields.has(key)) {
+        result[key] = null;
+      }
+      continue;
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+/** @deprecated Use buildResourcePayload with field metadata instead. */
 function defaultTransformPayload(values: Record<string, string>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(values).filter(([, value]) => value !== "")

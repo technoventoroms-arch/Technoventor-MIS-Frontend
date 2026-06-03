@@ -37,6 +37,8 @@ const accountPage = (exportName: keyof typeof import("@/premium/account-pages"))
 
 const workspaceShellChildren: RouteObject[] = [
   { index: true, element: page("DashboardHomePage") },
+  { path: "organisations", element: page("OrganisationSwitcherPage") },
+  { path: "my-organizations", element: page("OrganisationSwitcherPage") },
   { path: "profile", element: accountPage("ProfilePage") },
   { path: "request_lab", element: workflowPage("RequestLabPage") },
   {
