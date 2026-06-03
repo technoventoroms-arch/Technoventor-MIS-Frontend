@@ -19,7 +19,8 @@ type MachineDevicePanelProps = {
   orgId: string;
   labId: string;
   machineId: string;
-  isOrgAdmin: boolean;
+  /** Lab managers and organisation admins can fetch the one-time install setup code. */
+  canViewInstallSetup: boolean;
   enabled?: boolean;
 };
 
@@ -34,7 +35,7 @@ export function toAccessState(error: unknown): PanelAccessState {
   if (statusCode === 403) {
     return {
       isForbidden: true,
-      message: "You can access machine status, but installer setup code is organisation-admin only.",
+      message: "You can access machine status, but installer setup code requires lab manager or organisation admin access.",
     };
   }
   return {
@@ -59,7 +60,7 @@ export function MachineDevicePanel({
   orgId,
   labId,
   machineId,
-  isOrgAdmin,
+  canViewInstallSetup,
   enabled = true,
 }: MachineDevicePanelProps) {
   const [device, setDevice] = useState<MachineIoTDeviceResponse | null>(null);
@@ -89,7 +90,7 @@ export function MachineDevicePanel({
         { orgId }
       ),
     ];
-    if (isOrgAdmin) {
+    if (canViewInstallSetup) {
       requests.push(
         apiClient.get<{ error?: boolean; data?: MachineIoTInstallResponse }>(
           endpoints.machines.iotInstall(labId, machineId),
@@ -103,7 +104,7 @@ export function MachineDevicePanel({
         if (cancelled) return;
         const deviceRes = results[0] as { error?: boolean; data?: MachineIoTDeviceResponse };
         setDevice(deviceRes?.data ?? null);
-        if (isOrgAdmin && results[1]) {
+        if (canViewInstallSetup && results[1]) {
           const installRes = results[1] as { error?: boolean; data?: MachineIoTInstallResponse };
           setInstall(installRes?.data ?? null);
         } else {
@@ -125,7 +126,7 @@ export function MachineDevicePanel({
     return () => {
       cancelled = true;
     };
-  }, [orgId, labId, machineId, isOrgAdmin, enabled]);
+  }, [orgId, labId, machineId, canViewInstallSetup, enabled]);
 
   if (!enabled) return null;
 
@@ -150,8 +151,8 @@ export function MachineDevicePanel({
         <div className="space-y-1">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">RFID reader</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Lab managers only <strong>approve bookings</strong>. Students tap their registered lab
-            card at the machine during an approved slot — unlock, attendance, and release are
+            Lab managers register machines, approve bookings, and install readers. Students tap
+            their registered lab card during an approved slot — unlock, attendance, and release are
             automatic.
           </p>
         </div>
@@ -184,15 +185,15 @@ export function MachineDevicePanel({
 
           {!device?.linked ? (
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              After install, the reader polls the server every minute. If this stays offline, ask
-              your organisation admin to verify WiFi and the setup code on the device.
+              After install, the reader polls the server every minute. If this stays offline,
+              verify WiFi and the setup code on the device.
             </p>
           ) : null}
 
-          {isOrgAdmin && install ? (
+          {canViewInstallSetup && install ? (
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-4 space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                One-time install (organisation admin)
+                One-time install
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-400">{install.instructions}</p>
               <div className="flex flex-wrap gap-6 items-start">

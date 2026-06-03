@@ -22,7 +22,7 @@ describe("toAccessState", () => {
 
     expect(result).toEqual({
       isForbidden: true,
-      message: "You can access machine status, but installer setup code is organisation-admin only.",
+      message: "You can access machine status, but installer setup code requires lab manager or organisation admin access.",
     });
   });
 

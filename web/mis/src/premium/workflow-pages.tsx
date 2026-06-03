@@ -2422,7 +2422,7 @@ export function MachineDetailsPage() {
               orgId={orgId}
               labId={labId}
               machineId={machineId}
-              isOrgAdmin={Boolean(isOrgAdmin)}
+              canViewInstallSetup={Boolean(isOrgAdmin || isLabManager)}
             />
           ) : (
             <PremiumSurface className="p-6 space-y-2 border border-dashed border-slate-300 dark:border-slate-700">
