@@ -430,10 +430,3 @@ export function buildResourcePayload(
   }
   return result;
 }
-
-/** @deprecated Use buildResourcePayload with field metadata instead. */
-function defaultTransformPayload(values: Record<string, string>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(values).filter(([, value]) => value !== "")
-  );
-}
