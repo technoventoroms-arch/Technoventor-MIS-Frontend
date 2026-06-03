@@ -10,7 +10,6 @@ export const routeConstants = {
   SIGN_UP: "sign-up",
 
   APPROVALS: "approval",
-  CART: "cart",
   EDIT_LAB: "edit-lab",
   EDIT_PROFILE: "edit-profile",
   ORDERS: "orders",

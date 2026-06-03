@@ -4,7 +4,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useLabPermissions } from "./lab-permissions";
 import { P } from "./permission-codes";
 
-/** Blocks non-admins from commerce routes (cart / orders). */
+/** Blocks non-admins from commerce routes (project orders). */
 export function RequireLabFeature({
   feature,
   children,

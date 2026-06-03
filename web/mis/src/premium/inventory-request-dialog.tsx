@@ -55,7 +55,7 @@ export function InventoryRequestDialog({
     }
   }, [item, open, units]);
 
-  async function addToCart() {
+  async function submitRequest() {
     if (!item) return;
     setIsSubmitting(true);
     try {
@@ -72,7 +72,7 @@ export function InventoryRequestDialog({
         },
         { orgId }
       );
-      toast.success("Added to cart.");
+      toast.success("Inventory request submitted.");
       onOpenChange(false);
       await onAdded();
     } catch (error) {
@@ -88,7 +88,7 @@ export function InventoryRequestDialog({
         <DialogHeader>
           <DialogTitle>Request inventory item</DialogTitle>
           <DialogDescription>
-            {item ? formatInventoryItemOption(item) : "Select quantity and unit for your cart."}
+            {item ? formatInventoryItemOption(item) : "Select quantity and unit for your request."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -123,14 +123,14 @@ export function InventoryRequestDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!quantity || isSubmitting} onClick={addToCart}>
+          <Button disabled={!quantity || isSubmitting} onClick={submitRequest}>
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Adding…
+                Submitting…
               </>
             ) : (
-              "Add to cart"
+              "Submit request"
             )}
           </Button>
         </DialogFooter>

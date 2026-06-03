@@ -379,11 +379,10 @@ export function LandingPage() {
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
               </div>
-              <h3 className="feat-title">Material checkout cart</h3>
+              <h3 className="feat-title">Material requests</h3>
               <p className="feat-desc">
-                Students add materials to a cart, attach them to a project,
-                and request checkout — all in a clean, streamlined workflow with
-                manager approval.
+                Students request materials for a project with manager approval —
+                a clean, streamlined workflow from inventory to usage tracking.
               </p>
             </div>
             <div className="feat-card">
@@ -785,8 +784,7 @@ export function LandingPage() {
                   consumed materials
                 </div>
                 <div className="role-cap">
-                  <span className="rc-dot"></span>Request inventory via checkout
-                  cart
+                  <span className="rc-dot"></span>Request inventory for projects
                 </div>
                 <div className="role-cap">
                   <span className="rc-dot"></span>Log check-in / check-out

@@ -13,7 +13,6 @@ import {
   Loader2,
   Plus,
   Radio,
-  ShoppingCart,
   Users,
   Wrench,
 } from "lucide-react";
@@ -62,7 +61,6 @@ import { usePagedResource } from "./api-hooks";
 import { useOrganisationAccess } from "./use-organisation-access";
 import { useJoinLabVisibility } from "./use-join-lab-visibility";
 import { entityNameCell, entityTitle } from "./entity-display";
-import { RequireLabFeature } from "./lab-feature-guard";
 import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
 import { P } from "./permission-codes";
@@ -1827,6 +1825,7 @@ export function AttendancePage() {
     >
       <div className="mb-4 flex flex-wrap gap-2">
         <Button
+          className="min-w-[7.5rem]"
           disabled={Boolean(openSession) || isCheckingIn}
           onClick={async () => {
             if (!labId) return;
@@ -1849,7 +1848,7 @@ export function AttendancePage() {
           {isCheckingIn ? "Checking in..." : "Check in"}
         </Button>
         <Button
-          variant="outline"
+          className="min-w-[7.5rem]"
           disabled={!openSession || isCheckingOut}
           onClick={async () => {
             if (!labId) return;
@@ -2147,108 +2146,7 @@ export function ApprovalsPage() {
   );
 }
 
-export function CartPage() {
-  const { orgId, labId } = useParams();
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutProjectId, setCheckoutProjectId] = useState("");
-  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
-  const cart = usePagedResource<ApiRow>(labId ? endpoints.inventory.cart(labId) : null, orgId);
-  const projects = usePagedResource<ApiRow>(labId ? endpoints.projects.list(labId) : null, orgId);
-
-  return (
-    <RequireLabFeature feature="projects-order">
-    <PageFrame
-      eyebrow="Cart"
-      title="Cart"
-      description="Collect inventory items and submit checkout requests for project usage."
-      metrics={[
-        metric("Cart items", cart.rows.length, "Ready for checkout", <ShoppingCart />),
-        metric("Checkout", "Ready", "Creates project inventory orders", <Boxes />),
-      ]}
-    >
-      <ResourceCrudTable
-        title="Cart Items"
-        description={cart.error?.message ?? "Items added from inventory are checked out into a project order."}
-        resource={cart}
-        fields={[]}
-        orgId={orgId}
-        columns={[
-          nameColumn(),
-          textColumn("sku", "SKU"),
-          {
-            key: "quantity_display",
-            header: "Quantity",
-            render: (row) => String(row.display_quantity ?? `${row.cart_quantity ?? ""} ${row.stock_unit_symbol ?? row.unit_symbol ?? ""}`),
-          },
-          textColumn("return_date", "Return date"),
-        ]}
-        deletePath={(row) => endpoints.inventory.cartItem(String(labId), row.id)}
-        rowActions={[
-          {
-            label: "Checkout",
-            run: async () => {
-              setIsCheckoutOpen(true);
-            },
-          },
-        ]}
-      />
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Checkout cart</DialogTitle>
-            <DialogDescription>
-              Select the project that should receive these inventory items.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="checkout-project">Project</Label>
-            <Select value={checkoutProjectId} onValueChange={setCheckoutProjectId}>
-              <SelectTrigger id="checkout-project">
-                <SelectValue placeholder="Select a project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.rows.map((project) => (
-                  <SelectItem key={String(project.id)} value={String(project.id)}>
-                    {displayName(project)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!checkoutProjectId || isSubmittingCheckout}
-              onClick={async () => {
-                if (!checkoutProjectId || !labId) return;
-                setIsSubmittingCheckout(true);
-                try {
-                  await apiClient.create(
-                    endpoints.inventory.cartCheckout(String(labId)),
-                    { project_id: Number(checkoutProjectId) },
-                    { orgId }
-                  );
-                  setIsCheckoutOpen(false);
-                  setCheckoutProjectId("");
-                  await cart.reload();
-                } finally {
-                  setIsSubmittingCheckout(false);
-                }
-              }}
-            >
-              {isSubmittingCheckout ? "Checking out..." : "Confirm checkout"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </PageFrame>
-    </RequireLabFeature>
-  );
-}
-
-export function NotificationsPage() {
+export function ApprovalsPage() {
   const { orgId } = useParams();
   const [tab, setTab] = useState<"unread" | "all" | "grouped">("unread");
   const notifications = usePagedResource<ApiRow>(endpoints.users.notifications, orgId);

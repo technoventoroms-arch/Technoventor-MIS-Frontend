@@ -16,7 +16,6 @@ import {
   Plus,
   QrCode,
   Settings,
-  ShoppingCart,
   UserCircle,
   Users,
   Wrench,
@@ -191,7 +190,6 @@ function buildLabNav({
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
       { label: "Machine usage", to: `${labBase}/machine-usage`, icon: Wrench },
       { label: "Lab members", to: `${labBase}/users`, icon: Users },
-      { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
       { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
       { label: "Lab settings", to: `${labBase}/edit-lab`, icon: QrCode },
       { label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 },
@@ -228,7 +226,6 @@ function buildLabNav({
       { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
       { label: "Machine usage", to: `${labBase}/machine-usage`, icon: Wrench },
-      { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
       ...accountBasics,
     ];
   }
@@ -248,9 +245,6 @@ function buildLabNav({
   }
   if (can(P.USERS_READ)) {
     items.push({ label: "Lab members", to: `${labBase}/users`, icon: Users });
-  }
-  if (can(P.PROJECTS_ORDER)) {
-    items.push({ label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart });
   }
   if (can(P.ATTENDANCE_READ)) {
     items.push({ label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck });
