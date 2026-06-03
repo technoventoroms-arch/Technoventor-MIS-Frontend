@@ -189,6 +189,7 @@ function buildLabNav({
       { label: "Booking calendar", to: `${labBase}/bookings`, icon: CalendarDays },
       { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
+      { label: "Machine usage", to: `${labBase}/machine-usage`, icon: Wrench },
       { label: "Lab members", to: `${labBase}/users`, icon: Users },
       { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
       { label: "Approvals", to: `${labBase}/approval`, icon: Activity },
@@ -226,6 +227,7 @@ function buildLabNav({
       { label: "Booking calendar", to: `${labBase}/bookings`, icon: CalendarDays },
       { label: "Inventory", to: `${labBase}/inventory`, icon: Boxes },
       { label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck },
+      { label: "Machine usage", to: `${labBase}/machine-usage`, icon: Wrench },
       { label: "Cart", to: `${labBase}/cart`, icon: ShoppingCart },
       ...accountBasics,
     ];
@@ -252,6 +254,9 @@ function buildLabNav({
   }
   if (can(P.ATTENDANCE_READ)) {
     items.push({ label: "Attendance", to: `${labBase}/attendance`, icon: CalendarCheck });
+  }
+  if (can(P.MACHINES_READ)) {
+    items.push({ label: "Machine usage", to: `${labBase}/machine-usage`, icon: Wrench });
   }
   if (canAny(P.ATTENDANCE_WRITE, P.INVENTORY_WRITE, P.MACHINES_WRITE, P.PROJECTS_WRITE)) {
     items.push({ label: "Approvals", to: `${labBase}/approval`, icon: Activity });

@@ -152,7 +152,7 @@ const machineFields: ResourceField[] = [
     options: machineModeFieldOptions,
     defaultValue: MACHINE_MODE_MACHINE,
     helper:
-      "Equipment readers require approved bookings before unlock. Attendance kiosks only record lab check-in when a card is tapped.",
+      "Equipment readers require approved bookings before unlock. Attendance kiosks record lab check-in and check-out when a card is tapped (same consume endpoint).",
   },
   { name: "model_number", label: "Model number" },
   { name: "purchased_at", label: "Purchased at", type: "date" },
@@ -1758,13 +1758,10 @@ export function ProjectsPage() {
   );
 }
 
-export function AttendancePage() {
+export function MachineUsagePage() {
   const { orgId, labId } = useParams();
-  const [regularizeRow, setRegularizeRow] = useState<ApiRow | null>(null);
-  const [regularizeNotes, setRegularizeNotes] = useState("");
-  const [isSubmittingRegularize, setIsSubmittingRegularize] = useState(false);
-  const attendance = usePagedResource<ApiRow>(
-    labId ? `${endpoints.attendance.me}?lab_id=${labId}` : endpoints.attendance.me,
+  const usage = usePagedResource<ApiRow>(
+    labId ? `${endpoints.machineUsage.me}?lab_id=${labId}` : endpoints.machineUsage.me,
     orgId
   );
 
@@ -1772,17 +1769,115 @@ export function AttendancePage() {
   return (
     <PageFrame
       eyebrow="Access"
-      title="My Attendance"
-      description="Review your attendance records and submit correction requests when needed."
-      metrics={[metric("Attendance", attendance.rows.length, "Current records", <CalendarCheck />)]}
+      title="Machine Usage"
+      description="Review your machine bookings, RFID check-ins, and session history for this lab."
+      metrics={[metric("Sessions", usage.rows.length, "Bookings & usage", <Wrench />)]}
     >
+      <ResourceCrudTable
+        title="Machine usage"
+        resource={usage}
+        fields={[]}
+        orgId={orgId}
+        columns={[
+          textColumn("machine_name", "Machine"),
+          textColumn("project_title", "Project"),
+          statusColumn(),
+          textColumn("booked_from", "Booked from"),
+          textColumn("booked_till", "Booked until"),
+          textColumn("checked_in_at", "Checked in"),
+          textColumn("checked_out_at", "Checked out"),
+        ]}
+      />
+    </PageFrame>
+  );
+}
+
+export function AttendancePage() {
+  const { orgId, labId } = useParams();
+  const [regularizeRow, setRegularizeRow] = useState<ApiRow | null>(null);
+  const [regularizeNotes, setRegularizeNotes] = useState("");
+  const [isSubmittingRegularize, setIsSubmittingRegularize] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const attendance = usePagedResource<ApiRow>(
+    labId ? `${endpoints.attendance.me}?lab_id=${labId}` : endpoints.attendance.me,
+    orgId
+  );
+
+  const openSession = useMemo(
+    () => attendance.rows.find((row) => !row.check_out_at),
+    [attendance.rows]
+  );
+
+  if (!labId) return null;
+  return (
+    <PageFrame
+      eyebrow="Access"
+      title="My Attendance"
+      description="Review your lab check-in records, check in or out from the portal, or submit correction requests."
+      metrics={[
+        metric("Attendance", attendance.rows.length, "Current records", <CalendarCheck />),
+        metric(
+          "Session",
+          openSession ? "Checked in" : "Checked out",
+          openSession ? "Open lab session" : "No open session",
+          <DoorOpen />
+        ),
+      ]}
+    >
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Button
+          disabled={Boolean(openSession) || isCheckingIn}
+          onClick={async () => {
+            if (!labId) return;
+            setIsCheckingIn(true);
+            try {
+              await apiClient.create(
+                endpoints.attendance.meCheckIn,
+                { lab_id: Number(labId) },
+                { orgId }
+              );
+              await attendance.reload();
+              toast.success("Checked in to the lab.");
+            } catch (error) {
+              toast.error(normalizeApiError(error).message);
+            } finally {
+              setIsCheckingIn(false);
+            }
+          }}
+        >
+          {isCheckingIn ? "Checking in..." : "Check in"}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!openSession || isCheckingOut}
+          onClick={async () => {
+            if (!labId) return;
+            setIsCheckingOut(true);
+            try {
+              await apiClient.create(
+                endpoints.attendance.meCheckOut,
+                { lab_id: Number(labId) },
+                { orgId }
+              );
+              await attendance.reload();
+              toast.success("Checked out of the lab.");
+            } catch (error) {
+              toast.error(normalizeApiError(error).message);
+            } finally {
+              setIsCheckingOut(false);
+            }
+          }}
+        >
+          {isCheckingOut ? "Checking out..." : "Check out"}
+        </Button>
+      </div>
       <ResourceCrudTable
         title="Attendance"
         resource={attendance}
         fields={[]}
         orgId={orgId}
         columns={[
-          memberColumn(),
           statusColumn(),
           textColumn("check_in_at", "Check in"),
           textColumn("check_out_at", "Check out"),

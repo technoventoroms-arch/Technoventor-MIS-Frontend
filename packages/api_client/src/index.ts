@@ -458,9 +458,14 @@ export const endpoints = {
   attendance: {
     list: (labId: string | number) => `attendance/labs/${labId}/`,
     me: "attendance/me/",
+    meCheckIn: "attendance/me/check-in/",
+    meCheckOut: "attendance/me/check-out/",
     meRecord: (attendanceId: string | number) => `attendance/me/${attendanceId}/`,
     approve: (labId: string | number, attendanceId: string | number) =>
       `attendance/labs/${labId}/${attendanceId}/approve/`,
+  },
+  machineUsage: {
+    me: "machines/machine-usage/me/",
   },
   machines: {
     list: (labId: string | number) => `machines/labs/${labId}/`,
