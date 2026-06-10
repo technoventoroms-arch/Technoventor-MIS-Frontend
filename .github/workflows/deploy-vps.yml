@@ -1,0 +1,329 @@
+name: Deploy MIS Frontend to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VPS_DEPLOY_PATH: /opt/makerspaceops/MIS_Backend/deploy
+  WEB_IMAGE: makerspaceops-web
+  APP_DOMAIN: makerspaceops.com
+  API_DOMAIN: api.makerspaceops.com
+  HUB_TAG_KEEP: "10"
+
+jobs:
+  build-and-push:
+    name: Build & Push Web Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v6
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: mis.dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.WEB_IMAGE }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.WEB_IMAGE }}:${{ github.sha }}
+          build-args: |
+            VITE_PUBLIC_API_ENDPOINT=/api/v1/
+            VITE_PUBLIC_WEB_ENDPOINT=https://${{ env.APP_DOMAIN }}
+            VITE_PUBLIC_SITE_NAME=MakerSpace Ops MIS
+
+  deploy-to-vps:
+    name: Deploy Web on VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      deploy_logs: ${{ steps.deploy.outputs.deploy_logs }}
+    steps:
+      - name: Deploy Web via HTTPS hook
+        id: deploy
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOOK_SECRET }}" ]; then
+            echo "::error::Missing DEPLOY_HOOK_SECRET — run setup-deploy-hook.sh on VPS first"
+            exit 1
+          fi
+          missing=0
+          [ -z "$DOCKERHUB_USERNAME" ] && { echo "::error::Missing DOCKERHUB_USERNAME"; missing=1; }
+          [ -z "$DOCKERHUB_TOKEN" ] && { echo "::error::Missing DOCKERHUB_TOKEN"; missing=1; }
+          [ "$missing" -ne 0 ] && exit 1
+
+          PAYLOAD=$(jq -n \
+            --arg service web \
+            --arg tag "${{ github.sha }}" \
+            --arg registry_user "$DOCKERHUB_USERNAME" \
+            --arg registry_token "$DOCKERHUB_TOKEN" \
+            '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token}')
+          RESPONSE_FILE="$(mktemp)"
+          HTTP_CODE=$(curl -s -m 300 -w "%{http_code}" -o "$RESPONSE_FILE" -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
+            -H "Authorization: Bearer ${{ secrets.DEPLOY_HOOK_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          RESPONSE="$(cat "$RESPONSE_FILE")"
+          echo "HTTP $HTTP_CODE"
+          echo "$RESPONSE" | jq . || echo "$RESPONSE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Deploy hook returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "$RESPONSE" | jq -e '.ok' >/dev/null
+          LOGS=$(echo "$RESPONSE" | jq -r '.logs')
+          { echo "deploy_logs<<EOF"; echo "$LOGS"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+  hub-retention:
+    name: Prune old Docker Hub tags
+    needs: deploy-to-vps
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Keep latest + ${{ env.HUB_TAG_KEEP }} SHA tags
+        continue-on-error: true
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          chmod +x deploy/scripts/prune-dockerhub-tags.sh
+          deploy/scripts/prune-dockerhub-tags.sh \
+            "$DOCKERHUB_USERNAME" \
+            "${{ env.WEB_IMAGE }}" \
+            "${{ env.HUB_TAG_KEEP }}" \
+            "$DOCKERHUB_USERNAME" \
+            "$DOCKERHUB_TOKEN"
+
+  notify-success:
+    name: Send Success Email
+    needs: deploy-to-vps
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate mail secrets
+        env:
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          missing=0
+          [ -z "$MAIL_USERNAME" ] && { echo "::error::Missing MAIL_USERNAME (set to cloud.keywis@gmail.com)"; missing=1; }
+          [ -z "$MAIL_PASSWORD" ] && { echo "::error::Missing MAIL_PASSWORD (16-char Gmail App Password)"; missing=1; }
+          [ -z "$MAIL_TO" ] && { echo "::error::Missing MAIL_TO"; missing=1; }
+          exit $missing
+      - uses: dawidd6/action-send-mail@v16
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "MIS Frontend deployed — ${{ github.event.head_commit.message || format('run {0}', github.run_id) }}"
+          to: ${{ secrets.MAIL_TO }}
+          from: Technoventor MIS CI/CD <${{ secrets.MAIL_USERNAME }}>
+          convert_markdown: false
+          attachments: deploy/cicd/assets/logo.jpg,deploy/cicd/assets/banner.jpg
+          html_body: |
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Deployment Succeeded</title></head>
+            <body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 16px;">
+                <tr><td align="center">
+                  <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);border:1px solid #e5e7eb;">
+                    <tr>
+                      <td style="background:#ffffff;padding:24px 32px;border-bottom:1px solid #f3f4f6;">
+                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                          <td width="52" valign="middle"><img src="cid:logo.jpg" alt="Technoventor" height="40" style="display:block;border:0;height:40px;" /></td>
+                          <td valign="middle" style="padding-left:14px;">
+                            <p style="margin:0;font-size:15px;font-weight:700;color:#0d9488;line-height:1.3;">Technoventor Innovations Pvt Ltd.</p>
+                            <p style="margin:4px 0 0;font-size:11px;color:#64748b;">A Makerspace Company</p>
+                          </td>
+                        </tr></table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0;line-height:0;">
+                        <img src="cid:banner.jpg" alt="Design · Develop · Deploy" width="620" style="display:block;width:100%;max-width:620px;height:auto;border:0;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px 32px 24px;">
+                        <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">Frontend is live!</p>
+                        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.5;">The latest MIS frontend has been successfully deployed to the Technoventor production VPS.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 32px 24px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #f1f5f9;">
+                          <tr>
+                            <td style="padding:16px;border-bottom:1px solid #f1f5f9;">
+                              <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Commit</p>
+                              <p style="margin:0;font-size:14px;color:#1e293b;font-weight:500;">${{ github.event.head_commit.message || github.event_name }}</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:16px;border-bottom:1px solid #f1f5f9;">
+                              <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                  <td width="50%">
+                                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Branch</p>
+                                    <p style="margin:0;font-size:13px;color:#1e293b;font-weight:500;">${{ github.ref_name }}</p>
+                                  </td>
+                                  <td width="50%">
+                                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Author</p>
+                                    <p style="margin:0;font-size:13px;color:#1e293b;font-weight:500;">@${{ github.actor }}</p>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:16px;">
+                              <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Live site</p>
+                              <p style="margin:0;font-size:13px;color:#1e293b;font-weight:500;"><a href="https://${{ env.APP_DOMAIN }}" style="color:#2563eb;text-decoration:none;">https://${{ env.APP_DOMAIN }}</a></p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 32px 32px;">
+                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">View live container logs and rollback from the <a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Production Deploy Ops</a> dashboard.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #f3f4f6;">
+                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                          <td style="font-size:12px;color:#9ca3af;">Technoventor MIS CI/CD &bull; ${{ github.repository }}</td>
+                          <td align="right"><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color:#2563eb;font-size:12px;text-decoration:none;font-weight:600;">View GitHub Run</a></td>
+                        </tr></table>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+
+  notify-failure:
+    name: Send Failure Email
+    needs: [build-and-push, deploy-to-vps]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate mail secrets
+        env:
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          missing=0
+          [ -z "$MAIL_USERNAME" ] && { echo "::error::Missing MAIL_USERNAME"; missing=1; }
+          [ -z "$MAIL_PASSWORD" ] && { echo "::error::Missing MAIL_PASSWORD (Gmail App Password)"; missing=1; }
+          [ -z "$MAIL_TO" ] && { echo "::error::Missing MAIL_TO"; missing=1; }
+          exit $missing
+      - uses: dawidd6/action-send-mail@v16
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "MIS Frontend deploy FAILED — ${{ github.event.head_commit.message || format('run {0}', github.run_id) }}"
+          to: ${{ secrets.MAIL_TO }}
+          from: Technoventor MIS CI/CD <${{ secrets.MAIL_USERNAME }}>
+          convert_markdown: false
+          attachments: deploy/cicd/assets/logo.jpg,deploy/cicd/assets/banner.jpg
+          html_body: |
+            <!DOCTYPE html>
+            <html lang="en">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Deployment Failed</title></head>
+            <body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 16px;">
+                <tr><td align="center">
+                  <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);border:1px solid #e5e7eb;">
+                    <tr>
+                      <td style="background:#ffffff;padding:24px 32px;border-bottom:1px solid #f3f4f6;">
+                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                          <td width="52" valign="middle"><img src="cid:logo.jpg" alt="Technoventor" height="40" style="display:block;border:0;height:40px;" /></td>
+                          <td valign="middle" style="padding-left:14px;">
+                            <p style="margin:0;font-size:15px;font-weight:700;color:#0d9488;line-height:1.3;">Technoventor Innovations Pvt Ltd.</p>
+                            <p style="margin:4px 0 0;font-size:11px;color:#64748b;">A Makerspace Company</p>
+                          </td>
+                        </tr></table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0;line-height:0;">
+                        <img src="cid:banner.jpg" alt="Design · Develop · Deploy" width="620" style="display:block;width:100%;max-width:620px;height:auto;border:0;opacity:0.85;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px 32px 24px;">
+                        <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">Frontend deployment encountered an error</p>
+                        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.5;">The MIS frontend pipeline failed. Check Production Deploy Ops for live logs or open the GitHub run for CI details.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 32px 24px;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #f1f5f9;">
+                          <tr>
+                            <td style="padding:16px;border-bottom:1px solid #f1f5f9;">
+                              <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Failed Commit</p>
+                              <p style="margin:0;font-size:14px;color:#1e293b;font-weight:500;">${{ github.event.head_commit.message || github.event_name }}</p>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:16px;">
+                              <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                  <td width="50%">
+                                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Branch</p>
+                                    <p style="margin:0;font-size:13px;color:#1e293b;font-weight:500;">${{ github.ref_name }}</p>
+                                  </td>
+                                  <td width="50%">
+                                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;">Triggered By</p>
+                                    <p style="margin:0;font-size:13px;color:#1e293b;font-weight:500;">@${{ github.actor }}</p>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 32px 32px;">
+                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;"><a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Production Deploy Ops</a> &bull; <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color:#2563eb;text-decoration:none;font-weight:600;">GitHub run</a></p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#f9fafb;padding:20px 32px;border-top:1px solid #f3f4f6;">
+                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                          <td style="font-size:12px;color:#9ca3af;">Technoventor MIS CI/CD &bull; ${{ github.repository }}</td>
+                          <td align="right"><a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;font-size:12px;text-decoration:none;font-weight:600;">Live logs</a></td>
+                        </tr></table>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>

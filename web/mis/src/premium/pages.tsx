@@ -201,8 +201,9 @@ export function LoginPage() {
 }
 
 function MisShellInner() {
-  const { user, logout } = useAuth();
+  const { user, logout, profile } = useAuth();
   const { uiContext } = useCurrentUserProfile();
+  const canAccessDeployOps = Boolean(profile?.can_access_deploy_ops);
   const params = useParams();
   const orgId = params.orgId;
   const labId = params.labId;
@@ -270,6 +271,7 @@ function MisShellInner() {
         orgId,
         labId,
         isOrgAdmin,
+        canAccessDeployOps,
         roleName,
         canCreateOrganisation: canCreateFromContext,
         showJoinLab,
@@ -287,6 +289,7 @@ function MisShellInner() {
       uiContext.capabilities,
       uiContext.navigation_sections,
       isOrgAdmin,
+      canAccessDeployOps,
       labId,
       orgId,
       roleName,

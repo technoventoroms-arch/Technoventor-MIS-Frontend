@@ -128,6 +128,25 @@ export function PublicOnlyRoute() {
   return <Outlet />;
 }
 
+export function DeployOpsRoute() {
+  const location = useLocation();
+  const { isAuthenticated, isBootstrapping, profile } = useAuth();
+
+  if (isBootstrapping) {
+    return <PremiumBootScreen label="Preparing your MIS workspace" />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (!profile?.can_access_deploy_ops) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}
+
 function PremiumBootScreen({ label }: { label: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
