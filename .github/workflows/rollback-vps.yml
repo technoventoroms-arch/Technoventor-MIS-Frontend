@@ -9,7 +9,7 @@ on:
         default: previous
 
 env:
-  API_DOMAIN: api.makerspaceops.com
+  VPS_DEPLOY_PATH: /opt/makerspaceops/MIS_Backend/deploy
 
 jobs:
   rollback:
@@ -17,24 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Roll back Web via HTTPS hook
+      - name: Roll back Web via SSH
+        uses: appleboy/ssh-action@v1.2.2
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          if [ -z "${{ secrets.DEPLOY_HOOK_SECRET }}" ]; then
-            echo "::error::Missing DEPLOY_HOOK_SECRET — run setup-deploy-hook.sh on VPS first"
-            exit 1
-          fi
-          PAYLOAD=$(jq -n \
-            --arg service web \
-            --arg tag "${{ inputs.image_tag }}" \
-            --arg registry_user "$DOCKERHUB_USERNAME" \
-            --arg registry_token "$DOCKERHUB_TOKEN" \
-            '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token}')
-          RESPONSE=$(curl -sf -m 300 -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
-            -H "Authorization: Bearer ${{ secrets.DEPLOY_HOOK_SECRET }}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          echo "$RESPONSE" | jq .
-          echo "$RESPONSE" | jq -e '.ok' >/dev/null
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,IMAGE_TAG
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            cd ${{ env.VPS_DEPLOY_PATH }}
+            export DOCKERHUB_USERNAME DOCKERHUB_TOKEN
+            bash scripts/ci-deploy.sh web "$IMAGE_TAG"
