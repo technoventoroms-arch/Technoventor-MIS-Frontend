@@ -1,3 +1,17 @@
+# =============================================================================
+# MIS Frontend CI/CD — identical pattern to Technoventor LMS deploy-vps.yml
+# =============================================================================
+# Runner: ubuntu-latest ONLY. No SSH from GitHub. No self-hosted runner.
+#
+#   build-and-push  → push tvdep/makerspaceops-web:latest + :{github.sha}
+#   deploy-to-vps   → POST https://api.makerspaceops.com/_ci/deploy
+#                     service=web, tag={github.sha}
+#   hub-retention   → deploy/scripts/prune-dockerhub-tags.sh
+#   notify-*        → branded Gmail (MAIL_* secrets)
+#
+# See deploy/cicd/SECRETS.md (frontend) and MIS_Backend/deploy/cicd/DEPLOY_HOOK.md
+# =============================================================================
+
 name: Deploy MIS Frontend to VPS
 
 on:
@@ -204,7 +218,7 @@ jobs:
                     </tr>
                     <tr>
                       <td style="padding:0 32px 32px;">
-                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">View live container logs and rollback from the <a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Production Deploy Ops</a> dashboard.</p>
+                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">View live container logs and rollback from the <a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Deploy Ops dashboard</a>.</p>
                       </td>
                     </tr>
                     <tr>
@@ -278,7 +292,7 @@ jobs:
                     <tr>
                       <td style="padding:32px 32px 24px;">
                         <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">Frontend deployment encountered an error</p>
-                        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.5;">The MIS frontend pipeline failed. Check Production Deploy Ops for live logs or open the GitHub run for CI details.</p>
+                        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.5;">The MIS frontend pipeline failed. Check the Deploy Ops dashboard for live logs or open the GitHub run for CI details.</p>
                       </td>
                     </tr>
                     <tr>
@@ -311,7 +325,7 @@ jobs:
                     </tr>
                     <tr>
                       <td style="padding:0 32px 32px;">
-                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;"><a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Production Deploy Ops</a> &bull; <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color:#2563eb;text-decoration:none;font-weight:600;">GitHub run</a></p>
+                        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;"><a href="https://${{ env.APP_DOMAIN }}/ops/deploy" style="color:#2563eb;text-decoration:none;font-weight:600;">Deploy Ops dashboard</a> &bull; <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="color:#2563eb;text-decoration:none;font-weight:600;">GitHub run</a></p>
                       </td>
                     </tr>
                     <tr>

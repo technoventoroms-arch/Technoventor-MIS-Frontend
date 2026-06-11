@@ -1,3 +1,5 @@
+# Rollback via HTTPS deploy hook (same as LMS rollback-vps.yml)
+
 name: Rollback MIS Frontend on VPS
 
 on:
