@@ -69,8 +69,9 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DEPLOY_HOOK_SECRET: ${{ secrets.DEPLOY_HOOK_SECRET }}
         run: |
-          if [ -z "${{ secrets.DEPLOY_HOOK_SECRET }}" ]; then
+          if [ -z "$DEPLOY_HOOK_SECRET" ]; then
             echo "::error::Missing DEPLOY_HOOK_SECRET — run setup-deploy-hook.sh on VPS first"
             exit 1
           fi
@@ -79,27 +80,63 @@ jobs:
           [ -z "$DOCKERHUB_TOKEN" ] && { echo "::error::Missing DOCKERHUB_TOKEN"; missing=1; }
           [ "$missing" -ne 0 ] && exit 1
 
+          TARGET_SHA="${{ github.sha }}"
+          HOOK_AUTH=(-H "Authorization: Bearer ${DEPLOY_HOOK_SECRET}")
+
+          curl -sf -m 30 "https://${{ env.API_DOMAIN }}/api/v1/health/" >/dev/null \
+            || { echo "::error::VPS API unreachable from GitHub runner"; exit 1; }
+
           PAYLOAD=$(jq -n \
             --arg service web \
-            --arg tag "${{ github.sha }}" \
+            --arg tag "$TARGET_SHA" \
             --arg registry_user "$DOCKERHUB_USERNAME" \
             --arg registry_token "$DOCKERHUB_TOKEN" \
-            '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token}')
+            '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token, async: true, force: true}')
           RESPONSE_FILE="$(mktemp)"
-          HTTP_CODE=$(curl -s -m 300 -w "%{http_code}" -o "$RESPONSE_FILE" -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
-            -H "Authorization: Bearer ${{ secrets.DEPLOY_HOOK_SECRET }}" \
+          HTTP_CODE=$(curl -s --connect-timeout 30 -m 60 \
+            -w "%{http_code}" -o "$RESPONSE_FILE" \
+            -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
+            "${HOOK_AUTH[@]}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
-          RESPONSE="$(cat "$RESPONSE_FILE")"
-          echo "HTTP $HTTP_CODE"
-          echo "$RESPONSE" | jq . || echo "$RESPONSE"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Deploy hook returned HTTP $HTTP_CODE"
+          echo "Trigger HTTP $HTTP_CODE"
+          cat "$RESPONSE_FILE" | jq . || cat "$RESPONSE_FILE"
+          if [ "$HTTP_CODE" != "202" ]; then
+            echo "::error::Deploy hook did not accept async deploy (HTTP $HTTP_CODE)"
             exit 1
           fi
-          echo "$RESPONSE" | jq -e '.ok' >/dev/null
-          LOGS=$(echo "$RESPONSE" | jq -r '.logs')
+
+          DEPLOY_OK=0
+          LOGS=""
+          for i in $(seq 1 40); do
+            sleep 15
+            STATUS=$(curl -s --connect-timeout 30 -m 45 \
+              "${HOOK_AUTH[@]}" \
+              "https://${{ env.API_DOMAIN }}/_ci/status")
+            JOB_STATUS=$(echo "$STATUS" | jq -r '.jobs.web.status // empty')
+            JOB_ERR=$(echo "$STATUS" | jq -r '.jobs.web.error // empty')
+            WEB_TAG=$(echo "$STATUS" | jq -r '.web.tag // empty')
+            WEB_RUNNING=$(echo "$STATUS" | jq -r '.web.running // false')
+            echo "Poll $i/40 job=${JOB_STATUS:-idle} tag=${WEB_TAG:-?} running=${WEB_RUNNING}"
+            if [ "$JOB_STATUS" = "failed" ]; then
+              echo "$STATUS" | jq .
+              echo "::error::Web deploy failed: ${JOB_ERR:-unknown}"
+              LOGS=$(echo "$STATUS" | jq -r '.jobs.web.logs // empty')
+              { echo "deploy_logs<<EOF"; echo "$LOGS"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
+            if [ "$WEB_TAG" = "$TARGET_SHA" ] && [ "$WEB_RUNNING" = "true" ]; then
+              DEPLOY_OK=1
+              LOGS=$(echo "$STATUS" | jq -r '.jobs.web.logs // empty')
+              break
+            fi
+          done
+          if [ "$DEPLOY_OK" -ne 1 ]; then
+            echo "::error::Timed out waiting for web @ ${TARGET_SHA}"
+            exit 1
+          fi
           { echo "deploy_logs<<EOF"; echo "$LOGS"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          echo "Deploy OK: web @ ${TARGET_SHA}"
 
   hub-retention:
     name: Prune old Docker Hub tags
