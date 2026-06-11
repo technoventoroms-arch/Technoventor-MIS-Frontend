@@ -107,7 +107,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
           echo "Trigger HTTP $HTTP_CODE"
-          cat "$RESPONSE_FILE" | jq . || cat "$RESPONSE_FILE"
+          jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
           if [ "$HTTP_CODE" != "202" ]; then
             echo "::error::Deploy hook did not accept async deploy (HTTP $HTTP_CODE)"
             exit 1
@@ -120,6 +120,11 @@ jobs:
             STATUS=$(curl -s --connect-timeout 30 -m 45 \
               "${HOOK_AUTH[@]}" \
               "https://${{ env.API_DOMAIN }}/_ci/status")
+            if ! echo "$STATUS" | jq -e . >/dev/null 2>&1; then
+              echo "::error::/_ci/status did not return JSON — check Caddy routes /_ci/* → mis-deploy-hook"
+              echo "$STATUS" | head -c 500
+              exit 1
+            fi
             JOB_STATUS=$(echo "$STATUS" | jq -r '.jobs.web.status // empty')
             JOB_ERR=$(echo "$STATUS" | jq -r '.jobs.web.error // empty')
             WEB_TAG=$(echo "$STATUS" | jq -r '.web.tag // empty')
