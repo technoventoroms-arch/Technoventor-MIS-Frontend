@@ -83,8 +83,15 @@ jobs:
           TARGET_SHA="${{ github.sha }}"
           HOOK_AUTH=(-H "Authorization: Bearer ${DEPLOY_HOOK_SECRET}")
 
-          curl -sf -m 30 "https://${{ env.API_DOMAIN }}/api/v1/health/" >/dev/null \
-            || { echo "::error::VPS API unreachable from GitHub runner"; exit 1; }
+          if ! curl -sf --connect-timeout 30 -m 30 "https://${{ env.API_DOMAIN }}/health/live/" >/dev/null; then
+            HOOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 30 -m 30 \
+              -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy")
+            if [ "$HOOK_CODE" != "401" ]; then
+              echo "::error::VPS API unreachable from GitHub runner (health/live failed, hook HTTP ${HOOK_CODE})"
+              exit 1
+            fi
+            echo "health/live not available yet — deploy hook reachable (401)"
+          fi
 
           PAYLOAD=$(jq -n \
             --arg service web \
