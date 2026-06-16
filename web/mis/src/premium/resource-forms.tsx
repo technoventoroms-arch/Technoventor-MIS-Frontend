@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { Edit, Loader2, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 
 import { apiClient, normalizeApiError, type ApiError, type Entity } from "@mono/api_client";
 import { ImageUploadField } from "@mono/shared_ui/components/shared/image-upload-field";
 import { Button } from "@mono/shared_ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@mono/shared_ui/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +59,18 @@ export type ResourceAction<T extends Entity> = {
   run: (row: T) => Promise<void>;
 };
 
+export type ResourceRowMenuItem<T extends Entity> = {
+  label: string;
+  icon?: ReactNode;
+  href?: string;
+  onClick?: (row: T) => void;
+  disabled?: boolean | ((row: T) => boolean);
+  title?: string;
+  destructive?: boolean;
+  hidden?: boolean | ((row: T) => boolean);
+  separatorBefore?: boolean;
+};
+
 export function ResourceCrudTable<T extends Entity>({
   title,
   description,
@@ -63,6 +83,8 @@ export function ResourceCrudTable<T extends Entity>({
   createLabel = "Create record",
   columns,
   rowActions = [],
+  rowMenuItems,
+  actionStyle = "buttons",
   transformPayload,
 }: {
   title: string;
@@ -86,6 +108,8 @@ export function ResourceCrudTable<T extends Entity>({
   createLabel?: string;
   columns: PremiumColumn<T>[];
   rowActions?: ResourceAction<T>[];
+  rowMenuItems?: (row: T) => ResourceRowMenuItem<T>[];
+  actionStyle?: "buttons" | "menu";
   transformPayload?: (values: Record<string, string>) => Record<string, unknown>;
 }) {
   const [editingRow, setEditingRow] = useState<T | null>(null);
@@ -128,37 +152,48 @@ export function ResourceCrudTable<T extends Entity>({
   const actionColumn = useMemo<PremiumColumn<T>>(
     () => ({
       key: "actions",
-      header: "Actions",
-      className: "text-right",
-      render: (row) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          {rowActions.map((action) => (
-            <Button
-              key={action.label}
-              size="sm"
-              variant={action.tone ?? "outline"}
-              disabled={runningAction === `${action.label}-${row.id}`}
-              onClick={() => void runRowAction(action, row)}
-            >
-              {action.label}
-            </Button>
-          ))}
-          {updatePath ? (
-            <Button size="sm" variant="outline" onClick={() => setEditingRow(row)}>
-              <Edit className="size-3.5" />
-              Edit
-            </Button>
-          ) : null}
-          {deletePath ? (
-            <Button size="sm" variant="destructive" onClick={() => void removeRow(row)}>
-              <Trash2 className="size-3.5" />
-              Delete
-            </Button>
-          ) : null}
-        </div>
-      ),
+      header: actionStyle === "menu" ? "" : "Actions",
+      className: "w-12 text-right",
+      render: (row) =>
+        actionStyle === "menu" ? (
+          <RowActionsMenu
+            row={row}
+            rowActions={rowActions}
+            rowMenuItems={rowMenuItems?.(row) ?? []}
+            runningAction={runningAction}
+            onRunRowAction={runRowAction}
+            onEdit={updatePath ? () => setEditingRow(row) : undefined}
+            onDelete={deletePath ? () => void removeRow(row) : undefined}
+          />
+        ) : (
+          <div className="flex flex-wrap justify-end gap-2">
+            {rowActions.map((action) => (
+              <Button
+                key={action.label}
+                size="sm"
+                variant={action.tone ?? "outline"}
+                disabled={runningAction === `${action.label}-${row.id}`}
+                onClick={() => void runRowAction(action, row)}
+              >
+                {action.label}
+              </Button>
+            ))}
+            {updatePath ? (
+              <Button size="sm" variant="outline" onClick={() => setEditingRow(row)}>
+                <Edit className="size-3.5" />
+                Edit
+              </Button>
+            ) : null}
+            {deletePath ? (
+              <Button size="sm" variant="destructive" onClick={() => void removeRow(row)}>
+                <Trash2 className="size-3.5" />
+                Delete
+              </Button>
+            ) : null}
+          </div>
+        ),
     }),
-    [deletePath, rowActions, runningAction, updatePath]
+    [actionStyle, deletePath, rowActions, rowMenuItems, runningAction, updatePath]
   );
 
   return (
@@ -233,6 +268,102 @@ function formatRelativeTime(timestamp: number): string {
   if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
   const deltaHours = Math.floor(deltaMinutes / 60);
   return `${deltaHours}h ago`;
+}
+
+function RowActionsMenu<T extends Entity>({
+  row,
+  rowActions,
+  rowMenuItems,
+  runningAction,
+  onRunRowAction,
+  onEdit,
+  onDelete,
+}: {
+  row: T;
+  rowActions: ResourceAction<T>[];
+  rowMenuItems: ResourceRowMenuItem<T>[];
+  runningAction: string | null;
+  onRunRowAction: (action: ResourceAction<T>, row: T) => Promise<void>;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
+  const visibleMenuItems = rowMenuItems.filter((item) => {
+    if (typeof item.hidden === "function") return !item.hidden(row);
+    return !item.hidden;
+  });
+  const hasCrud = Boolean(onEdit || onDelete);
+  const hasAsyncActions = rowActions.length > 0;
+  const showManageSeparator = visibleMenuItems.length > 0 && (hasCrud || hasAsyncActions);
+
+  return (
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="icon" variant="ghost" className="size-8" aria-label="Open actions menu">
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {visibleMenuItems.map((item) => {
+            const disabled = typeof item.disabled === "function" ? item.disabled(row) : item.disabled;
+            const content = (
+              <>
+                {item.icon}
+                {item.label}
+              </>
+            );
+
+            if (item.href) {
+              return (
+                <span key={item.label}>
+                  {item.separatorBefore ? <DropdownMenuSeparator /> : null}
+                  <DropdownMenuItem asChild disabled={disabled} title={item.title} variant={item.destructive ? "destructive" : "default"}>
+                    <Link to={item.href}>{content}</Link>
+                  </DropdownMenuItem>
+                </span>
+              );
+            }
+
+            return (
+              <span key={item.label}>
+                {item.separatorBefore ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuItem
+                  disabled={disabled}
+                  title={item.title}
+                  variant={item.destructive ? "destructive" : "default"}
+                  onClick={() => item.onClick?.(row)}
+                >
+                  {content}
+                </DropdownMenuItem>
+              </span>
+            );
+          })}
+          {rowActions.map((action) => (
+            <DropdownMenuItem
+              key={action.label}
+              disabled={runningAction === `${action.label}-${row.id}`}
+              onClick={() => void onRunRowAction(action, row)}
+            >
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+          {showManageSeparator ? <DropdownMenuSeparator /> : null}
+          {onEdit ? (
+            <DropdownMenuItem onClick={onEdit}>
+              <Edit />
+              Edit
+            </DropdownMenuItem>
+          ) : null}
+          {onDelete ? (
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 export function ResourceFormDialog({

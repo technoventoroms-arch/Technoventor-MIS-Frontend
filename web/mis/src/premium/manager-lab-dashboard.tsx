@@ -29,7 +29,10 @@ export function ManagerLabDashboard({ labName }: ManagerLabDashboardProps) {
     orgId && labId ? endpoints.labs.members(orgId, labId) : null,
     orgId
   );
-  const attendance = usePagedResource<Entity>(labId ? endpoints.attendance.list(labId) : null, orgId);
+  const attendance = usePagedResource<Entity>(
+    labId ? `${endpoints.attendance.list(labId)}?status=PENDING` : null,
+    orgId
+  );
   const projectOrders = usePagedResource<Entity>(
     labId ? `${endpoints.projects.pendingOrders}?lab_id=${labId}` : endpoints.projects.pendingOrders,
     orgId
@@ -41,13 +44,11 @@ export function ManagerLabDashboard({ labName }: ManagerLabDashboardProps) {
     orgId
   );
   const joinRequests = usePagedResource<Entity>(
-    orgId ? endpoints.organisations.joinRequests(orgId) : null,
+    orgId ? `${endpoints.organisations.joinRequests(orgId)}?status=PENDING` : null,
     orgId
   );
 
-  const pendingAttendance = attendance.rows.filter(
-    (row) => String(row.status ?? "").toLowerCase() === "pending"
-  ).length;
+  const pendingAttendance = attendance.rows.length;
   const pendingApprovals =
     joinRequests.rows.length +
     pendingAttendance +
