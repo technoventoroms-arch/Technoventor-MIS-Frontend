@@ -1965,9 +1965,12 @@ export function AttendancePage() {
 export function ApprovalsPage() {
   const { orgId, labId } = useParams();
   const { canAny } = useLabAccessRole(orgId, labId);
-  const attendance = usePagedResource<ApiRow>(labId ? endpoints.attendance.list(labId) : null, orgId);
+  const attendance = usePagedResource<ApiRow>(
+    labId ? `${endpoints.attendance.list(labId)}?status=PENDING` : null,
+    orgId
+  );
   const joinRequests = usePagedResource<ApiRow>(
-    orgId ? endpoints.organisations.joinRequests(orgId) : null,
+    orgId ? `${endpoints.organisations.joinRequests(orgId)}?status=PENDING` : null,
     orgId
   );
   const projectOrders = usePagedResource<ApiRow>(
@@ -2028,7 +2031,7 @@ export function ApprovalsPage() {
           {labId ? (
             <ResourceCrudTable
               title="Attendance"
-              description={attendance.error?.message ?? "Approve or reject attendance regularisation."}
+              description={attendance.error?.message ?? "Pending attendance regularisation requests."}
               resource={attendance}
               fields={[]}
               orgId={orgId}
