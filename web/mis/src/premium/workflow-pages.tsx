@@ -105,6 +105,7 @@ import {
   ResourceFormDialog,
   type FieldOption,
   type ResourceField,
+  type ResourceRowMenuItem,
 } from "./resource-forms";
 
 type Metric = {
@@ -1152,63 +1153,64 @@ export function MachinesPage() {
           updatePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
           deletePath={isOrgAdmin || isLabManager ? (row) => endpoints.machines.detail(labId, row.id) : undefined}
           createLabel="Register machine"
+          actionStyle="menu"
+          rowMenuItems={(row) => {
+            const attendanceOnly = isAttendanceMachine(row);
+            const detailsPath = `/${orgId}/lab/${labId}/machine/${row.id}/details`;
+            const items: ResourceRowMenuItem<ApiRow>[] = [];
+
+            if (isLabManager || isOrgAdmin) {
+              items.push(
+                { label: "Details", icon: <FileText />, href: detailsPath },
+                { label: "Reader", icon: <Radio />, href: detailsPath },
+                {
+                  label: "Status",
+                  icon: <Activity />,
+                  onClick: () => setStatusMachine(row),
+                }
+              );
+            }
+
+            if (!attendanceOnly) {
+              items.push({
+                label: "Reservations",
+                icon: <CalendarCheck />,
+                onClick: () => setReservationMachine(row),
+              });
+            }
+
+            if (!attendanceOnly) {
+              items.push({
+                label: "Book slot",
+                icon: <CalendarCheck />,
+                disabled: !labBookingPolicy.booking_enabled,
+                onClick: () => {
+                  setBookingMachine(row);
+                  setBookingStep(1);
+                  setBookingMachineId(String(row.id));
+                  setBookingDate("");
+                  setBookingSlotStart("");
+                  setBookingSlotEnd("");
+                  setBookingTimeMode("slots");
+                  setBookingError(null);
+                },
+              });
+            }
+
+            items.push({
+              label: "Logs",
+              icon: <Wrench />,
+              onClick: () => setLogMachine(row),
+            });
+
+            return items;
+          }}
           columns={[
             nameColumn(),
             imageThumbColumn("image_url", "Image"),
             machineModeColumn(),
             statusColumn(),
             textColumn("serial_number", "Serial"),
-            {
-              key: "ops",
-              header: "Operations",
-              render: (row) => {
-                const attendanceOnly = isAttendanceMachine(row);
-                return (
-                <div className="flex flex-wrap gap-2">
-                  {isLabManager || isOrgAdmin ? (
-                    <>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>Details</Link>
-                      </Button>
-                      <Button size="sm" variant="secondary" asChild>
-                        <Link to={`/${orgId}/lab/${labId}/machine/${row.id}/details`}>
-                          Reader
-                        </Link>
-                      </Button>
-                    </>
-                  ) : null}
-                  {isLabManager || isOrgAdmin ? (
-                    <Button size="sm" variant="outline" onClick={() => setStatusMachine(row)}>
-                      Status
-                    </Button>
-                  ) : null}
-                  {!attendanceOnly ? (
-                    <Button size="sm" variant="outline" onClick={() => setReservationMachine(row)}>
-                      Reservations
-                    </Button>
-                  ) : null}
-                  <Button size="sm" variant="outline" onClick={() => {
-                    setBookingMachine(row);
-                    setBookingStep(1);
-                    setBookingMachineId(String(row.id));
-                    setBookingDate("");
-                    setBookingSlotStart("");
-                    setBookingSlotEnd("");
-                    setBookingTimeMode("slots");
-                    setBookingError(null);
-                  }}
-                  disabled={!labBookingPolicy.booking_enabled || attendanceOnly}
-                  title={attendanceOnly ? "Attendance kiosks do not use slot booking" : undefined}
-                  >
-                    Book slot
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setLogMachine(row)}>
-                    Logs
-                  </Button>
-                </div>
-                );
-              },
-            },
           ]}
         />
         {reservationMachine ? (
