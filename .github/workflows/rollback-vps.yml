@@ -1,0 +1,46 @@
+name: Rollback MIS Frontend on VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Git SHA (40 chars) or "previous" for last deploy'
+        required: true
+        default: previous
+
+env:
+  API_DOMAIN: api.makerspaceops.com
+
+jobs:
+  rollback:
+    name: Rollback Web container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Roll back Web via HTTPS hook
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DEPLOY_HOOK_SECRET: ${{ secrets.DEPLOY_HOOK_SECRET }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_SECRET" ]; then
+            echo "::error::Missing DEPLOY_HOOK_SECRET — run setup-deploy-hook.sh on VPS first"
+            exit 1
+          fi
+          PAYLOAD=$(jq -n \
+            --arg service web \
+            --arg tag "${{ inputs.image_tag }}" \
+            --arg registry_user "$DOCKERHUB_USERNAME" \
+            --arg registry_token "$DOCKERHUB_TOKEN" \
+            '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token}')
+          RESPONSE_FILE="$(mktemp)"
+          HTTP_CODE=$(curl -s --connect-timeout 60 -m 600 -w "%{http_code}" -o "$RESPONSE_FILE" \
+            -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
+            -H "Authorization: Bearer ${DEPLOY_HOOK_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD") || true
+          RESPONSE="$(cat "$RESPONSE_FILE")"
+          echo "HTTP ${HTTP_CODE:-none}"
+          echo "$RESPONSE" | jq . || echo "$RESPONSE"
+          [ "${HTTP_CODE:-}" = "200" ] || { echo "::error::Rollback hook returned HTTP ${HTTP_CODE:-none}"; exit 1; }
+          echo "$RESPONSE" | jq -e '.ok' >/dev/null

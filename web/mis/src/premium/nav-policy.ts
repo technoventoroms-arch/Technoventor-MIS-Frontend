@@ -30,6 +30,7 @@ export function buildMisNav(options: {
   orgId?: string;
   labId?: string;
   isOrgAdmin: boolean;
+  canAccessDeployOps?: boolean;
   roleName?: string;
   canCreateOrganisation?: boolean;
   showJoinLab?: boolean;
@@ -48,6 +49,7 @@ export function buildMisNav(options: {
     orgId,
     labId,
     isOrgAdmin,
+    canAccessDeployOps = false,
     roleName = "",
     canCreateOrganisation = false,
     showJoinLab = true,
@@ -58,9 +60,13 @@ export function buildMisNav(options: {
     capabilities = {},
   } = options;
   const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
+  const deployOpsItems: ShellNavItem[] = canAccessDeployOps
+    ? [{ label: "Deployment", to: "/ops/deploy", icon: Activity }]
+    : [];
 
   if (!orgId) {
     const rootItems: ShellNavItem[] = [
+      ...deployOpsItems,
       { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2, end: true },
       ...(canCreateOrganisation
         ? [{ label: "Create organisation", to: "/create-organization", icon: Plus }]
@@ -76,7 +82,7 @@ export function buildMisNav(options: {
   const orgBase = `/${orgId}`;
 
   if (labId) {
-    return buildLabNav({
+    const labNav = buildLabNav({
       orgBase,
       labBase: `${orgBase}/lab/${labId}`,
       isOrgAdmin,
@@ -86,9 +92,11 @@ export function buildMisNav(options: {
       canManageInventory,
       profileItem,
     });
+    return applyNavigationSectionFilter([...deployOpsItems, ...labNav], navigationSections);
   }
 
   const orgItems: ShellNavItem[] = [
+    ...deployOpsItems,
     { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2 },
     { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
     { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },

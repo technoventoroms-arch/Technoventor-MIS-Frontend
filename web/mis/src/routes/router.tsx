@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ComponentType } from "react";
-import { RouteObject } from "react-router-dom";
-import { AuthenticatedRoute, PublicOnlyRoute } from "@/premium/auth";
+import { Navigate, RouteObject } from "react-router-dom";
+import { AuthenticatedRoute, DeployOpsRoute, PublicOnlyRoute } from "@/premium/auth";
 
 function lazyElement<T extends Record<string, unknown>>(
   loader: () => Promise<T>,
@@ -34,6 +34,9 @@ const workflowPage = (exportName: keyof typeof import("@/premium/workflow-pages"
 
 const accountPage = (exportName: keyof typeof import("@/premium/account-pages")) =>
   lazyElement(() => import("@/premium/account-pages"), exportName);
+
+const deployOpsPage = () =>
+  lazyElement(() => import("@/premium/deploy-ops-page"), "DeployOpsPage");
 
 const workspaceShellChildren: RouteObject[] = [
   { index: true, element: page("DashboardHomePage") },
@@ -120,6 +123,21 @@ const routes: RouteObject[] = [
   {
     element: <AuthenticatedRoute />,
     children: authenticatedShellChildren,
+  },
+  {
+    path: "ops",
+    element: <DeployOpsRoute />,
+    children: [
+      {
+        path: "deploy",
+        element: page("MisShell"),
+        children: [{ index: true, element: deployOpsPage() }],
+      },
+    ],
+  },
+  {
+    path: "superadmin/deploy",
+    element: <Navigate to="/ops/deploy" replace />,
   },
   {
     path: "*",

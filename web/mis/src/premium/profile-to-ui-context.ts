@@ -53,6 +53,7 @@ export type CurrentUserProfile = {
   first_name?: string;
   last_name?: string;
   full_name?: string;
+  can_access_deploy_ops?: boolean;
   account_type?: AccountType;
   can_create_organisation?: boolean;
   lab_roles?: ProfileLabRole[];

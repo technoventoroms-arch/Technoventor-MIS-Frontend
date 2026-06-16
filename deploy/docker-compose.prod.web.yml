@@ -1,0 +1,16 @@
+# Frontend-only production compose (CI/CD).
+# Runs alongside mis-api from MIS_Backend/deploy/docker-compose.prod.yml on the same VPS.
+
+services:
+  mis:
+    image: ${DOCKERHUB_USERNAME}/makerspaceops-web:${WEB_IMAGE_TAG:-latest}
+    container_name: mis
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - deploy_default
+
+networks:
+  deploy_default:
+    external: true

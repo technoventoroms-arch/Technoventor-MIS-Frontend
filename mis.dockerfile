@@ -1,8 +1,10 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@latest --activate
-COPY . .
-RUN pnpm install
+RUN corepack enable && corepack prepare pnpm@10.10.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages ./packages
+COPY web ./web
+RUN pnpm install --frozen-lockfile
 ARG VITE_PUBLIC_API_ENDPOINT
 ARG VITE_PUBLIC_WEB_ENDPOINT
 ARG VITE_PUBLIC_SITE_NAME
