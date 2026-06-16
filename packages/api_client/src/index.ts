@@ -107,7 +107,7 @@ export type RequestOptions = AxiosRequestConfig & {
 };
 
 const SESSION_KEY = "mis.jwt.session";
-const FALLBACK_API_BASE_URL = "https://technoventor-mis-django-backend.onrender.com/api/v1/";
+const FALLBACK_API_BASE_URL = "https://api.makerspaceops.com/api/v1/";
 
 function getEnvBaseUrl(): string {
   const meta = import.meta as ImportMeta & {
