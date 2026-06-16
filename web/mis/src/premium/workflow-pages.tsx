@@ -1125,6 +1125,18 @@ export function MachinesPage() {
     }
   }, [bookingMachineData]);
 
+  const openMachineBooking = (row: ApiRow) => {
+    setBookingMachine(row);
+    setBookingStep(1);
+    setBookingMachineId(String(row.id));
+    setBookingDate("");
+    setBookingSlotStart("");
+    setBookingSlotEnd("");
+    setBookingTimeMode("slots");
+    setBookingError(null);
+  };
+  const canManageMachines = isLabManager || isOrgAdmin;
+
   if (!labId) return null;
   return (
     <PageFrame
@@ -1179,21 +1191,12 @@ export function MachinesPage() {
               });
             }
 
-            if (!attendanceOnly) {
+            if (!attendanceOnly && canManageMachines) {
               items.push({
                 label: "Book slot",
                 icon: <CalendarCheck />,
                 disabled: !labBookingPolicy.booking_enabled,
-                onClick: () => {
-                  setBookingMachine(row);
-                  setBookingStep(1);
-                  setBookingMachineId(String(row.id));
-                  setBookingDate("");
-                  setBookingSlotStart("");
-                  setBookingSlotEnd("");
-                  setBookingTimeMode("slots");
-                  setBookingError(null);
-                },
+                onClick: () => openMachineBooking(row),
               });
             }
 
@@ -1209,7 +1212,11 @@ export function MachinesPage() {
             nameColumn(),
             machineModeColumn(),
             statusColumn(),
-            setupCodeColumn(),
+            machineAccessColumn({
+              showSetupCode: canManageMachines,
+              labBookingPolicy,
+              onBookSlot: openMachineBooking,
+            }),
           ]}
         />
         {reservationMachine ? (
@@ -2849,19 +2856,44 @@ function textColumn<T extends ApiRow>(key: string, header: string): PremiumColum
   };
 }
 
-function setupCodeColumn<T extends ApiRow>(): PremiumColumn<T> {
+function machineAccessColumn<T extends ApiRow>({
+  showSetupCode,
+  labBookingPolicy,
+  onBookSlot,
+}: {
+  showSetupCode: boolean;
+  labBookingPolicy: LabBookingPolicy;
+  onBookSlot: (row: T) => void;
+}): PremiumColumn<T> {
   return {
-    key: "setup_code",
-    header: "Setup code",
+    key: showSetupCode ? "setup_code" : "book_slot",
+    header: showSetupCode ? "Setup code" : "Book",
     render: (row) => {
-      const code = row.setup_code;
-      if (typeof code !== "string" || !code) {
+      if (showSetupCode) {
+        const code = row.setup_code;
+        if (typeof code !== "string" || !code) {
+          return <span className="text-slate-500">-</span>;
+        }
+        return (
+          <span className="font-mono text-sm font-medium tracking-wide text-slate-700 dark:text-slate-200">
+            {code}
+          </span>
+        );
+      }
+
+      if (isAttendanceMachine(row)) {
         return <span className="text-slate-500">-</span>;
       }
+
       return (
-        <span className="font-mono text-sm font-medium tracking-wide text-slate-700 dark:text-slate-200">
-          {code}
-        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!labBookingPolicy.booking_enabled}
+          onClick={() => onBookSlot(row)}
+        >
+          Book slot
+        </Button>
       );
     },
   };
