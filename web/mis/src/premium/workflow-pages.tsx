@@ -1207,10 +1207,9 @@ export function MachinesPage() {
           }}
           columns={[
             nameColumn(),
-            imageThumbColumn("image_url", "Image"),
             machineModeColumn(),
             statusColumn(),
-            textColumn("serial_number", "Serial"),
+            setupCodeColumn(),
           ]}
         />
         {reservationMachine ? (
@@ -2847,6 +2846,24 @@ function textColumn<T extends ApiRow>(key: string, header: string): PremiumColum
     key,
     header,
     render: (row) => <span className="text-slate-600 dark:text-slate-300">{formatValue(row[key])}</span>,
+  };
+}
+
+function setupCodeColumn<T extends ApiRow>(): PremiumColumn<T> {
+  return {
+    key: "setup_code",
+    header: "Setup code",
+    render: (row) => {
+      const code = row.setup_code;
+      if (typeof code !== "string" || !code) {
+        return <span className="text-slate-500">-</span>;
+      }
+      return (
+        <span className="font-mono text-sm font-medium tracking-wide text-slate-700 dark:text-slate-200">
+          {code}
+        </span>
+      );
+    },
   };
 }
 
