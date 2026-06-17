@@ -98,10 +98,16 @@ export function LoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      const profile = await login(email, password);
       const from = (location.state as { from?: { pathname?: string } } | null)?.from
         ?.pathname;
-      navigate(from ?? "/", { replace: true });
+      if (from) {
+        navigate(from, { replace: true });
+      } else if (profile.can_access_deploy_ops) {
+        navigate("/ops/deploy", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Unable to sign in");
     } finally {
@@ -186,6 +192,14 @@ export function LoginPage() {
           <Button className="mt-7 w-full" size="lg" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
+          <div className="mt-4 text-center">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-teal-600 hover:text-teal-500 dark:text-teal-400"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="text-center mt-5">
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Don't have an account?{" "}

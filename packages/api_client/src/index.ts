@@ -101,6 +101,23 @@ export type LoginPayload = {
   password: string;
 };
 
+export type PasswordResetVerifyPayload = {
+  email: string;
+  otp: string;
+};
+
+export type PasswordResetConfirmPayload = {
+  verification_token: string;
+  password: string;
+};
+
+export type PasswordResetVerifyResponse = {
+  error?: boolean;
+  message?: string;
+  verification_token: string;
+  verification_expiry: string;
+};
+
 export type RequestOptions = AxiosRequestConfig & {
   orgId?: string | number;
   pageUrl?: string | null;
@@ -288,6 +305,34 @@ export class MisApiClient {
   async login(payload: LoginPayload): Promise<AuthSession> {
     const { data } = await this.http.post<AuthSession>("users/auth/login/", payload);
     tokenStorage.write(data);
+    return data;
+  }
+
+  async requestPasswordReset(email: string): Promise<{ error?: boolean; message?: string }> {
+    const { data } = await this.http.post<{ error?: boolean; message?: string }>(
+      "users/auth/password-reset/request/",
+      { email }
+    );
+    return data;
+  }
+
+  async verifyPasswordReset(
+    payload: PasswordResetVerifyPayload
+  ): Promise<PasswordResetVerifyResponse> {
+    const { data } = await this.http.post<PasswordResetVerifyResponse>(
+      "users/auth/password-reset/verify/",
+      payload
+    );
+    return data;
+  }
+
+  async confirmPasswordReset(
+    payload: PasswordResetConfirmPayload
+  ): Promise<{ error?: boolean; message?: string }> {
+    const { data } = await this.http.post<{ error?: boolean; message?: string }>(
+      "users/auth/password-reset/confirm/",
+      payload
+    );
     return data;
   }
 

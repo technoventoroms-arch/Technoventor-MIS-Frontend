@@ -21,7 +21,7 @@ type AuthState = {
   profile: CurrentUserProfile | null;
   isAuthenticated: boolean;
   isBootstrapping: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<CurrentUserProfile>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 };
@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profileResponse = (await apiClient.currentUser()) as CurrentUserProfile;
       setUser((session.user as AuthUser | undefined) ?? profileResponse);
       setProfile(profileResponse);
+      return profileResponse;
     } catch (error) {
       throw normalizeApiError(error);
     }

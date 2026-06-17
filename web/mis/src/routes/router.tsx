@@ -121,6 +121,11 @@ const routes: RouteObject[] = [
     children: [{ index: true, element: page("RegisterPage") }],
   },
   {
+    path: "forgot-password",
+    element: <PublicOnlyRoute />,
+    children: [{ index: true, element: lazyElement(() => import("@/premium/password-reset-pages"), "ForgotPasswordPage") }],
+  },
+  {
     element: <AuthenticatedRoute />,
     children: authenticatedShellChildren,
   },
