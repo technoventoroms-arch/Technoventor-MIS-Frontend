@@ -152,6 +152,10 @@ describe("buildMisNav", () => {
     });
 
     expect(nav.map((item) => item.label)).toContain("Logs");
+    const labels = nav.map((item) => item.label);
+    const profileIndex = labels.indexOf("Profile");
+    const logsIndex = labels.indexOf("Logs");
+    expect(logsIndex).toBeGreaterThan(profileIndex);
   });
 
   it("includes Machines in lab-manager lab sidebar", () => {

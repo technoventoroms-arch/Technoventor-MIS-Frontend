@@ -67,7 +67,6 @@ export function buildMisNav(options: {
 
   if (!orgId) {
     const rootItems: ShellNavItem[] = [
-      ...deployOpsItems,
       { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2, end: true },
       ...(canCreateOrganisation
         ? [{ label: "Create organisation", to: "/create-organization", icon: Plus }]
@@ -76,6 +75,7 @@ export function buildMisNav(options: {
         ? [{ label: "Join a lab", to: "/request_lab", icon: FlaskConical }]
         : []),
       profileItem,
+      ...deployOpsItems,
     ];
     return applyNavigationSectionFilter(rootItems, navigationSections);
   }
@@ -93,11 +93,13 @@ export function buildMisNav(options: {
       canManageInventory,
       profileItem,
     });
-    return applyNavigationSectionFilter([...deployOpsItems, ...labNav], navigationSections);
+    return appendDeployOpsAfterProfile(
+      applyNavigationSectionFilter(labNav, navigationSections),
+      deployOpsItems
+    );
   }
 
   const orgItems: ShellNavItem[] = [
-    ...deployOpsItems,
     { label: "My Organizations", to: MY_ORGANISATIONS_PATH, icon: Building2 },
     { label: "Dashboard", to: `${orgBase}/dashboard`, icon: LayoutDashboard },
     { label: "Labs", to: `${orgBase}/labs`, icon: FlaskConical, end: !isOrgAdmin },
@@ -116,8 +118,25 @@ export function buildMisNav(options: {
       ? [{ label: "Reports", to: `${orgBase}/reports`, icon: BarChart3 }]
       : []),
     profileItem,
+    ...deployOpsItems,
   ];
   return applyNavigationSectionFilter(orgItems, navigationSections);
+}
+
+function appendDeployOpsAfterProfile(
+  items: ShellNavItem[],
+  deployOpsItems: ShellNavItem[]
+): ShellNavItem[] {
+  if (!deployOpsItems.length) return items;
+  const profileIndex = items.findIndex((item) => item.label === "Profile");
+  if (profileIndex === -1) {
+    return [...items, ...deployOpsItems];
+  }
+  return [
+    ...items.slice(0, profileIndex + 1),
+    ...deployOpsItems,
+    ...items.slice(profileIndex + 1),
+  ];
 }
 
 function sectionKeysToAllowedLabels(section: string): string[] {
