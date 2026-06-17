@@ -98,16 +98,10 @@ export function LoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const profile = await login(email, password);
+      await login(email, password);
       const from = (location.state as { from?: { pathname?: string } } | null)?.from
         ?.pathname;
-      if (from) {
-        navigate(from, { replace: true });
-      } else if (profile.can_access_deploy_ops) {
-        navigate("/ops/deploy", { replace: true });
-      } else {
-        navigate("/", { replace: true });
-      }
+      navigate(from ?? "/", { replace: true });
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Unable to sign in");
     } finally {

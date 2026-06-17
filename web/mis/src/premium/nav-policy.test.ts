@@ -139,6 +139,21 @@ describe("buildMisNav", () => {
     expect(item?.to).toBe("/organisations");
   });
 
+  it("shows Logs for deploy-ops accounts even when navigation_sections omit it", () => {
+    const nav = buildMisNav({
+      orgId: "12",
+      labId: "7",
+      isOrgAdmin: true,
+      roleName: "Organisation Admin",
+      canAccessDeployOps: true,
+      can,
+      canAny,
+      navigationSections: ["overview", "labs", "profile"],
+    });
+
+    expect(nav.map((item) => item.label)).toContain("Logs");
+  });
+
   it("includes Machines in lab-manager lab sidebar", () => {
     const nav = buildMisNav({
       orgId: "12",

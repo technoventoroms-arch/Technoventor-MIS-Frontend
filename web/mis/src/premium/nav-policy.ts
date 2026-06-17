@@ -15,6 +15,7 @@ import {
   ListChecks,
   Plus,
   QrCode,
+  ScrollText,
   Settings,
   UserCircle,
   Users,
@@ -61,7 +62,7 @@ export function buildMisNav(options: {
   } = options;
   const profileItem: ShellNavItem = { label: "Profile", to: "/profile", icon: UserCircle };
   const deployOpsItems: ShellNavItem[] = canAccessDeployOps
-    ? [{ label: "Deployment", to: "/ops/deploy", icon: Activity }]
+    ? [{ label: "Logs", to: "/ops/deploy", icon: ScrollText }]
     : [];
 
   if (!orgId) {
@@ -137,6 +138,7 @@ function applyNavigationSectionFilter(items: ShellNavItem[], navigationSections:
     "dashboard",
     "labs",
     "profile",
+    "logs",
     "my organizations",
     "my organisations",
     "organization settings",
