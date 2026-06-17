@@ -94,19 +94,19 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-white">
-      <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 shadow-2xl">
-        <div className="mb-8 rounded-2xl bg-white px-5 py-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12 text-slate-950">
+      <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10">
+        <div className="mb-8">
           <MakerSpaceOpsLogo variant="hero" />
         </div>
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-400">Password reset</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">Password reset</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
           {step === "email" && "Forgot your password?"}
           {step === "otp" && "Enter verification code"}
           {step === "password" && "Set a new password"}
           {step === "done" && "All set"}
         </h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-500">
           {step === "email" && "We will email a 6-digit code to reset your password."}
           {step === "otp" && `Enter the code sent to ${email}.`}
           {step === "password" && "Choose a strong password for your account."}
@@ -185,19 +185,19 @@ export function ForgotPasswordPage() {
         ) : null}
 
         {error ? (
-          <div className="mt-5 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
         ) : null}
         {info ? (
-          <div className="mt-5 rounded-2xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm text-teal-100">
+          <div className="mt-5 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
             {info}
           </div>
         ) : null}
 
         {step !== "done" ? (
-          <p className="mt-6 text-center text-sm text-slate-400">
-            <Link to="/login" className="font-semibold text-teal-400 hover:text-teal-300">
+          <p className="mt-6 text-center text-sm">
+            <Link to="/login" className="font-semibold text-teal-600 hover:text-teal-500">
               Back to sign in
             </Link>
           </p>
