@@ -98,7 +98,7 @@ export function ManagerLabDashboard({ labName }: ManagerLabDashboardProps) {
           {labName ?? "Lab"} overview
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">
-          Your command view for approvals, people, settings, and lab health — without student
+          Your command view for approvals, people, settings, and lab health — without user
           ordering flows.
         </p>
       </section>

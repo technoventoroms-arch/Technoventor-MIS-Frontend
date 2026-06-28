@@ -118,7 +118,7 @@ export function LoginPage() {
             <MakerSpaceOpsLogo variant="hero" />
           </div>
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-teal-200">
-            MakerSpace Ops MIS
+            MakerSpace
           </p>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
             Run every lab, machine, inventory item, and project from one cockpit.
@@ -146,13 +146,13 @@ export function LoginPage() {
           className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-950/10 dark:border-white/10 dark:bg-white/[0.03]"
         >
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-teal-600">
-            MIS Access
+            MakerSpace
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Sign in with your MakerSpace Ops MIS account.
+            Sign in with your MakerSpace account.
           </p>
           <div className="mt-8 space-y-5">
             <div className="space-y-2">
@@ -313,7 +313,7 @@ function MisShellInner() {
 
   return (
     <PremiumShell
-      appName="MakerSpace Ops MIS"
+      appName="MakerSpace"
       appSubtitle={permissionsLoading && labId ? "Loading access…" : "Laboratory operations"}
       logoSrc={orgLogoUrl ?? MAKERSPACE_OPS_LOGO_SRC}
       navItems={navItems}
@@ -846,7 +846,7 @@ export function NotFoundPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
       <EmptyState
         title="Page not found"
-        description="The route you requested does not exist in MakerSpace Ops MIS."
+        description="The route you requested does not exist in MakerSpace."
       />
     </div>
   );
@@ -1093,9 +1093,9 @@ function formatDate(value: unknown): string {
 }
 
 function fullName(user: { first_name?: string; last_name?: string; email?: string } | null): string {
-  if (!user) return "MIS User";
+  if (!user) return "MakerSpace User";
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ");
-  return name || user.email || "MIS User";
+  return name || user.email || "MakerSpace User";
 }
 
 export function RedirectToOrgDashboard() {
@@ -1193,7 +1193,7 @@ export function RegisterPage() {
             <MakerSpaceOpsLogo variant="hero" />
           </div>
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-teal-200">
-            MakerSpace Ops MIS
+            MakerSpace
           </p>
           <h1 className="max-w-2xl text-6xl font-semibold tracking-tight">
             Create your multi-tenant laboratory workspace today.

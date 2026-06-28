@@ -165,7 +165,7 @@ export function ProfilePage() {
     <PageFrame
       eyebrow="Account"
       title="Profile"
-      description="Manage your profile details used across MakerSpace Ops MIS."
+      description="Manage your profile details used across MakerSpace."
       metrics={[
         metric("Account", user?.email ?? "Signed in", "Profile details", <UserCircle />),
       ]}
@@ -452,7 +452,7 @@ export function LabSettingsPage() {
         <PremiumSurface className="p-6">
           <SectionHeader
             title="Machine booking policy"
-            description="Turn bookings on or off anytime and set allowed hours for student reservations."
+            description="Turn bookings on or off anytime and set allowed hours for user reservations."
           />
           {!canManageBooking ? (
             <EmptyState
@@ -594,7 +594,7 @@ export function ReportsPage() {
       {reportUrl ? (
         <PremiumSurface className="overflow-hidden p-0">
           <iframe
-            title="MIS reporting dashboard"
+            title="MakerSpace reporting dashboard"
             src={reportUrl}
             className="h-[72vh] w-full border-0"
             loading="lazy"

@@ -212,7 +212,7 @@ export function OrganisationSwitcherPage() {
         emptyTitle="No organisations found"
         emptyDescription={
           canCreateOrganisation
-            ? "Create an organisation to unlock the MIS workspace."
+            ? "Create an organisation to unlock the MakerSpace workspace."
             : "Join a lab or accept an invite to get access."
         }
         actions={
@@ -2285,14 +2285,14 @@ export function MachineSchedulePage() {
       title={attendanceKiosk ? "Attendance reader" : "Machine Schedule"}
       description={
         attendanceKiosk
-          ? "This reader records lab check-in when students tap their RFID card. Slot booking does not apply."
+          ? "This reader records lab check-in when users tap their RFID card. Slot booking does not apply."
           : "View reservations and operating schedule for this machine."
       }
       metrics={[metric("Reservations", reservations.rows.length, "Current page", <Wrench />)]}
     >
       {attendanceKiosk ? (
         <PremiumSurface className="mb-4 border-teal-200 bg-teal-50/80 p-4 text-sm text-teal-950 dark:border-teal-900/40 dark:bg-teal-950/30 dark:text-teal-100">
-          <strong>Attendance kiosk</strong> — students tap their lab card at the reader to check in.
+          <strong>Attendance kiosk</strong> — users tap their lab card at the reader to check in.
           No reservations or unlock flow.
         </PremiumSurface>
       ) : !isOrgAdmin && !isLabManager ? (
@@ -2318,7 +2318,7 @@ export function MachineSchedulePage() {
       {attendanceKiosk ? (
         <EmptyState
           title="No bookings for attendance readers"
-          description="Install the reader from Machine details and have students tap their lab RFID card at the kiosk."
+          description="Install the reader from Machine details and have users tap their lab RFID card at the kiosk."
           icon={<Radio className="size-7" />}
           action={
             <Button asChild>

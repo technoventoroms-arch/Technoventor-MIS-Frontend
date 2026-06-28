@@ -105,7 +105,7 @@ export function AuthenticatedRoute() {
   const { isAuthenticated, isBootstrapping } = useAuth();
 
   if (isBootstrapping) {
-    return <PremiumBootScreen label="Preparing your MIS workspace" />;
+    return <PremiumBootScreen label="Preparing your MakerSpace workspace" />;
   }
 
   if (!isAuthenticated) {
@@ -134,7 +134,7 @@ export function DeployOpsRoute() {
   const { isAuthenticated, isBootstrapping, profile } = useAuth();
 
   if (isBootstrapping) {
-    return <PremiumBootScreen label="Preparing your MIS workspace" />;
+    return <PremiumBootScreen label="Preparing your MakerSpace workspace" />;
   }
 
   if (!isAuthenticated) {

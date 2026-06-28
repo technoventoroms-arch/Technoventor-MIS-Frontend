@@ -160,8 +160,8 @@ export function MachineDevicePanel({
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             {attendanceKiosk
-              ? "Install this reader as an attendance kiosk. Students tap their lab RFID card to check in or out — no slot booking or machine unlock."
-              : "Lab managers register equipment, approve bookings, and install readers. Students tap their lab card during an approved slot — unlock, attendance, and release are automatic."}
+              ? "Install this reader as an attendance kiosk. Users tap their lab RFID card to check in or out — no slot booking or machine unlock."
+              : "Lab managers register equipment, approve bookings, and install readers. Users tap their lab card during an approved slot — unlock, attendance, and release are automatic."}
           </p>
         </div>
       </div>

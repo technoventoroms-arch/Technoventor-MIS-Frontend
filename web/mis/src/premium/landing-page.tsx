@@ -56,7 +56,7 @@ export function LandingPage() {
               <path d="M12 7v10M2 7l10 5 10-5" />
             </svg>
           </div>
-          MakerSpace Ops
+          MakerSpace
         </Link>
         <div className="nav-links">
           <a href="#features" className="nav-link">
@@ -80,7 +80,7 @@ export function LandingPage() {
                 Sign in
               </Link>
               <Link to="/register" className="nav-cta">
-                Try it free →
+                Try it for free →
               </Link>
             </>
           )}
@@ -97,7 +97,7 @@ export function LandingPage() {
       >
         <div>
           <div className="hero-tag au">
-            <span className="hero-tag-dot"></span>Makerspace Operating System
+            <span className="hero-tag-dot"></span>MakerSpace
           </div>
           <h1 className="hero-h1 au d1">
             The all-in-one platform for your{" "}
@@ -379,10 +379,11 @@ export function LandingPage() {
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
               </div>
-              <h3 className="feat-title">Material requests</h3>
+              <h3 className="feat-title">Smart Material Management</h3>
               <p className="feat-desc">
-                Students request materials for a project with manager approval —
-                a clean, streamlined workflow from inventory to usage tracking.
+                Enable makers, staff, and other authorized users to request project
+                materials, obtain approvals, and track material usage through a
+                centralized inventory management workflow.
               </p>
             </div>
             <div className="feat-card">
@@ -540,9 +541,9 @@ export function LandingPage() {
                   <div className="step-body">
                     <div className="step-title">Get proactive alerts</div>
                     <div className="step-desc">
-                      Set a minimum threshold per item. MakerSpace Ops flags
+                      Set a minimum threshold per item. MakerSpace flags
                       low-stock before it becomes a problem for your
-                      students.
+                      users.
                     </div>
                   </div>
                 </div>
@@ -601,7 +602,7 @@ export function LandingPage() {
                     <div className="step-title">Start & stop your session</div>
                     <div className="step-desc">
                       Tap Start to unlock the machine. Tap Stop when done —
-                      MakerSpace Ops logs time and can trigger hardware relay
+                      MakerSpace logs time and can trigger hardware relay
                       control.
                     </div>
                   </div>
@@ -770,7 +771,7 @@ export function LandingPage() {
             <div className="role-card">
               <div className="role-card-accent"></div>
               <div className="role-num">01</div>
-              <h3 className="role-title">Student</h3>
+              <h3 className="role-title">User</h3>
               <p className="role-desc">
                 Standard members who interact with the space daily.
               </p>
@@ -861,7 +862,7 @@ export function LandingPage() {
             <div className="testi-card">
               <div className="testi-quote-mark">"</div>
               <p className="testi-text">
-                MakerSpace Ops completely replaced our spreadsheets and WhatsApp
+                MakerSpace completely replaced our spreadsheets and WhatsApp
                 group. Booking conflicts dropped to zero in the first week.
               </p>
               <div className="testi-person">
@@ -877,7 +878,7 @@ export function LandingPage() {
             <div className="testi-card">
               <div className="testi-quote-mark">"</div>
               <p className="testi-text">
-                The QR machine access is a game-changer. Students just scan and
+                The QR machine access is a game-changer. Users just scan and
                 start — no logins, no friction. It's exactly what a busy
                 workshop needs.
               </p>
@@ -897,7 +898,7 @@ export function LandingPage() {
               <div className="testi-quote-mark">"</div>
               <p className="testi-text">
                 Finally a platform that understands multi-role workflows. Our
-                students, managers, and admins all see exactly what they need
+                users, managers, and admins all see exactly what they need
                 — nothing more.
               </p>
               <div className="testi-person">
@@ -921,7 +922,7 @@ export function LandingPage() {
         <div className="stats-bar-inner">
           <div className="stat-item">
             <div className="stat-num">200+</div>
-            <div className="stat-label">Active students onboarded</div>
+            <div className="stat-label">Active users onboarded</div>
           </div>
           <div className="stat-item">
             <div className="stat-num">12+</div>
@@ -947,7 +948,7 @@ export function LandingPage() {
             <p className="api-desc">
               All platform data and functionality is available via our open REST
               API. Import existing data, integrate your favourite tools, or
-              build custom extensions on top of MakerSpace Ops.
+              build custom extensions on top of MakerSpace.
             </p>
             <a
               href="#"
@@ -1080,7 +1081,7 @@ export function LandingPage() {
                     <path d="M12 7v10M2 7l10 5 10-5" />
                   </svg>
                 </div>
-                MakerSpace Ops
+                MakerSpace
               </Link>
               <p className="footer-tagline">
                 A modern multi-tenant SaaS platform for managing makerspaces,
@@ -1147,7 +1148,7 @@ export function LandingPage() {
           </div>
           <div className="footer-bottom">
             <p className="footer-copy">
-              © 2026 MakerSpace Ops
+              © 2026 MakerSpace
             </p>
             <div className="footer-social">
               <a href="#">Twitter</a>
