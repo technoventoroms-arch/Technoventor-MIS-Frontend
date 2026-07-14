@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -40,7 +40,7 @@ import { isLabManagerRoleName } from "./lab-manager-access";
 import { useAuth } from "./auth";
 import { useLabPermissions } from "./lab-permissions";
 import { P } from "./permission-codes";
-import { useIsOrgAdmin } from "./use-org-admin";
+import { useIsOrgAdmin, useOrgAdminAccess } from "./use-org-admin";
 import { MY_ORGANISATIONS_PATH } from "./routes";
 import {
   defaultBookingPolicy,
@@ -284,16 +284,32 @@ export function ProfilePage() {
 export function OrganisationSettingsPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
-  const isOrgAdmin = useIsOrgAdmin(orgId);
+  const { isOrgAdmin, isLoading } = useOrgAdminAccess(orgId);
   const [organisation, setOrganisation] = useState<Entity | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId || !isOrgAdmin) return;
     apiClient.get<Entity>(endpoints.organisations.detail(orgId), { orgId }).then(setOrganisation);
-  }, [orgId]);
+  }, [isOrgAdmin, orgId]);
 
   if (!orgId) return null;
+
+  if (isLoading) {
+    return (
+      <PageFrame
+        eyebrow="Settings"
+        title="Organization"
+        description="Checking organisation access…"
+      >
+        <PremiumSurface className="p-6 text-sm text-slate-500">Loading…</PremiumSurface>
+      </PageFrame>
+    );
+  }
+
+  if (!isOrgAdmin) {
+    return <Navigate to={`/${orgId}/labs`} replace />;
+  }
 
   const activeOrgId = orgId;
   const orgName = organisation?.name ?? `Organisation ${activeOrgId}`;
@@ -342,44 +358,42 @@ export function OrganisationSettingsPage() {
           />
         </PremiumSurface>
 
-        {isOrgAdmin ? (
-          <PremiumSurface className="border-destructive/30 p-6">
-            <SectionHeader
-              title="Danger zone"
-              description="Permanently remove this organisation and hide it from all members. Labs, projects, and history are soft-deleted with the organisation."
-            />
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive" disabled={isDeleting}>
-                  <Trash2 className="size-4" />
-                  Delete organisation
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {orgName}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This soft-deletes the organisation and hides it from all members. Everyone loses
-                    access immediately. This cannot be undone from the app.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    disabled={isDeleting}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      void deleteOrganisation();
-                    }}
-                  >
-                    {isDeleting ? "Deleting…" : "Delete organisation"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </PremiumSurface>
-        ) : null}
+        <PremiumSurface className="border-destructive/30 p-6">
+          <SectionHeader
+            title="Danger zone"
+            description="Permanently remove this organisation and hide it from all members. Labs, projects, and history are soft-deleted with the organisation."
+          />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" disabled={isDeleting}>
+                <Trash2 className="size-4" />
+                Delete organisation
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {orgName}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This soft-deletes the organisation and hides it from all members. Everyone loses
+                  access immediately. This cannot be undone from the app.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isDeleting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void deleteOrganisation();
+                  }}
+                >
+                  {isDeleting ? "Deleting…" : "Delete organisation"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PremiumSurface>
       </div>
     </PageFrame>
   );

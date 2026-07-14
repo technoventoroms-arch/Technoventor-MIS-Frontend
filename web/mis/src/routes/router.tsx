@@ -1,6 +1,11 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { Navigate, RouteObject } from "react-router-dom";
-import { AuthenticatedRoute, DeployOpsRoute, PublicOnlyRoute } from "@/premium/auth";
+import {
+  AuthenticatedRoute,
+  DeployOpsRoute,
+  OrgAdminRoute,
+  PublicOnlyRoute,
+} from "@/premium/auth";
 
 function lazyElement<T extends Record<string, unknown>>(
   loader: () => Promise<T>,
@@ -54,15 +59,20 @@ const workspaceShellChildren: RouteObject[] = [
   },
   { path: ":orgId", element: page("RedirectToOrgDashboard") },
   { path: ":orgId/dashboard", element: page("OrgDashboardPage") },
-  { path: ":orgId/settings", element: accountPage("OrganisationSettingsPage") },
-  { path: ":orgId/organization", element: accountPage("OrganisationSettingsPage") },
+  {
+    element: <OrgAdminRoute />,
+    children: [
+      { path: ":orgId/settings", element: accountPage("OrganisationSettingsPage") },
+      { path: ":orgId/organization", element: accountPage("OrganisationSettingsPage") },
+      { path: ":orgId/users", element: workflowPage("OrgUsersPage") },
+    ],
+  },
   { path: ":orgId/reports", element: accountPage("ReportsPage") },
   { path: ":orgId/labs", element: workflowPage("LabsPage") },
   {
     path: ":orgId/labs/new",
     element: workflowPage("LabsPage"),
   },
-  { path: ":orgId/users", element: workflowPage("OrgUsersPage") },
   {
     path: ":orgId/lab/:labId",
     element: page("LabDashboardPage"),

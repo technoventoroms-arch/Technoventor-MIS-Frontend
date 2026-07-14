@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import {
   apiClient,
   normalizeApiError,
@@ -15,6 +15,8 @@ import {
   type AuthUser,
 } from "@mono/api_client";
 import type { CurrentUserProfile } from "./profile-to-ui-context";
+import { MY_ORGANISATIONS_PATH } from "./routes";
+import { isNumericOrgId, useOrgAdminAccess } from "./use-org-admin";
 
 type AuthState = {
   user: AuthUser | null;
@@ -143,6 +145,26 @@ export function DeployOpsRoute() {
 
   if (!profile?.can_access_deploy_ops) {
     return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}
+
+/** Blocks organisation admin pages for members (and invalid `/:orgId` segments like `/admin/settings`). */
+export function OrgAdminRoute() {
+  const { orgId } = useParams();
+  const { isOrgAdmin, isLoading } = useOrgAdminAccess(orgId);
+
+  if (!isNumericOrgId(orgId)) {
+    return <Navigate to={MY_ORGANISATIONS_PATH} replace />;
+  }
+
+  if (isLoading) {
+    return <PremiumBootScreen label="Checking organisation access" />;
+  }
+
+  if (!isOrgAdmin) {
+    return <Navigate to={`/${orgId}/labs`} replace />;
   }
 
   return <Outlet />;
