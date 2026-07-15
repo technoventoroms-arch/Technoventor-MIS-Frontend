@@ -71,6 +71,8 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           DEPLOY_HOOK_SECRET: ${{ secrets.DEPLOY_HOOK_SECRET }}
         run: |
+          set -euo pipefail
+
           if [ -z "$DEPLOY_HOOK_SECRET" ]; then
             echo "::error::Missing DEPLOY_HOOK_SECRET — run setup-deploy-hook.sh on VPS first"
             exit 1
@@ -82,12 +84,36 @@ jobs:
 
           TARGET_SHA="${{ github.sha }}"
           HOOK_AUTH=(-H "Authorization: Bearer ${DEPLOY_HOOK_SECRET}")
+          API_BASE="https://${{ env.API_DOMAIN }}"
 
-          if ! curl -sf --connect-timeout 30 -m 30 "https://${{ env.API_DOMAIN }}/health/live/" >/dev/null; then
-            HOOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 30 -m 30 \
-              -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy")
-            if [ "$HOOK_CODE" != "401" ]; then
-              echo "::error::VPS API unreachable from GitHub runner (health/live failed, hook HTTP ${HOOK_CODE})"
+          curl_retry() {
+            local label="$1"
+            shift
+            local attempt code
+            for attempt in 1 2 3; do
+              set +e
+              "$@"
+              code=$?
+              set -e
+              if [ "$code" -eq 0 ]; then
+                return 0
+              fi
+              echo "curl ${label} attempt ${attempt}/3 failed (exit ${code})"
+              [ "$attempt" -lt 3 ] && sleep 10
+            done
+            return "$code"
+          }
+
+          echo "Preflight: ${API_BASE}/health/live/"
+          if ! curl_retry "health/live" curl -sfS --connect-timeout 20 -m 25 "${API_BASE}/health/live/" >/dev/null; then
+            echo "health/live unavailable — probing deploy hook (expect 401)"
+            set +e
+            HOOK_CODE=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 20 -m 25 \
+              -X POST "${API_BASE}/_ci/deploy")
+            HOOK_EXIT=$?
+            set -e
+            if [ "$HOOK_EXIT" -ne 0 ] || [ "$HOOK_CODE" != "401" ]; then
+              echo "::error::VPS unreachable from GitHub runner (health/live failed, hook HTTP ${HOOK_CODE:-none}, curl exit ${HOOK_EXIT}). Check mis-api, mis-deploy-hook, and Caddy /_ci/* on VPS."
               exit 1
             fi
             echo "health/live not available yet — deploy hook reachable (401)"
@@ -100,12 +126,21 @@ jobs:
             --arg registry_token "$DOCKERHUB_TOKEN" \
             '{service: $service, tag: $tag, registry_user: $registry_user, registry_token: $registry_token, async: true, force: true}')
           RESPONSE_FILE="$(mktemp)"
-          HTTP_CODE=$(curl -s --connect-timeout 30 -m 60 \
+          echo "Trigger async web deploy @ ${TARGET_SHA}"
+          set +e
+          HTTP_CODE=$(curl -sS --connect-timeout 20 -m 90 \
             -w "%{http_code}" -o "$RESPONSE_FILE" \
-            -X POST "https://${{ env.API_DOMAIN }}/_ci/deploy" \
+            -X POST "${API_BASE}/_ci/deploy" \
             "${HOOK_AUTH[@]}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
+          TRIGGER_EXIT=$?
+          set -e
+          if [ "$TRIGGER_EXIT" -ne 0 ]; then
+            echo "::error::POST /_ci/deploy failed (curl exit ${TRIGGER_EXIT}). Ensure mis-deploy-hook is running on VPS."
+            cat "$RESPONSE_FILE" 2>/dev/null || true
+            exit 1
+          fi
           echo "Trigger HTTP $HTTP_CODE"
           jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
           if [ "$HTTP_CODE" != "202" ]; then
@@ -117,25 +152,39 @@ jobs:
           LOGS=""
           for i in $(seq 1 40); do
             sleep 15
-            STATUS=$(curl -s --connect-timeout 30 -m 45 \
+            set +e
+            STATUS=$(curl -sS --connect-timeout 20 -m 90 \
               "${HOOK_AUTH[@]}" \
-              "https://${{ env.API_DOMAIN }}/_ci/status")
+              "${API_BASE}/_ci/status")
+            STATUS_EXIT=$?
+            set -e
+            if [ "$STATUS_EXIT" -ne 0 ]; then
+              echo "::warning::/_ci/status poll ${i}/40 failed (curl exit ${STATUS_EXIT}), retrying"
+              continue
+            fi
             if ! echo "$STATUS" | jq -e . >/dev/null 2>&1; then
               echo "::error::/_ci/status did not return JSON — check Caddy routes /_ci/* → mis-deploy-hook"
               echo "$STATUS" | head -c 500
               exit 1
             fi
             JOB_STATUS=$(echo "$STATUS" | jq -r '.jobs.web.status // empty')
+            JOB_TAG=$(echo "$STATUS" | jq -r '.jobs.web.tag // empty')
             JOB_ERR=$(echo "$STATUS" | jq -r '.jobs.web.error // empty')
             WEB_TAG=$(echo "$STATUS" | jq -r '.web.tag // empty')
             WEB_RUNNING=$(echo "$STATUS" | jq -r '.web.running // false')
-            echo "Poll $i/40 job=${JOB_STATUS:-idle} tag=${WEB_TAG:-?} running=${WEB_RUNNING}"
+            echo "Poll $i/40 job=${JOB_STATUS:-idle} job_tag=${JOB_TAG:-?} tag=${WEB_TAG:-?} running=${WEB_RUNNING}"
             if [ "$JOB_STATUS" = "failed" ]; then
               echo "$STATUS" | jq .
               echo "::error::Web deploy failed: ${JOB_ERR:-unknown}"
               LOGS=$(echo "$STATUS" | jq -r '.jobs.web.logs // empty')
               { echo "deploy_logs<<EOF"; echo "$LOGS"; echo "EOF"; } >> "$GITHUB_OUTPUT"
               exit 1
+            fi
+            # Prefer in-memory job success (immune to docker ps probe contention during pull/up).
+            if [ "$JOB_STATUS" = "success" ] && [ "$JOB_TAG" = "$TARGET_SHA" ]; then
+              DEPLOY_OK=1
+              LOGS=$(echo "$STATUS" | jq -r '.jobs.web.logs // empty')
+              break
             fi
             if [ "$WEB_TAG" = "$TARGET_SHA" ] && [ "$WEB_RUNNING" = "true" ]; then
               DEPLOY_OK=1
